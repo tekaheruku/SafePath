@@ -8,7 +8,8 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@safepath/shared';
 import { useAuth } from './AuthContext';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useMapStore } from '../store/useMapStore';
 import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
@@ -121,8 +122,23 @@ const MapDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ reports: 0, heatmapPoints: 0 });
-  const [showIncidentsHeat, setShowIncidentsHeat] = useState(true);
-  const [showRatingsHeat, setShowRatingsHeat] = useState(true);
+  
+  const { 
+    lat: storeLat, lng: storeLng, zoom: storeZoom, setView,
+    showIncidentsHeat, showRatingsHeat, setIncidentsHeat, setRatingsHeat
+  } = useMapStore();
+
+  const showIncidentsHeatRef = useRef(showIncidentsHeat);
+  const showRatingsHeatRef = useRef(showRatingsHeat);
+
+  // Sync refs with store values for use in callbacks
+  useEffect(() => {
+    showIncidentsHeatRef.current = showIncidentsHeat;
+  }, [showIncidentsHeat]);
+
+  useEffect(() => {
+    showRatingsHeatRef.current = showRatingsHeat;
+  }, [showRatingsHeat]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
@@ -130,9 +146,50 @@ const MapDashboard: React.FC = () => {
   const [ratings, setRatings] = useState<any[]>([]);
   const { user, token } = useAuth();
   const searchParams = useSearchParams();
-  // Keep refs in sync so closures inside fetchMapData always read current visibility
-  const showIncidentsHeatRef = useRef(true);
-  const showRatingsHeatRef = useRef(true);
+  const router = useRouter();
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(searchParams.get('reportId'));
+  const [selectedRatingId, setSelectedRatingId] = useState<string | null>(searchParams.get('ratingId'));
+
+  const [incidentHeatPoints, setIncidentHeatPoints] = useState<any[]>([]);
+  const [ratingHeatPoints, setRatingHeatPoints] = useState<any[]>([]);
+
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
+  const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
+
+  useEffect(() => {
+    const rid = searchParams.get('reportId');
+    if (rid) setSelectedReportId(rid);
+    const ratid = searchParams.get('ratingId');
+    if (ratid) setSelectedRatingId(ratid);
+  }, [searchParams]);
+
+  // Consume and clear URL parameters to support "reset on refresh"
+  useEffect(() => {
+    if (searchParams.get('lat') || searchParams.get('lng')) {
+      const timeout = setTimeout(() => {
+        router.replace('/');
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    updateIncidentsHeatmap(incidentHeatPoints);
+    updateRatingsHeatmap(ratingHeatPoints);
+    updateMarkers(reports);
+    updateRatingMarkers(ratings);
+  }, [selectedReportId, selectedRatingId, showIncidentsHeat, showRatingsHeat]);
+
+  useEffect(() => {
+    if (selectionMode) {
+      setSelectedReportId(null);
+      setSelectedRatingId(null);
+    }
+  }, [selectionMode]);
+
+
 
   // Custom Pin Icons
   const IncidentIcon = L.divIcon({
@@ -208,6 +265,9 @@ const MapDashboard: React.FC = () => {
       setStats({ reports: reports.length, heatmapPoints: incidentPoints.length + ratingPoints.length });
       setReports(reports);
       setRatings(ratings);
+      setIncidentHeatPoints(incidentPoints);
+      setRatingHeatPoints(ratingPoints);
+
       updateMarkers(reports);
       updateRatingMarkers(ratings);
       updateIncidentsHeatmap(incidentPoints);
@@ -226,9 +286,13 @@ const MapDashboard: React.FC = () => {
     markersRef.current = [];
 
     // Hide pins if heatmap is toggled on (Convert to Heatmap feature)
-    if (showIncidentsHeatRef.current) return;
+    // EXCEPTION: Always show the selected report even if heatmap is on
+    if (showIncidentsHeatRef.current && !selectedReportId) return;
 
     reports.forEach(r => {
+      // If heatmap is on, only show the selected report
+      if (showIncidentsHeatRef.current && r.id !== selectedReportId) return;
+
       const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
       const deleteHtml = canDelete 
         ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
@@ -269,6 +333,11 @@ const MapDashboard: React.FC = () => {
           </div>
         `, { className: 'custom-popup-glass' })
         .addTo(mapRef.current!);
+      
+      if (r.id === selectedReportId) {
+        setTimeout(() => marker.openPopup(), 500);
+      }
+
       markersRef.current.push(marker);
     });
 
@@ -277,7 +346,10 @@ const MapDashboard: React.FC = () => {
   const updateIncidentsHeatmap = (points: any[]) => {
     if (!mapRef.current) return;
     if (incidentsHeatLayerRef.current) incidentsHeatLayerRef.current.remove();
-    if (!showIncidentsHeatRef.current || points.length === 0) return;
+    
+    // Suppress heatmap if a report is focused
+    if (!showIncidentsHeatRef.current || points.length === 0 || selectedReportId) return;
+    
     incidentsHeatLayerRef.current = (L as any).heatLayer(
       points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
       { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.2: '#fbbf24', 0.5: '#f97316', 0.8: '#ef4444', 1.0: '#dc2626' } }
@@ -290,9 +362,11 @@ const MapDashboard: React.FC = () => {
     ratingMarkersRef.current = [];
 
     // Hide pins if heatmap is toggled on (Convert to Heatmap feature)
-    if (showRatingsHeatRef.current) return;
+    if (showRatingsHeatRef.current && !selectedRatingId) return;
 
     ratings.forEach(r => {
+      if (showRatingsHeatRef.current && r.id !== selectedRatingId) return;
+
       const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
       const deleteHtml = canDelete 
         ? `<br/><button onclick="window.deleteRating('${r.id}')" class="mt-2 text-xs text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Rating</button>` 
@@ -311,6 +385,11 @@ const MapDashboard: React.FC = () => {
           ${deleteHtml}
         `)
         .addTo(mapRef.current!);
+
+      if (r.id === selectedRatingId) {
+        setTimeout(() => marker.openPopup(), 500);
+      }
+
       ratingMarkersRef.current.push(marker);
     });
   };
@@ -318,7 +397,10 @@ const MapDashboard: React.FC = () => {
   const updateRatingsHeatmap = (points: any[]) => {
     if (!mapRef.current) return;
     if (ratingsHeatLayerRef.current) ratingsHeatLayerRef.current.remove();
-    if (!showRatingsHeatRef.current || points.length === 0) return;
+
+    // Suppress heatmap if a rating is focused
+    if (!showRatingsHeatRef.current || points.length === 0 || selectedRatingId) return;
+
     ratingsHeatLayerRef.current = (L as any).heatLayer(
       points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
       { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.3: '#34d399', 0.6: '#a78bfa', 1.0: '#7c3aed' } }
@@ -333,9 +415,9 @@ const MapDashboard: React.FC = () => {
       [15.41, 120.18]   // NE — covers Santa Barbara far east
     );
 
-    const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat') as string) : 15.390;
-    const initialLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng') as string) : 120.060;
-    const initialZoom = searchParams.get('zoom') ? parseInt(searchParams.get('zoom') as string) : 12;
+    const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat') as string) : storeLat;
+    const initialLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng') as string) : storeLng;
+    const initialZoom = searchParams.get('zoom') ? parseInt(searchParams.get('zoom') as string) : storeZoom;
 
     const map = L.map(mapContainerRef.current, {
       center: [initialLat, initialLng],
@@ -361,6 +443,17 @@ const MapDashboard: React.FC = () => {
     // Initial fetch for the entire Iba area
     mapRef.current = map;
     fetchMapData();
+
+    // Persist map state in memory (Zustand)
+    map.on('moveend', () => {
+      const center = map.getCenter();
+      setView(center.lat, center.lng, map.getZoom());
+    });
+
+    map.on('zoomend', () => {
+      const center = map.getCenter();
+      setView(center.lat, center.lng, map.getZoom());
+    });
 
 
     socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchMapData());
@@ -470,17 +563,14 @@ const MapDashboard: React.FC = () => {
     }
   };
 
-  const [showReportForm, setShowReportForm] = useState(false);
-
-  const [showRatingForm, setShowRatingForm] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
-  const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
 
     const onMapClick = (e: L.LeafletMouseEvent) => {
       setSelectedLocation(e.latlng);
+      setSelectedReportId(null);
+      setSelectedRatingId(null);
       if (selectionMode === 'report') {
         setShowReportForm(true);
         setSelectionMode(null);
@@ -563,7 +653,7 @@ const MapDashboard: React.FC = () => {
             <button
               onClick={() => {
                 const next = !showIncidentsHeat;
-                setShowIncidentsHeat(next);
+                setIncidentsHeat(next);
                 showIncidentsHeatRef.current = next;
                 if (!next) {
                   if (incidentsHeatLayerRef.current) {
@@ -588,7 +678,7 @@ const MapDashboard: React.FC = () => {
             <button
               onClick={() => {
                 const next = !showRatingsHeat;
-                setShowRatingsHeat(next);
+                setRatingsHeat(next);
                 showRatingsHeatRef.current = next;
                 if (!next) {
                   if (ratingsHeatLayerRef.current) {

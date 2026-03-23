@@ -28,7 +28,7 @@ export default function IncidentsPage() {
   const handleReportClick = (r: any) => {
     const lat = r.location.coordinates[1];
     const lng = r.location.coordinates[0];
-    router.push(`/?lat=${lat}&lng=${lng}&zoom=17`);
+    router.push(`/?lat=${lat}&lng=${lng}&zoom=17&reportId=${r.id}`);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
