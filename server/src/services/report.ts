@@ -9,14 +9,15 @@ export class ReportService {
     const { type, severity_level, description, location } = data;
     
     const query = `
-      INSERT INTO reports (user_id, title, severity_level, description, location)
-      VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326))
+      INSERT INTO reports (user_id, title, severity_level, description, location, upvotes_count, downvotes_count)
+      VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), 0, 0)
       RETURNING id, user_id, title as type, severity_level, description, 
-                ST_AsGeoJSON(location)::json as location, created_at, updated_at
+                ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, created_at, updated_at
     `;
     const params = [userId, type, severity_level, description, location.longitude, location.latitude];
     const result = await pool.query(query, params);
     return result.rows[0];
+
   }
 
   /**
@@ -53,14 +54,18 @@ export class ReportService {
     const query = `
       SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
+             r.upvotes_count, r.downvotes_count,
              u.name as author_name
+             ${filters?.currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $${paramIndex}) as user_vote` : ''}
       FROM reports r
       LEFT JOIN users u ON r.user_id = u.id
       ${whereClause}
       ORDER BY r.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      LIMIT $${filters?.currentUserId ? paramIndex + 1 : paramIndex} OFFSET $${filters?.currentUserId ? paramIndex + 2 : paramIndex + 1}
     `;
+    if (filters?.currentUserId) params.push(filters.currentUserId);
     params.push(limit, offset);
+
 
     const result = await pool.query(query, params);
     
@@ -82,18 +87,22 @@ export class ReportService {
   /**
    * Get report by ID
    */
-  static async getReportById(id: string): Promise<ReportWithUser | null> {
+  static async getReportById(id: string, currentUserId?: string): Promise<ReportWithUser | null> {
     const query = `
       SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
+             r.upvotes_count, r.downvotes_count,
              u.name as author_name
+             ${currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $2) as user_vote` : ''}
       FROM reports r
       LEFT JOIN users u ON r.user_id = u.id
       WHERE r.id = $1
     `;
-    const result = await pool.query(query, [id]);
+    const params = currentUserId ? [id, currentUserId] : [id];
+    const result = await pool.query(query, params);
     return result.rows[0] || null;
   }
+
 
   static async updateReport(id: string, userId: string, data: any): Promise<Report> {
     const { type, severity_level, description } = data;

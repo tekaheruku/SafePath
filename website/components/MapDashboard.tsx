@@ -11,6 +11,8 @@ import { useAuth } from './AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
+import HeatmapLegend from './HeatmapLegend';
+
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -80,13 +82,18 @@ function createFogLayer(map: L.Map): () => void {
   style.innerHTML = `
     .fog-of-war-polygon {
       backdrop-filter: grayscale(1) brightness(0.35);
+      -webkit-backdrop-filter: grayscale(1) brightness(0.35);
       pointer-events: none !important;
+      will-change: transform, backdrop-filter;
+      transform: translateZ(0);
     }
     .fog-glow-edge {
       filter: url(#fog-inner-glow);
       pointer-events: none !important;
+      will-change: transform;
     }
   `;
+
   document.head.appendChild(style);
 
   return () => {
@@ -111,6 +118,9 @@ const MapDashboard: React.FC = () => {
   const [stats, setStats] = useState({ reports: 0, heatmapPoints: 0 });
   const [showIncidentsHeat, setShowIncidentsHeat] = useState(true);
   const [showRatingsHeat, setShowRatingsHeat] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
   const [reports, setReports] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
   const { user, token } = useAuth();
@@ -144,16 +154,17 @@ const MapDashboard: React.FC = () => {
     popupAnchor: [0, -40]
   });
 
-  const fetchMapData = async (bounds: L.LatLngBounds) => {
+  const fetchMapData = async () => {
     setLoading(true);
     setError(null);
     try {
       const b = {
-        minLat: bounds.getSouth(),
-        maxLat: bounds.getNorth(),
-        minLng: bounds.getWest(),
-        maxLng: bounds.getEast(),
+        minLat: 15.30,
+        maxLat: 15.41,
+        minLng: 119.92,
+        maxLng: 120.18,
       };
+
 
       // Use allSettled so one failing call doesn't kill the entire map load
       const [reportsResult, incidentHeatResult, ratingHeatResult, ratingsResult] = await Promise.allSettled([
@@ -215,19 +226,47 @@ const MapDashboard: React.FC = () => {
     reports.forEach(r => {
       const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
       const deleteHtml = canDelete 
-        ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-xs text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
+        ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
         : '';
+
+      const userVote = r.user_vote;
+      const upvoteClass = userVote === 'up' ? 'text-indigo-400 font-bold' : 'text-slate-400 hover:text-indigo-400';
+      const downvoteClass = userVote === 'down' ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-orange-400';
+
+      const voteHtml = `
+        <div class="mt-3 pt-2 border-t border-slate-700 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <button onclick="window.voteReport('${r.id}', 'up')" class="flex items-center gap-1 transition-all hover:scale-110 active:scale-95 ${upvoteClass}" title="Upvote">
+              <span class="text-sm">🔼</span>
+              <span class="text-[11px] font-mono">${r.upvotes_count || 0}</span>
+            </button>
+            <button onclick="window.voteReport('${r.id}', 'down')" class="flex items-center gap-1 transition-all hover:scale-110 active:scale-95 ${downvoteClass}" title="Downvote">
+              <span class="text-sm">🔽</span>
+              <span class="text-[11px] font-mono">${r.downvotes_count || 0}</span>
+            </button>
+          </div>
+          ${deleteHtml}
+        </div>
+      `;
 
       const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: IncidentIcon })
         .bindPopup(`
-          <strong>${r.type}</strong><br/>
-          ${r.description}<br/>
-          <small>Severity: ${r.severity_level}</small>
-          ${deleteHtml}
-        `)
+          <div class="min-w-[150px]">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <strong class="text-indigo-300 capitalize">${r.type}</strong>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 border border-slate-700 ${
+                r.severity_level === 'high' ? 'text-red-400 border-red-900/50' : 
+                r.severity_level === 'medium' ? 'text-orange-400 border-orange-900/50' : 'text-emerald-400 border-emerald-900/50'
+              }">${r.severity_level}</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">${r.description}</p>
+            ${voteHtml}
+          </div>
+        `, { className: 'custom-popup-glass' })
         .addTo(mapRef.current!);
       markersRef.current.push(marker);
     });
+
   };
 
   const updateIncidentsHeatmap = (points: any[]) => {
@@ -307,17 +346,26 @@ const MapDashboard: React.FC = () => {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
+      updateWhenIdle: false,
     }).addTo(map);
+
 
     // Attach fog-of-war canvas layer
     const cleanupFog = createFogLayer(map);
 
-    map.on('moveend', () => fetchMapData(map.getBounds()));
+    // Initial fetch for the entire Iba area
     mapRef.current = map;
-    fetchMapData(map.getBounds());
+    fetchMapData();
 
-    socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchMapData(map.getBounds()));
-    socket.on(SOCKET_EVENTS.HEATMAP_UPDATED, () => fetchMapData(map.getBounds()));
+
+    socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchMapData());
+    socket.on(SOCKET_EVENTS.HEATMAP_UPDATED, () => fetchMapData());
+
+    // Force size recalculation to ensure the map fills the container
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
 
     return () => {
       cleanupFog();
@@ -335,19 +383,34 @@ const MapDashboard: React.FC = () => {
         await apiClient.delete(`/reports/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        fetchMapData(mapRef.current!.getBounds());
+        fetchMapData();
       } catch (err: any) {
         console.error('Delete failed:', err.response?.data || err);
         alert('Failed to delete report.');
       }
     };
+    (window as any).voteReport = async (id: string, type: string) => {
+      if (!token) {
+        alert('Please login to vote.');
+        return;
+      }
+      try {
+        await apiClient.post(`/reports/${id}/vote`, { type }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchMapData();
+      } catch (err: any) {
+        console.error('Vote failed:', err.response?.data || err);
+      }
+    };
+
     (window as any).deleteRating = async (id: string) => {
       if (!confirm('Are you sure you want to delete this rating?')) return;
       try {
         await apiClient.delete(`/streets/ratings/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        fetchMapData(mapRef.current!.getBounds());
+        fetchMapData();
       } catch (err: any) {
         console.error('Delete failed:', err.response?.data || err);
         alert('Failed to delete rating.');
@@ -356,10 +419,54 @@ const MapDashboard: React.FC = () => {
     return () => {
       delete (window as any).deleteReport;
       delete (window as any).deleteRating;
+      delete (window as any).voteReport;
     };
+
   }, [token]);
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    try {
+      const q = `${searchQuery}, Iba, Zambales`;
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const latNum = parseFloat(lat);
+        const lonNum = parseFloat(lon);
+
+        if (mapRef.current) {
+          mapRef.current.flyTo([latNum, lonNum], 16, {
+            duration: 1.5,
+            easeLinearity: 0.25
+          });
+
+          const highlight = L.circle([latNum, lonNum], {
+            radius: 50,
+            color: '#4f46e5',
+            fillColor: '#818cf8',
+            fillOpacity: 0.4,
+            weight: 2
+          }).addTo(mapRef.current);
+          
+          setTimeout(() => highlight.remove(), 3000);
+        }
+      } else {
+        alert('Location not found in Iba.');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const [showReportForm, setShowReportForm] = useState(false);
+
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
@@ -385,34 +492,69 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[600px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900">
+    <div className="relative w-full h-[750px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900">
+
       <div ref={mapContainerRef} className="w-full h-full" />
 
       {selectionMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white px-6 py-2 rounded-full font-bold animate-bounce shadow-2xl">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white px-6 py-2 rounded-full font-bold animate-bounce shadow-2xl backdrop-blur-md">
           📍 Click on the map to select location
         </div>
       )}
 
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4">
-        <div className="bg-slate-900/90 p-4 rounded-lg text-white border border-slate-700 backdrop-blur-sm shadow-xl">
-          <h3 className="font-bold mb-2 text-indigo-400">Live Safety Map</h3>
-          {loading && <div className="animate-pulse text-xs text-slate-400">Updating data...</div>}
-          {error && <div className="text-xs text-red-400 font-medium">{error}</div>}
-          <div className="mt-3 space-y-1 text-xs border-t border-slate-700 pt-2">
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-400">Incidents:</span>
-              <span className="font-mono text-indigo-300 font-bold">{stats.reports}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-400">Heatmap pts:</span>
-              <span className="font-mono text-orange-300 font-bold">{stats.heatmapPoints}</span>
-            </div>
-          </div>
+      {/* Top Center: Search Box */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[320px] px-4 hidden md:block">
+        {!selectionMode && (
+          <form onSubmit={handleSearch} className="relative group">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search local streets/landmarks..."
+              className="w-full glass-panel bg-slate-900/60 text-white pl-4 pr-12 py-2.5 rounded-full text-xs outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all border-white/10 group-hover:border-white/20 shadow-2xl"
+            />
+            <button
+              type="submit"
+              disabled={isSearching}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+            >
+              {isSearching ? <span className="animate-spin text-[10px]">⌛</span> : <span>🔍</span>}
+            </button>
+          </form>
+        )}
+      </div>
 
-          {/* Heatmap Layer Toggles */}
-          <div className="mt-3 pt-2 border-t border-slate-700 space-y-2">
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Heatmap Layers</p>
+
+      {/* Top Left: Title & Stats (Glassmorphic) */}
+      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
+        <div className="glass-panel p-4 rounded-xl text-white shadow-xl min-w-[180px]">
+          <h3 className="font-extrabold text-sm mb-1 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">SafePath Iba</h3>
+          <div className="flex flex-col gap-1">
+             <div className="flex justify-between items-center text-[10px]">
+               <span className="text-slate-400">Reports</span>
+               <span className="font-mono text-indigo-300 font-bold">{stats.reports}</span>
+             </div>
+             <div className="flex justify-between items-center text-[10px]">
+               <span className="text-slate-400">Heat Points</span>
+               <span className="font-mono text-orange-300 font-bold">{stats.heatmapPoints}</span>
+             </div>
+             {loading && <div className="animate-pulse text-[9px] text-blue-400 mt-1">Fetching live data...</div>}
+             {error && <div className="text-[9px] text-red-400 mt-1">{error}</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Left: Heatmap Legend (Static Scale) */}
+      <div className="absolute bottom-6 left-6 z-[1000] hidden md:block">
+        <HeatmapLegend />
+      </div>
+
+      {/* Top Right: Layer Toggles & Action Buttons */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4 w-[220px]">
+        {/* Heatmap Layer Toggles (Glassmorphic) */}
+        <div className="glass-panel p-4 rounded-xl text-white shadow-xl flex flex-col gap-3">
+          <h3 className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Heatmap Layers</h3>
+          <div className="flex flex-col gap-2">
             <button
               onClick={() => {
                 const next = !showIncidentsHeat;
@@ -423,21 +565,20 @@ const MapDashboard: React.FC = () => {
                     incidentsHeatLayerRef.current.remove(); 
                     incidentsHeatLayerRef.current = null; 
                   }
-                  updateMarkers(reports); // Show pins when heatmap off
-                }
-                else if (next && mapRef.current) {
-                  updateMarkers(reports); // Hide pins when heatmap on
-                  fetchMapData(mapRef.current.getBounds());
+                  updateMarkers(reports);
+                } else if (mapRef.current) {
+                  updateMarkers(reports);
+                  fetchMapData();
                 }
               }}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                showIncidentsHeat
-                  ? 'bg-orange-500/20 border border-orange-500/60 text-orange-300'
-                  : 'bg-slate-800 border border-slate-600 text-slate-500'
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                showIncidentsHeat 
+                  ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' 
+                  : 'bg-slate-800/50 border-white/5 text-slate-500 hover:text-slate-400'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-400' : 'bg-slate-600'}`} />
-              🔥 Incidents Heat
+              <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
+              ⚠️ Incident Heat
             </button>
             <button
               onClick={() => {
@@ -449,50 +590,53 @@ const MapDashboard: React.FC = () => {
                     ratingsHeatLayerRef.current.remove(); 
                     ratingsHeatLayerRef.current = null; 
                   }
-                  updateRatingMarkers(ratings); // Show pins when heatmap off
-                }
-                else if (next && mapRef.current) {
-                  updateRatingMarkers(ratings); // Hide pins when heatmap on
-                  fetchMapData(mapRef.current.getBounds());
+                  updateRatingMarkers(ratings);
+                } else if (mapRef.current) {
+                  updateRatingMarkers(ratings);
+                  fetchMapData();
                 }
               }}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                showRatingsHeat
-                  ? 'bg-violet-500/20 border border-violet-500/60 text-violet-300'
-                  : 'bg-slate-800 border border-slate-600 text-slate-500'
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                showRatingsHeat 
+                  ? 'bg-violet-500/20 border-violet-500/50 text-violet-400' 
+                  : 'bg-slate-800/50 border-white/5 text-slate-500 hover:text-slate-400'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-400' : 'bg-slate-600'}`} />
-              🛡️ Street Ratings Heat
+              <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
+              🛡️ Safety Heat
             </button>
           </div>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex flex-col gap-2">
           <button
             onClick={() => setSelectionMode('report')}
-            className={`w-full ${selectionMode === 'report' ? 'bg-orange-500' : 'bg-indigo-600 hover:bg-indigo-500'} text-white px-4 py-3 rounded-lg text-sm font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2`}
+            className={`w-full ${selectionMode === 'report' ? 'bg-orange-500 shadow-orange-500/40' : 'bg-indigo-600/90 hover:bg-indigo-500 shadow-indigo-500/30'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border border-white/10`}
           >
             <span>⚠️</span> {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
           </button>
           <button
             onClick={() => setSelectionMode('rating')}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-orange-500' : 'bg-slate-800 hover:bg-slate-700'} text-white px-4 py-3 rounded-lg text-sm font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 border border-slate-700 flex items-center justify-center gap-2`}
+            className={`w-full ${selectionMode === 'rating' ? 'bg-orange-500 shadow-orange-500/40' : 'glass-panel hover:bg-slate-800/80'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 border border-white/10`}
           >
-            <span>⭐</span> {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Street Safety'}
+            <span>⭐</span> {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
           </button>
         </div>
       </div>
 
+
+
       {showReportForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+
           <div className="max-w-md w-full">
             <ReportForm
               location={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
               onSuccess={() => {
                 setShowReportForm(false);
                 setSelectedLocation(null);
-                fetchMapData(mapRef.current!.getBounds());
+                fetchMapData();
               }}
               onCancel={() => {
                 setShowReportForm(false);
@@ -503,14 +647,15 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
       {showRatingForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+
           <div className="max-w-md w-full">
             <StreetRatingForm
               location={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
               onSuccess={() => {
                 setShowRatingForm(false);
                 setSelectedLocation(null);
-                fetchMapData(mapRef.current!.getBounds());
+                fetchMapData();
               }}
               onCancel={() => {
                 setShowRatingForm(false);

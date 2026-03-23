@@ -11,7 +11,9 @@ import { AuthController } from './controllers/auth.js';
 import { ReportController } from './controllers/reports.js';
 import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
+import { VoteController } from './controllers/votes.js';
 import { authMiddleware } from './middleware/auth.js';
+
 
 dotenv.config();
 
@@ -49,6 +51,8 @@ app.get(`${apiRoot}/reports`, (req, res) => ReportController.listReports(req, re
 app.get(`${apiRoot}/reports/:id`, (req, res) => ReportController.getReport(req, res));
 app.put(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.updateReport(req, res));
 app.delete(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.deleteReport(req, res));
+app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
+
 
 // Heatmap
 app.get(`${apiRoot}/heatmap/data`, (req, res) => HeatmapController.getHeatmapData(req, res));

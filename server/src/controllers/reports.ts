@@ -81,7 +81,9 @@ export class ReportController {
         daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
       };
 
-      const reports = await ReportService.listReports(filters, paginationData.page, paginationData.limit);
+      const currentUserId = (req as any).user?.id;
+      const reports = await ReportService.listReports({ ...filters, currentUserId }, paginationData.page, paginationData.limit);
+
 
       res.json({
         success: true,
@@ -108,7 +110,9 @@ export class ReportController {
    */
   static async getReport(req: Request, res: Response): Promise<void> {
     try {
-      const report = await ReportService.getReportById(req.params.id);
+      const currentUserId = (req as any).user?.id;
+      const report = await ReportService.getReportById(req.params.id, currentUserId);
+
       if (!report) {
         res.status(404).json({
           success: false,

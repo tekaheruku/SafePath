@@ -99,7 +99,8 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
   };
 
   return (
-    <div className="p-6 bg-slate-900 rounded-xl border border-slate-700 space-y-5 shadow-2xl max-w-md">
+    <div className="p-6 glass-panel rounded-xl space-y-5 shadow-2xl max-w-md min-w-[320px]">
+
       <div>
         <h2 className="text-xl font-bold text-white">Rate Street Safety</h2>
         <p className="text-xs text-slate-400 mt-1">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>

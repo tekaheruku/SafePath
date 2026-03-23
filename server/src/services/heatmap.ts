@@ -18,8 +18,8 @@ export class HeatmapService {
     if (type === 'incidents') {
       query = `
         SELECT 
-          ST_X(ST_SnapToGrid(location::geometry, 0.001)) as lng,
-          ST_Y(ST_SnapToGrid(location::geometry, 0.001)) as lat,
+          ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
+          ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
           AVG(
             CASE severity_level 
               WHEN 'low' THEN 1 
@@ -43,8 +43,8 @@ export class HeatmapService {
     } else if (type === 'ratings') {
       query = `
         SELECT 
-          ST_X(ST_SnapToGrid(location::geometry, 0.001)) as lng,
-          ST_Y(ST_SnapToGrid(location::geometry, 0.001)) as lat,
+          ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
+          ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
           (5.5 - AVG(overall_safety_score)) * 0.5 * COUNT(*) as intensity_raw,
           COUNT(*) as rating_count
         FROM street_ratings
@@ -56,8 +56,8 @@ export class HeatmapService {
       query = `
         WITH GridStats AS (
           SELECT 
-            ST_X(ST_SnapToGrid(location::geometry, 0.001)) as lng,
-            ST_Y(ST_SnapToGrid(location::geometry, 0.001)) as lat,
+            ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
+            ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
             AVG(
               CASE severity_level 
                 WHEN 'low' THEN 1 
@@ -80,8 +80,8 @@ export class HeatmapService {
         ),
         StreetStats AS (
           SELECT 
-            ST_X(ST_SnapToGrid(location::geometry, 0.001)) as lng,
-            ST_Y(ST_SnapToGrid(location::geometry, 0.001)) as lat,
+            ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
+            ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
             AVG(overall_safety_score) as avg_safety_score,
             COUNT(*) as rating_count
           FROM street_ratings

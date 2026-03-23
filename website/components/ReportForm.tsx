@@ -69,7 +69,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
   };
 
   return (
-    <div className="p-6 bg-slate-900 rounded-xl border border-slate-800 space-y-4 shadow-2xl">
+    <div className="p-6 glass-panel rounded-xl space-y-4 shadow-2xl min-w-[320px]">
+
       <h2 className="text-xl font-bold text-white">Report Incident</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1">

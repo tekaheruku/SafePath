@@ -45,6 +45,8 @@ export interface TokenPayload {
 }
 
 export type SeverityLevel = 'low' | 'medium' | 'high';
+export type VoteType = 'up' | 'down';
+
 
 export interface Location {
     latitude: number;
@@ -59,9 +61,13 @@ export interface Report {
     location: Location;
     severity_level: SeverityLevel;
     sentiment_score: number;
+    upvotes_count: number;
+    downvotes_count: number;
+    user_vote?: VoteType;
     created_at: string;
     updated_at: string;
 }
+
 
 export interface CreateReportRequest {
     title: string;
@@ -94,6 +100,15 @@ export interface ReportComment {
     created_at: string;
     updated_at: string;
 }
+
+export interface ReportVote {
+    id: string;
+    report_id: string;
+    user_id: string;
+    vote_type: VoteType;
+    created_at: string;
+}
+
 
 export interface CreateCommentRequest {
     comment: string;

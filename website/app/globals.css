@@ -22,6 +22,28 @@ body {
   background: #0f172a !important;
 }
 
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7) !important;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.custom-popup-glass .leaflet-popup-content-wrapper {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc !important;
+  border-radius: 12px !important;
+  padding: 4px;
+}
+
+.custom-popup-glass .leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(12px);
+}
+
 .leaflet-popup-content-wrapper {
   background: #1e293b !important;
   color: #f8fafc !important;
@@ -32,3 +54,4 @@ body {
 .leaflet-popup-tip {
   background: #1e293b !important;
 }
+
