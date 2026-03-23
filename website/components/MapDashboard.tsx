@@ -51,6 +51,9 @@ function createFogLayer(map: L.Map): () => void {
   `;
   map.getPane('overlayPane')?.appendChild(svg);
 
+  // Use a dedicated SVG renderer with high padding to reduce repositioning frequency/lag
+  const fogRenderer = L.svg({ padding: 1.0 });
+
   // Define World Bounds for the inverted polygon
   const WORLD_BOUNDS: [number, number][] = [
     [90, -180], [90, 180], [-90, 180], [-90, -180]
@@ -64,7 +67,8 @@ function createFogLayer(map: L.Map): () => void {
     color: 'rgba(100, 160, 255, 0.8)', // Glowing edge color
     className: 'fog-of-war-polygon',
     interactive: false,
-    pane: 'overlayPane'
+    pane: 'overlayPane',
+    renderer: fogRenderer
   }).addTo(map);
 
   // Add a dedicated glowing edge layer on top
@@ -74,7 +78,8 @@ function createFogLayer(map: L.Map): () => void {
     color: '#64a0ff',
     className: 'fog-glow-edge',
     interactive: false,
-    pane: 'overlayPane'
+    pane: 'overlayPane',
+    renderer: fogRenderer
   }).addTo(map);
 
   // Apply the SVG filter and backdrop-filter via CSS
@@ -84,7 +89,7 @@ function createFogLayer(map: L.Map): () => void {
       backdrop-filter: grayscale(1) brightness(0.35);
       -webkit-backdrop-filter: grayscale(1) brightness(0.35);
       pointer-events: none !important;
-      will-change: transform, backdrop-filter;
+      will-change: transform, opacity;
       transform: translateZ(0);
     }
     .fog-glow-edge {
