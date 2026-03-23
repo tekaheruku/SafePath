@@ -20,7 +20,7 @@ const HeatmapLegend: React.FC<HeatmapLegendProps> = () => {
               Incidents
             </span>
           </div>
-          <div className="h-1 w-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-red-700 opacity-80" />
+          <div className="h-1 w-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 opacity-80" />
           <div className="flex justify-between text-[7px] text-slate-500 uppercase tracking-tighter font-mono">
             <span>Low</span>
             <span>Critical</span>

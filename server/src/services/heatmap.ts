@@ -17,28 +17,35 @@ export class HeatmapService {
 
     if (type === 'incidents') {
       query = `
+        WITH GridStats AS (
+          SELECT 
+            ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
+            ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
+            AVG(
+              CASE severity_level 
+                WHEN 'low' THEN 1 
+                WHEN 'medium' THEN 3 
+                WHEN 'high' THEN 5 
+                ELSE 1 
+              END
+            ) as avg_severity,
+            COUNT(*) as report_count,
+            AVG(
+              1.0 - (
+                EXTRACT(EPOCH FROM (NOW() - created_at)) /
+                EXTRACT(EPOCH FROM (($5::text || ' days')::interval))
+              )
+            ) as recency_weight
+          FROM reports
+          WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            AND created_at >= NOW() - ($5::text || ' days')::interval
+          GROUP BY lng, lat
+        )
         SELECT 
-          ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
-          ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-          AVG(
-            CASE severity_level 
-              WHEN 'low' THEN 1 
-              WHEN 'medium' THEN 3 
-              WHEN 'high' THEN 5 
-              ELSE 1 
-            END
-          ) as avg_severity,
-          COUNT(*) as report_count,
-          AVG(
-            1.0 - (
-              EXTRACT(EPOCH FROM (NOW() - created_at)) /
-              EXTRACT(EPOCH FROM (($5::text || ' days')::interval))
-            )
-          ) as recency_weight
-        FROM reports
-        WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-          AND created_at >= NOW() - ($5::text || ' days')::interval
-        GROUP BY lng, lat
+          lng, 
+          lat,
+          (avg_severity / 5.0) * (0.5 + 0.5 * recency_weight) * (1.0 + LOG(report_count)) as intensity
+        FROM GridStats
       `;
     } else if (type === 'ratings') {
       query = `

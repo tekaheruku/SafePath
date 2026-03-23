@@ -275,7 +275,7 @@ const MapDashboard: React.FC = () => {
     if (!showIncidentsHeatRef.current || points.length === 0) return;
     incidentsHeatLayerRef.current = (L as any).heatLayer(
       points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
-      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.3: '#f97316', 0.6: '#ef4444', 1.0: '#dc2626' } }
+      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.2: '#fbbf24', 0.5: '#f97316', 0.8: '#ef4444', 1.0: '#dc2626' } }
     ).addTo(mapRef.current);
   };
 
@@ -496,16 +496,16 @@ const MapDashboard: React.FC = () => {
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
-      {selectionMode && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-blue-600/90 text-white px-6 py-2 rounded-full font-bold animate-bounce shadow-2xl backdrop-blur-md">
-          📍 Click on the map to select location
-        </div>
-      )}
 
-      {/* Top Center: Search Box */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[320px] px-4 hidden md:block">
-        {!selectionMode && (
-          <form onSubmit={handleSearch} className="relative group">
+
+      {/* Top Center: Search Box & Selection Banner */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[320px] px-4">
+        {selectionMode ? (
+          <div className="w-full bg-blue-600/90 text-white px-6 py-2.5 rounded-full font-bold shadow-2xl backdrop-blur-md text-center text-xs border border-white/20 whitespace-nowrap">
+            📍 Click on the map to select location
+          </div>
+        ) : (
+          <form onSubmit={handleSearch} className="relative group hidden md:block">
             <input
               type="text"
               value={searchQuery}
@@ -611,13 +611,13 @@ const MapDashboard: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex flex-col gap-2">
           <button
-            onClick={() => setSelectionMode('report')}
+            onClick={() => setSelectionMode(selectionMode === 'report' ? null : 'report')}
             className={`w-full ${selectionMode === 'report' ? 'bg-orange-500 shadow-orange-500/40' : 'bg-indigo-600/90 hover:bg-indigo-500 shadow-indigo-500/30'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border border-white/10`}
           >
             <span>⚠️</span> {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
           </button>
           <button
-            onClick={() => setSelectionMode('rating')}
+            onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
             className={`w-full ${selectionMode === 'rating' ? 'bg-orange-500 shadow-orange-500/40' : 'glass-panel hover:bg-slate-800/80'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 border border-white/10`}
           >
             <span>⭐</span> {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
