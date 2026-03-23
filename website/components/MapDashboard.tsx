@@ -104,17 +104,45 @@ const MapDashboard: React.FC = () => {
   const incidentsHeatLayerRef = useRef<any>(null);
   const ratingsHeatLayerRef = useRef<any>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const ratingMarkersRef = useRef<L.Marker[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ reports: 0, heatmapPoints: 0 });
   const [showIncidentsHeat, setShowIncidentsHeat] = useState(true);
   const [showRatingsHeat, setShowRatingsHeat] = useState(true);
+  const [reports, setReports] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<any[]>([]);
   const { user, token } = useAuth();
   const searchParams = useSearchParams();
   // Keep refs in sync so closures inside fetchMapData always read current visibility
   const showIncidentsHeatRef = useRef(true);
   const showRatingsHeatRef = useRef(true);
+
+  // Custom Pin Icons
+  const IncidentIcon = L.divIcon({
+    className: 'custom-pin-incident',
+    html: `
+      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#f97316"/>
+        <circle cx="15" cy="15" r="5" fill="white"/>
+      </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+    popupAnchor: [0, -40]
+  });
+
+  const RatingIcon = L.divIcon({
+    className: 'custom-pin-rating',
+    html: `
+      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#3b82f6"/>
+        <circle cx="15" cy="15" r="5" fill="white"/>
+      </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+    popupAnchor: [0, -40]
+  });
 
   const fetchMapData = async (bounds: L.LatLngBounds) => {
     setLoading(true);
@@ -128,15 +156,17 @@ const MapDashboard: React.FC = () => {
       };
 
       // Use allSettled so one failing call doesn't kill the entire map load
-      const [reportsResult, incidentHeatResult, ratingHeatResult] = await Promise.allSettled([
+      const [reportsResult, incidentHeatResult, ratingHeatResult, ratingsResult] = await Promise.allSettled([
         apiClient.get('/reports', { params: { ...b, page: 1, limit: 100 } }),
         apiClient.get('/heatmap/data', { params: { ...b, type: 'incidents' } }),
         apiClient.get('/heatmap/data', { params: { ...b, type: 'ratings' } }),
+        apiClient.get('/streets/ratings', { params: { ...b, page: 1, limit: 100 } }),
       ]);
 
       let reports: any[] = [];
       let incidentPoints: any[] = [];
       let ratingPoints: any[] = [];
+      let ratings: any[] = [];
 
       if (reportsResult.status === 'fulfilled') {
         reports = reportsResult.value.data.data.reports || [];
@@ -153,9 +183,17 @@ const MapDashboard: React.FC = () => {
       } else {
         console.warn('Rating heatmap fetch failed:', ratingHeatResult.reason);
       }
+      if (ratingsResult.status === 'fulfilled') {
+        ratings = ratingsResult.value.data.data.ratings || [];
+      } else {
+        console.warn('Ratings fetch failed:', ratingsResult.reason);
+      }
 
       setStats({ reports: reports.length, heatmapPoints: incidentPoints.length + ratingPoints.length });
+      setReports(reports);
+      setRatings(ratings);
       updateMarkers(reports);
+      updateRatingMarkers(ratings);
       updateIncidentsHeatmap(incidentPoints);
       updateRatingsHeatmap(ratingPoints);
     } catch (err: any) {
@@ -171,13 +209,16 @@ const MapDashboard: React.FC = () => {
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
+    // Hide pins if heatmap is toggled on (Convert to Heatmap feature)
+    if (showIncidentsHeatRef.current) return;
+
     reports.forEach(r => {
       const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
       const deleteHtml = canDelete 
         ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-xs text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
         : '';
 
-      const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]])
+      const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: IncidentIcon })
         .bindPopup(`
           <strong>${r.type}</strong><br/>
           ${r.description}<br/>
@@ -197,6 +238,37 @@ const MapDashboard: React.FC = () => {
       points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
       { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.3: '#f97316', 0.6: '#ef4444', 1.0: '#dc2626' } }
     ).addTo(mapRef.current);
+  };
+
+  const updateRatingMarkers = (ratings: any[]) => {
+    if (!mapRef.current) return;
+    ratingMarkersRef.current.forEach(m => m.remove());
+    ratingMarkersRef.current = [];
+
+    // Hide pins if heatmap is toggled on (Convert to Heatmap feature)
+    if (showRatingsHeatRef.current) return;
+
+    ratings.forEach(r => {
+      const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
+      const deleteHtml = canDelete 
+        ? `<br/><button onclick="window.deleteRating('${r.id}')" class="mt-2 text-xs text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Rating</button>` 
+        : '';
+
+      const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: RatingIcon })
+        .bindPopup(`
+          <strong>Street Safety Rating</strong><br/>
+          Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span><br/>
+          ${r.comment ? `<p class="italic text-xs mt-1">"${r.comment}"</p>` : ''}
+          <div class="mt-2 text-[10px] space-y-0.5 text-slate-400">
+            <div>Lighting: ${r.lighting_score}/5</div>
+            <div>Pedestrian: ${r.pedestrian_safety_score}/5</div>
+            <div>Driver: ${r.driver_safety_score}/5</div>
+          </div>
+          ${deleteHtml}
+        `)
+        .addTo(mapRef.current!);
+      ratingMarkersRef.current.push(marker);
+    });
   };
 
   const updateRatingsHeatmap = (points: any[]) => {
@@ -263,13 +335,27 @@ const MapDashboard: React.FC = () => {
         await apiClient.delete(`/reports/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        fetchMapData(mapRef.current!.getBounds());
       } catch (err: any) {
         console.error('Delete failed:', err.response?.data || err);
         alert('Failed to delete report.');
       }
     };
+    (window as any).deleteRating = async (id: string) => {
+      if (!confirm('Are you sure you want to delete this rating?')) return;
+      try {
+        await apiClient.delete(`/streets/ratings/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchMapData(mapRef.current!.getBounds());
+      } catch (err: any) {
+        console.error('Delete failed:', err.response?.data || err);
+        alert('Failed to delete rating.');
+      }
+    };
     return () => {
       delete (window as any).deleteReport;
+      delete (window as any).deleteRating;
     };
   }, [token]);
 
@@ -332,8 +418,17 @@ const MapDashboard: React.FC = () => {
                 const next = !showIncidentsHeat;
                 setShowIncidentsHeat(next);
                 showIncidentsHeatRef.current = next;
-                if (!next && incidentsHeatLayerRef.current) { incidentsHeatLayerRef.current.remove(); incidentsHeatLayerRef.current = null; }
-                else if (next && mapRef.current) fetchMapData(mapRef.current.getBounds());
+                if (!next) {
+                  if (incidentsHeatLayerRef.current) {
+                    incidentsHeatLayerRef.current.remove(); 
+                    incidentsHeatLayerRef.current = null; 
+                  }
+                  updateMarkers(reports); // Show pins when heatmap off
+                }
+                else if (next && mapRef.current) {
+                  updateMarkers(reports); // Hide pins when heatmap on
+                  fetchMapData(mapRef.current.getBounds());
+                }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 showIncidentsHeat
@@ -349,8 +444,17 @@ const MapDashboard: React.FC = () => {
                 const next = !showRatingsHeat;
                 setShowRatingsHeat(next);
                 showRatingsHeatRef.current = next;
-                if (!next && ratingsHeatLayerRef.current) { ratingsHeatLayerRef.current.remove(); ratingsHeatLayerRef.current = null; }
-                else if (next && mapRef.current) fetchMapData(mapRef.current.getBounds());
+                if (!next) {
+                  if (ratingsHeatLayerRef.current) {
+                    ratingsHeatLayerRef.current.remove(); 
+                    ratingsHeatLayerRef.current = null; 
+                  }
+                  updateRatingMarkers(ratings); // Show pins when heatmap off
+                }
+                else if (next && mapRef.current) {
+                  updateRatingMarkers(ratings); // Hide pins when heatmap on
+                  fetchMapData(mapRef.current.getBounds());
+                }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 showRatingsHeat

@@ -55,6 +55,8 @@ app.get(`${apiRoot}/heatmap/data`, (req, res) => HeatmapController.getHeatmapDat
 
 // Streets/Ratings
 app.post(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.createRating(req, res));
+app.get(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.listRatings(req, res));
+app.delete(`${apiRoot}/streets/ratings/:id`, authMiddleware, (req, res) => StreetRatingController.deleteRating(req, res));
 
 const PORT = process.env.PORT || 3001;
 
