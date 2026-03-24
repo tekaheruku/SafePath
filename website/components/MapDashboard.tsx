@@ -422,7 +422,7 @@ const MapDashboard: React.FC = () => {
     const map = L.map(mapContainerRef.current, {
       center: [initialLat, initialLng],
       zoom: initialZoom,
-      minZoom: 11,
+      minZoom: 13,
       maxZoom: 18,
       maxBounds: IBA_BOUNDS,
       maxBoundsViscosity: 1.0,
@@ -525,39 +525,55 @@ const MapDashboard: React.FC = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
+  
     setIsSearching(true);
     try {
-      const q = `${searchQuery}, Iba, Zambales`;
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
-      const data = await response.json();
-
+      // Iba Bounding Box: [lon1, lat1, lon2, lat2] -> [west, north, east, south]
+      const viewbox = "119.92,15.41,120.18,15.30";
+      const baseParams = `format=json&viewbox=${viewbox}&bounded=1&limit=5&addressdetails=1`;
+      
+      // Step 1: Formal search with town/province
+      let q = `${searchQuery}, Iba, Zambales`;
+      let response = await fetch(`https://nominatim.openstreetmap.org/search?${baseParams}&q=${encodeURIComponent(q)}`);
+      let data = await response.json();
+  
+      // Step 2: Fallback to loose search if first attempt fails
+      if (!data || data.length === 0) {
+        q = searchQuery;
+        response = await fetch(`https://nominatim.openstreetmap.org/search?${baseParams}&q=${encodeURIComponent(q)}`);
+        data = await response.json();
+      }
+  
       if (data && data.length > 0) {
-        const { lat, lon } = data[0];
+        // Prefer building/poi results if multiple exist
+        const bestMatch = data.find((d: any) => d.class === 'building' || d.class === 'amenity' || d.type === 'building') || data[0];
+        
+        const { lat, lon } = bestMatch;
         const latNum = parseFloat(lat);
         const lonNum = parseFloat(lon);
-
+  
         if (mapRef.current) {
-          mapRef.current.flyTo([latNum, lonNum], 16, {
+          mapRef.current.flyTo([latNum, lonNum], 17, {
             duration: 1.5,
             easeLinearity: 0.25
           });
-
+  
           const highlight = L.circle([latNum, lonNum], {
-            radius: 50,
+            radius: 40,
             color: '#4f46e5',
             fillColor: '#818cf8',
             fillOpacity: 0.4,
             weight: 2
           }).addTo(mapRef.current);
           
-          setTimeout(() => highlight.remove(), 3000);
+          setTimeout(() => highlight.remove(), 4000);
         }
       } else {
-        alert('Location not found in Iba.');
+        alert(`Location "${searchQuery}" not found within Iba boundaries. Please try a more specific name or street.`);
       }
     } catch (err) {
       console.error('Search failed:', err);
+      alert('Search service currently unavailable. Please try again later.');
     } finally {
       setIsSearching(false);
     }
