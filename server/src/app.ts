@@ -58,7 +58,7 @@ app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteContro
 app.get(`${apiRoot}/heatmap/data`, (req, res) => HeatmapController.getHeatmapData(req, res));
 
 // Streets/Ratings
-app.post(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.createRating(req, res));
+app.post(`${apiRoot}/streets/ratings`, authMiddleware, (req, res) => StreetRatingController.createRating(req, res));
 app.get(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.listRatings(req, res));
 app.delete(`${apiRoot}/streets/ratings/:id`, authMiddleware, (req, res) => StreetRatingController.deleteRating(req, res));
 

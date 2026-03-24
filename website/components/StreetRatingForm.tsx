@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
+import { useAuth } from './AuthContext';
+import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 
 const ratingSchema = z.object({
   lighting_score: z.coerce.number().min(1).max(5).optional().nullable(),
@@ -68,6 +70,7 @@ function ScoreSlider({ label, fieldName, register, watch }: {
 
 const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess, onCancel }) => {
   const [rateLighting, setRateLighting] = useState(false);
+  const { token } = useAuth();
 
   const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<RatingFormValues>({
     resolver: zodResolver(ratingSchema),
@@ -82,6 +85,17 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
   });
 
   const onSubmit = async (data: RatingFormValues) => {
+    if (!token) {
+      alert('Please sign in to submit a rating.');
+      return;
+    }
+
+    // Boundary Check
+    if (!isPointInPolygon([data.latitude, data.longitude], IBA_POLYGON)) {
+      alert('Selected location is outside the supported area (Iba, Zambales).');
+      return;
+    }
+
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/streets/ratings`, {
         pedestrian_safety_score: data.pedestrian_safety_score,
@@ -90,6 +104,8 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
         lighting_score: rateLighting ? data.lighting_score : null,
         comment: data.comment,
         location: { latitude: data.latitude, longitude: data.longitude }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       onSuccess();
     } catch (err) {

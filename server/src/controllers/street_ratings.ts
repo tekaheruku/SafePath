@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { StreetRatingService } from '../services/street_rating.js';
 import { createStreetRatingSchema, paginationSchema, validateSync } from '@safepath/shared/validators';
+import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import { HeatmapService } from '../services/heatmap.js';
 import { SocketEventBroadcaster } from '../utils/socket-broadcaster.js';
 
@@ -13,8 +14,16 @@ export class StreetRatingController {
     try {
       const data = validateSync(createStreetRatingSchema, req.body) as any;
       
-      // userId is optional if anonymous ratings are allowed
+      // Boundary Check
+      if (!isPointInPolygon([data.location.latitude, data.location.longitude], IBA_POLYGON)) {
+        throw new Error('Location is outside the supported area (Iba, Zambales)');
+      }
+
+      // userId is mandatory
       const userId = (req as any).user?.id;
+      if (!userId) {
+        throw new Error('You must be logged in to submit a rating');
+      }
       
       const rating = await StreetRatingService.createRating(userId, data);
 

@@ -3,7 +3,7 @@ import Joi from 'joi';
 export const createReportSchema = Joi.object({
   type: Joi.string().required(),
   severity_level: Joi.string().valid('low', 'medium', 'high').required(),
-  description: Joi.string().required(),
+  description: Joi.string().pattern(/[a-zA-Z0-9]/).message('Description must contain at least one alphanumeric character').required(),
   location: Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
@@ -17,7 +17,7 @@ export const updateReportSchema = Joi.object({
 });
 
 export const createCommentSchema = Joi.object({
-  comment: Joi.string().required(),
+  comment: Joi.string().pattern(/[a-zA-Z0-9]/).message('Comment must contain at least one alphanumeric character').required(),
 });
 
 export const paginationSchema = Joi.object({
@@ -38,11 +38,22 @@ export const createStreetRatingSchema = Joi.object({
   pedestrian_safety_score: Joi.number().min(1).max(5).required(),
   driver_safety_score: Joi.number().min(1).max(5).required(),
   overall_safety_score: Joi.number().min(1).max(5).required(),
-  comment: Joi.string().allow('', null).optional(),
+  comment: Joi.string().pattern(/[a-zA-Z0-9]/).message('Comment must contain at least one alphanumeric character').allow('', null).optional(),
   location: Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
   }).required(),
+});
+
+export const registerSchema = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
+  password: Joi.string().min(8).required(),
+  name: Joi.string().min(2).required(),
+});
+
+export const loginSchema = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).required(),
+  password: Joi.string().required(),
 });
 
 export const validateSync = (schema: Joi.Schema, data: any) => {

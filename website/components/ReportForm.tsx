@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 
 const reportSchema = z.object({
   type: z.string().min(1, 'Type is required'),
@@ -45,6 +46,12 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
   const severityValue = Number(watch('severity_level')) || 3;
 
   const onSubmit = async (data: ReportFormValues) => {
+    // Boundary Check
+    if (!isPointInPolygon([data.latitude, data.longitude], IBA_POLYGON)) {
+      alert('Selected location is outside the supported area (Iba, Zambales).');
+      return;
+    }
+
     try {
       const mapSeverity = (val: number): string => {
         if (val <= 2) return 'low';

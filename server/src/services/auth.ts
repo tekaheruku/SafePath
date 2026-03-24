@@ -6,17 +6,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'safepath-secret-key-change-it';
 
 export class AuthService {
   static async login(email: string, password: string) {
-    console.log(`Login attempt for email: ${email}`);
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     if (!user) {
-      console.log(`User not found for email: ${email}`);
       throw new Error('Invalid email or password');
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    console.log(`Password match for ${email}: ${isMatch}`);
 
     if (!isMatch) {
       throw new Error('Invalid email or password');
@@ -29,6 +26,17 @@ export class AuthService {
 
   static async register(data: any) {
     const { email, password, name } = data;
+    
+    // Profanity Filter for Name (English & Tagalog)
+    const vulgarWords = [
+      'tanga', 'gago', 'puta', 'pota', 'putangina', 'pokpok', 'bayot', 'bakla', 'kupal', 'ulol', 'buwisit', 'pucha',
+      'fuck', 'shit', 'asshole', 'bitch', 'dick', 'pussy', 'bastard', 'cunt'
+    ]; 
+    const nameLower = name.toLowerCase();
+    if (vulgarWords.some(word => nameLower.includes(word))) {
+      throw new Error('Name contains inappropriate language');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const result = await pool.query(

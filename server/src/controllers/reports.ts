@@ -12,6 +12,7 @@ import {
   paginationSchema,
   validateSync,
 } from '@safepath/shared/validators';
+import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import { HeatmapService } from '../services/heatmap.js';
 import { SocketEventBroadcaster } from '../utils/socket-broadcaster.js';
 
@@ -23,6 +24,12 @@ export class ReportController {
   static async createReport(req: Request, res: Response): Promise<void> {
     try {
       const data = validateSync(createReportSchema, req.body);
+      
+      // Boundary Check
+      if (!isPointInPolygon([data.location.latitude, data.location.longitude], IBA_POLYGON)) {
+        throw new Error('Location is outside the supported area (Iba, Zambales)');
+      }
+
       const report = await ReportService.createReport(req.user.id, data);
 
       // Broadcast new report
