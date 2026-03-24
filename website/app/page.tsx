@@ -16,12 +16,6 @@ export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
 
-  React.useEffect(() => {
-    if (user && (user.role === 'superadmin' || user.role === 'lgu_admin')) {
-      router.push('/admin/accounts');
-    }
-  }, [user, router]);
-
   return (
     <div className="space-y-8">
       <header className="space-y-2">

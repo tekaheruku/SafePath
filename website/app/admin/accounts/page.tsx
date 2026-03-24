@@ -148,44 +148,56 @@ export default function AccountListPage() {
               <thead>
                 <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-semibold">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-4">
                        <span>Name</span>
-                       <div className="flex flex-col ml-2">
+                       <div className="flex items-center space-x-2">
                          <button 
                            onClick={(e) => { e.stopPropagation(); requestSort('first_name'); }} 
-                           className={`hover:text-white transition-colors text-[8px] ${sortConfig?.key === 'first_name' ? 'text-indigo-400' : ''}`}
+                           className={`flex items-center space-x-1 px-1.5 py-0.5 rounded border transition-all ${
+                             sortConfig?.key === 'first_name' 
+                               ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' 
+                               : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                           }`}
+                           title="Sort by First Name"
                          >
-                           FN {sortConfig?.key === 'first_name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+                           <span className="text-[10px]">FN</span>
+                           <span className="text-[10px]">{sortConfig?.key === 'first_name' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}</span>
                          </button>
                          <button 
                            onClick={(e) => { e.stopPropagation(); requestSort('last_name'); }} 
-                           className={`hover:text-white transition-colors text-[8px] ${sortConfig?.key === 'last_name' ? 'text-indigo-400' : ''}`}
+                           className={`flex items-center space-x-1 px-1.5 py-0.5 rounded border transition-all ${
+                             sortConfig?.key === 'last_name' 
+                               ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' 
+                               : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                           }`}
+                           title="Sort by Last Name"
                          >
-                           LN {sortConfig?.key === 'last_name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+                           <span className="text-[10px]">LN</span>
+                           <span className="text-[10px]">{sortConfig?.key === 'last_name' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}</span>
                          </button>
                        </div>
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-slate-800/50 transition-colors"
                     onClick={() => requestSort('role')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Role</span>
-                      {sortConfig?.key === 'role' && (
-                        <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
-                      )}
+                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'role' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                        {sortConfig?.key === 'role' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}
+                      </span>
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 font-semibold cursor-pointer hover:text-white transition-colors"
+                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-slate-800/50 transition-colors"
                     onClick={() => requestSort('created_at')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Created</span>
-                      {sortConfig?.key === 'created_at' && (
-                        <span>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
-                      )}
+                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'created_at' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                        {sortConfig?.key === 'created_at' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}
+                      </span>
                     </div>
                   </th>
                   <th className="px-6 py-4 font-semibold">Activity</th>
