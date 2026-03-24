@@ -8,11 +8,12 @@ import dotenv from 'dotenv';
 
 // Import controllers
 import { AuthController } from './controllers/auth.js';
+import { AdminController } from './controllers/admin.js';
 import { ReportController } from './controllers/reports.js';
 import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
 import { VoteController } from './controllers/votes.js';
-import { authMiddleware } from './middleware/auth.js';
+import { authMiddleware, roleMiddleware } from './middleware/auth.js';
 
 
 dotenv.config();
@@ -61,6 +62,12 @@ app.get(`${apiRoot}/heatmap/data`, (req, res) => HeatmapController.getHeatmapDat
 app.post(`${apiRoot}/streets/ratings`, authMiddleware, (req, res) => StreetRatingController.createRating(req, res));
 app.get(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.listRatings(req, res));
 app.delete(`${apiRoot}/streets/ratings/:id`, authMiddleware, (req, res) => StreetRatingController.deleteRating(req, res));
+
+// Admin
+app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.listUsers(req, res));
+app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.banUser(req, res));
+app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.unbanUser(req, res));
+app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
 
 const PORT = process.env.PORT || 3001;
 

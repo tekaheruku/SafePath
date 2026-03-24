@@ -18,3 +18,12 @@ export const authMiddleware = (req: any, res: Response, next: NextFunction) => {
     return res.status(401).json({ success: false, error: { message: 'Invalid or expired token' } });
   }
 };
+
+export const roleMiddleware = (roles: string[]) => {
+  return (req: any, res: Response, next: NextFunction) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, error: { message: 'Forbidden: Access denied' } });
+    }
+    next();
+  };
+};

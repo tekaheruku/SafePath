@@ -19,6 +19,11 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    if (user.banned_until && new Date(user.banned_until) > new Date()) {
+      const reason = user.ban_reason ? ` Reason: ${user.ban_reason}` : '';
+      throw new Error(`Your account has been banned.${reason}`);
+    }
+
     const token = this.generateToken(user);
     const { password: _, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };

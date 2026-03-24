@@ -15,7 +15,11 @@ export default function LoginPage() {
   
   useEffect(() => {
     if (user) {
-      router.push('/');
+      if (user.role === 'superadmin' || user.role === 'lgu_admin') {
+        router.push('/admin/accounts');
+      } else {
+        router.push('/');
+      }
     }
   }, [user, router]);
 
@@ -30,7 +34,12 @@ export default function LoginPage() {
       });
       const { token, user } = res.data.data;
       login(token, user);
-      router.push('/');
+      
+      if (user.role === 'superadmin' || user.role === 'lgu_admin') {
+        router.push('/admin/accounts');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Login failed');
     } finally {
