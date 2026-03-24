@@ -167,10 +167,10 @@ const MapDashboard: React.FC = () => {
 
   // Consume and clear URL parameters to support "reset on refresh"
   useEffect(() => {
-    if (searchParams.get('lat') || searchParams.get('lng')) {
+    if (searchParams.get('lat') || searchParams.get('lng') || searchParams.get('reportId') || searchParams.get('ratingId')) {
       const timeout = setTimeout(() => {
         router.replace('/');
-      }, 1000);
+      }, 1500); // Give a bit more time for the flyTo animation
       return () => clearTimeout(timeout);
     }
   }, [searchParams, router]);
@@ -352,7 +352,7 @@ const MapDashboard: React.FC = () => {
     
     incidentsHeatLayerRef.current = (L as any).heatLayer(
       points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
-      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.2: '#fbbf24', 0.5: '#f97316', 0.8: '#ef4444', 1.0: '#dc2626' } }
+      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.2: '#fde68a', 0.5: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444' } }
     ).addTo(mapRef.current);
   };
 
@@ -671,6 +671,8 @@ const MapDashboard: React.FC = () => {
                 const next = !showIncidentsHeat;
                 setIncidentsHeat(next);
                 showIncidentsHeatRef.current = next;
+                setSelectedReportId(null);
+                setSelectedRatingId(null);
                 if (!next) {
                   if (incidentsHeatLayerRef.current) {
                     incidentsHeatLayerRef.current.remove(); 
@@ -696,6 +698,8 @@ const MapDashboard: React.FC = () => {
                 const next = !showRatingsHeat;
                 setRatingsHeat(next);
                 showRatingsHeatRef.current = next;
+                setSelectedReportId(null);
+                setSelectedRatingId(null);
                 if (!next) {
                   if (ratingsHeatLayerRef.current) {
                     ratingsHeatLayerRef.current.remove(); 

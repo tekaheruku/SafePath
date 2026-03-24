@@ -11,7 +11,7 @@ const loginSchema = Joi.object({
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
-  name: Joi.string().required(),
+  name: Joi.string().trim().min(3).pattern(/^[a-zA-Z\s]+$/).required(),
 });
 
 export class AuthController {

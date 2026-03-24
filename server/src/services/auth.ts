@@ -29,24 +29,64 @@ export class AuthService {
     return { user: userWithoutPassword, token };
   }
 
+  private static normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      // Replace common leetspeak
+      .replace(/0/g, 'o')
+      .replace(/[1!|l]/g, 'i')
+      .replace(/3/g, 'e')
+      .replace(/[4@^]/g, 'a')
+      .replace(/[5$]/g, 's')
+      .replace(/[69]/g, 'g')
+      .replace(/[7+]/g, 't')
+      .replace(/8/g, 'b')
+      .replace(/2/g, 'z')
+      // Remove all non-alphabetic characters
+      .replace(/[^a-z]/g, '');
+  }
+
   static async register(data: any) {
     const { email, password, name } = data;
+    const trimmedName = name.trim();
+
+    if (!trimmedName || trimmedName.length < 3) {
+      throw new Error('Name must be at least 3 characters long and cannot be just whitespace.');
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      throw new Error('Name can only contain letters and spaces (no numbers or symbols).');
+    }
     
-    // Profanity Filter for Name (English & Tagalog)
+    // Expanded Profanity Filter (English, Tagalog, and Slurs)
     const vulgarWords = [
+      // Tagalog
       'tanga', 'gago', 'puta', 'pota', 'putangina', 'pokpok', 'bayot', 'bakla', 'kupal', 'ulol', 'buwisit', 'pucha',
-      'fuck', 'shit', 'asshole', 'bitch', 'dick', 'pussy', 'bastard', 'cunt'
+      'kantot', 'iyot', 'burat', 'pekpek', 'puke', 'dede', 'salsal', 'jakol', 'etits',
+      // English
+      'fuck', 'shit', 'asshole', 'bitch', 'dick', 'pussy', 'bastard', 'cunt', 'cock', 'faggot', 'whore', 'slut',
+      // Slurs (Aggressive n-word variations)
+      'nigger', 'nigga', 'nigur', 'nigor', 'niga', 'niggah', 'nigg3r', 'nigg4', 'n*gger', 'n.i.g.g.e.r',
+      'kike', 'chink', 'spic', 'negro', 'necro'
     ]; 
-    const nameLower = name.toLowerCase();
-    if (vulgarWords.some(word => nameLower.includes(word))) {
-      throw new Error('Name contains inappropriate language');
+
+    const nameLower = trimmedName.toLowerCase();
+    const nameNormalized = this.normalizeText(trimmedName);
+
+    const isVulgar = vulgarWords.some(word => 
+      nameLower.includes(word) || 
+      nameNormalized.includes(word)
+    );
+
+    if (isVulgar) {
+      throw new Error('Name contains inappropriate language. Please use a professional name.');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const result = await pool.query(
       'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email, hashedPassword, name, 'user']
+      [email, hashedPassword, trimmedName, 'user']
     );
     
     const user = result.rows[0];

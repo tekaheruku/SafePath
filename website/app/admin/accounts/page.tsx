@@ -19,7 +19,7 @@ interface User {
 }
 
 export default function AccountListPage() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,12 +34,14 @@ export default function AccountListPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) {
       router.push('/');
       return;
     }
     fetchUsers();
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -106,7 +108,7 @@ export default function AccountListPage() {
     return items;
   }, [users, search, sortConfig]);
 
-  if (!user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) return null;
+  if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) return null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8">

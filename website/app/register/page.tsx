@@ -25,6 +25,19 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length < 3) {
+      setError('Please enter your full name (at least 3 characters).');
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      setError('Name can only contain letters and spaces.');
+      setLoading(false);
+      return;
+    }
+
     // Basic email validation match with backend
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -33,11 +46,20 @@ export default function RegisterPage() {
       return;
     }
 
+    // Client-side profanity check (Basic)
+    const basicVulgarWords = ['fuck', 'shit', 'gago', 'tanga', 'nigger', 'nigga', 'puta', 'bitch'];
+    const nameCheck = trimmedName.toLowerCase().replace(/[^a-z]/g, '');
+    if (basicVulgarWords.some(word => nameCheck.includes(word))) {
+      setError('Please use a professional name. Offensive language is not allowed.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/register`, {
         email,
         password,
-        name,
+        name: trimmedName,
       });
       const { token, user } = res.data.data;
       login(token, user);
