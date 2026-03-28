@@ -10,9 +10,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bannedUntil, setBannedUntil] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>('');
   const router = useRouter();
   const { login, user } = useAuth();
-  
+
   useEffect(() => {
     if (user) {
       if (user.role === 'superadmin' || user.role === 'lgu_admin') {
@@ -23,10 +25,38 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (bannedUntil) {
+      const updateTimer = () => {
+        const now = new Date();
+        const end = new Date(bannedUntil);
+        const diff = end.getTime() - now.getTime();
+
+        if (diff <= 0) {
+          setBannedUntil(null);
+          setError('');
+          return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTimeLeft(`${hours}hrs ${minutes}m ${seconds}s`);
+      };
+
+      updateTimer();
+      timer = setInterval(updateTimer, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [bannedUntil]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setBannedUntil(null);
     try {
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/login`, {
         email,
@@ -41,7 +71,13 @@ export default function LoginPage() {
         router.push('/');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Login failed');
+      const errorData = err.response?.data?.error;
+      if (errorData?.bannedUntil) {
+        setBannedUntil(errorData.bannedUntil);
+        setError(errorData.message);
+      } else {
+        setError(errorData?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,8 +90,18 @@ export default function LoginPage() {
         <p className="text-slate-400 mb-8">Sign in to report and track incidents</p>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-6 text-sm">
-            {error}
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-xl mb-6 text-sm flex flex-col gap-2">
+            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[10px]">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              Access Denied
+            </div>
+            <p className="font-medium text-slate-200">{error}</p>
+            {bannedUntil && (
+              <div className="mt-2 pt-2 border-t border-red-500/20">
+                <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">Time Remaining</p>
+                <p className="text-2xl font-black text-white italic tabular-nums ">{timeLeft}</p>
+              </div>
+            )}
           </div>
         )}
 

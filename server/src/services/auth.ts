@@ -20,8 +20,11 @@ export class AuthService {
     }
 
     if (user.banned_until && new Date(user.banned_until) > new Date()) {
-      const reason = user.ban_reason ? ` Reason: ${user.ban_reason}` : '';
-      throw new Error(`Your account has been banned.${reason}`);
+      return { 
+        banned: true, 
+        bannedUntil: user.banned_until, 
+        banReason: user.ban_reason 
+      };
     }
 
     const token = this.generateToken(user);
