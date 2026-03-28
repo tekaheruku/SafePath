@@ -7,8 +7,8 @@
 pnpm install
 
 # Copy environment files
-cp packages/backend/.env.example packages/backend/.env
-cp packages/web/.env.example packages/web/.env
+cp server/.env.example server/.env
+cp website/.env.example website/.env
 ```
 
 ## 2️⃣ Start Services (2 minutes)
@@ -31,7 +31,7 @@ pnpm db:migrate
 
 ```bash
 # Terminal 3: Start Next.js dev server
-cd packages/web
+cd website
 pnpm dev
 ```
 
@@ -158,27 +158,27 @@ docker logs safepath-postgres
 **TypeScript errors?**
 ```bash
 # Rebuild shared types
-cd packages/shared && pnpm build
+cd shared && pnpm build
 
 # Clear Next.js cache
-rm -rf packages/web/.next
+rm -rf website/.next
 ```
 
 ## 📚 File Organization
 
 | Purpose | Location |
 |---------|----------|
-| Type definitions | `packages/shared/src/index.ts` |
-| API routes | `packages/backend/src/app.ts` |
-| Database config | `packages/backend/src/config/` |
-| Business logic | `packages/backend/src/services/` |
-| Request handlers | `packages/backend/src/controllers/` |
-| API utilities | `packages/backend/src/utils/` |
-| Web pages | `packages/web/app/` |
-| React components | `packages/web/components/` |
-| API client | `packages/web/lib/api-client.ts` |
-| Auth store | `packages/web/lib/auth.ts` |
-| Socket.io | `packages/web/lib/socket-client.ts` |
+| Type definitions | `shared/src/index.ts` |
+| API routes | `server/src/app.ts` |
+| Database config | `server/src/config/` |
+| Business logic | `server/src/services/` |
+| Request handlers | `server/src/controllers/` |
+| API utilities | `server/src/utils/` |
+| Web pages | `website/app/` |
+| React components | `website/components/` |
+| API client | `website/lib/api-client.ts` |
+| Auth store | `website/lib/auth.ts` |
+| Socket.io | `website/lib/socket-client.ts` |
 
 ## ✨ Mobile Integration Ready
 

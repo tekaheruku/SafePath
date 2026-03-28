@@ -36,10 +36,10 @@ SafePath is built as a **monorepo** containing:
 2. **Setup environment variables**
    ```bash
    # Backend
-   cp packages/backend/.env.example packages/backend/.env
+   cp server/.env.example server/.env
 
    # Frontend
-   cp packages/web/.env.example packages/web/.env
+   cp website/.env.example website/.env
    ```
 
 3. **Start services with Docker**
@@ -59,7 +59,7 @@ SafePath is built as a **monorepo** containing:
 
 5. **Start frontend development server**
    ```bash
-   cd packages/web
+   cd website
    pnpm dev
    ```
    Frontend will be available at `http://localhost:3000`
@@ -70,34 +70,33 @@ SafePath is built as a **monorepo** containing:
 
 ```
 SafePath/
-├── packages/
-│   ├── backend/              # Node.js/Express API
-│   │   ├── src/
-│   │   │   ├── app.ts       # Express server setup
-│   │   │   ├── config/      # Configuration files
-│   │   │   ├── controllers/ # Request handlers
-│   │   │   ├── middlewares/ # Auth, validation, error handling
-│   │   │   ├── models/      # Database queries
-│   │   │   ├── services/    # Business logic
-│   │   │   ├── utils/       # JWT, sentiment analysis, GIS helpers
-│   │   │   └── socket/      # Socket.io event handlers
-│   │   └── migrations/      # Database migrations
-│   │
-│   ├── web/                 # Next.js frontend
-│   │   ├── app/            # Next.js App Router
-│   │   │   ├── (auth)/     # Login/Register pages
-│   │   │   ├── dashboard/  # Main map view
-│   │   │   ├── incidents/  # Incident list
-│   │   │   ├── report/     # Create incident
-│   │   │   ├── admin/      # LGU admin dashboard
-│   │   │   └── my-reports/ # User's incidents
-│   │   ├── components/     # React components
-│   │   ├── lib/            # API client, auth, Socket.io
-│   │   └── store/          # Zustand state management
-│   │
-│   └── shared/              # Shared TypeScript types
-│       └── src/index.ts     # All shared interfaces
+├── server/              # Node.js/Express API
+│   ├── src/
+│   │   ├── app.ts       # Express server setup
+│   │   ├── config/      # Configuration files
+│   │   ├── controllers/ # Request handlers
+│   │   ├── middlewares/ # Auth, validation, error handling
+│   │   ├── models/      # Database queries
+│   │   ├── services/    # Business logic
+│   │   ├── utils/       # JWT, sentiment analysis, GIS helpers
+│   │   └── socket/      # Socket.io event handlers
+│   └── migrations/      # Database migrations
 │
+├── website/             # Next.js frontend
+│   ├── app/            # Next.js App Router
+│   │   ├── (auth)/     # Login/Register pages
+│   │   ├── dashboard/  # Main map view
+│   │   ├── incidents/  # Incident list
+│   │   ├── report/     # Create incident
+│   │   ├── admin/      # LGU admin dashboard
+│   │   └── my-reports/ # User's incidents
+│   ├── components/     # React components
+│   ├── lib/            # API client, auth, Socket.io
+│   └── store/          # Zustand state management
+│
+└── shared/              # Shared TypeScript types
+    └── src/index.ts     # All shared interfaces
+
 ├── docker-compose.yml       # Service definitions
 ├── package.json            # Monorepo workspace config
 └── tsconfig.json           # Root TypeScript config
@@ -170,11 +169,11 @@ docker-compose up
 # Already running via Docker
 
 # Terminal 3: Frontend
-cd packages/web
+cd website
 pnpm dev
 
 # Terminal 4: Shared types (rebuild on changes)
-cd packages/shared
+cd shared
 pnpm build --watch
 ```
 
@@ -222,7 +221,7 @@ pnpm format
 When the mobile app is ready to integrate:
 
 1. **Use the same API**: The mobile app consumes the exact same REST endpoints at `http://api.safepath.com/api/v1`
-2. **Shared types**: Import from `@safepath/shared` for TypeScript projects, or use generated OpenAPI specs
+2. **Shared types**: Import from `shared` for TypeScript projects, or use generated OpenAPI specs
 3. **JWT tokens**: Mobile app uses identical token storage and refresh logic
 4. **Socket.io**: Connect to the same WebSocket server using the same events
 5. **Database**: Mobile app queries the same PostgreSQL database
@@ -281,7 +280,7 @@ No backend refactoring needed—the architecture is ready for multi-platform exp
 ### Example: Docker Production
 
 ```bash
-docker build -t safepath-api packages/backend
+docker build -t safepath-api server
 docker run -e NODE_ENV=production \
   -e DB_HOST=db.example.com \
   -e JWT_SECRET_ACCESS=<prod_secret> \

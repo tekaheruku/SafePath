@@ -1,0 +1,63 @@
+[
+  {
+    "name": "Iba Town Plaza",
+    "type": "landmark",
+    "latitude": 15.3331,
+    "longitude": 119.9814,
+    "description": "The central plaza of Iba, Zambales."
+  },
+  {
+    "name": "Zambales Provincial Capitol",
+    "type": "government",
+    "latitude": 15.3328,
+    "longitude": 119.9800,
+    "description": "Seat of the provincial government."
+  },
+  {
+    "name": "President Ramon Magsaysay State University (PRMSU)",
+    "type": "university",
+    "latitude": 15.3305,
+    "longitude": 119.9765,
+    "description": "Main campus of PRMSU."
+  },
+  {
+    "name": "Iba Public Market",
+    "type": "market",
+    "latitude": 15.3315,
+    "longitude": 119.9835,
+    "description": "Major trading hub in Iba."
+  },
+  {
+    "name": "Saint Augustine Cathedral",
+    "type": "church",
+    "latitude": 15.3335,
+    "longitude": 119.9810,
+    "description": "Historic cathedral in the town center."
+  },
+  {
+    "name": "Iba Airport",
+    "type": "airport",
+    "latitude": 15.3285,
+    "longitude": 119.9675,
+    "description": "Local airport serving the area."
+  },
+  {
+    "name": "Iba Beach",
+    "type": "beach",
+    "latitude": 15.3265,
+    "longitude": 119.9625,
+    "description": "Popular public beach area."
+  },
+  {
+    "name": "Rizal Street",
+    "type": "street",
+    "latitude": 15.3325,
+    "longitude": 119.9810
+  },
+  {
+    "name": "Magsaysay Avenue",
+    "type": "street",
+    "latitude": 15.3310,
+    "longitude": 119.9780
+  }
+]
