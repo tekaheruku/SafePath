@@ -34,6 +34,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [isCustomYear, setIsCustomYear] = useState<boolean>(false);
 
   // Mode 2: Custom
   const [customFrom, setCustomFrom] = useState<string>(initialFrom || '');
@@ -49,6 +50,28 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
   const daysOfWeek = [
     'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
   ];
+
+  // Given a week number (1-5) and a day-of-week index (0=Sun … 6=Sat),
+  // return the actual Date that falls in that slot for the selected month/year.
+  // Returns null if the day falls outside the selected month.
+  const resolveDate = (week: number, dayIndex: number): Date | null => {
+    const monthStart = startOfMonth(new Date(selectedYear, selectedMonth));
+    const weekStart = addDays(monthStart, (week - 1) * 7);
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(weekStart, i);
+      if (d.getDay() === dayIndex) {
+        // Only return if the date is still within the selected month
+        if (d.getMonth() === selectedMonth && d.getFullYear() === selectedYear) {
+          return d;
+        }
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
 
   const handleApply = () => {
     if (mode === 'custom') {
@@ -167,6 +190,48 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
         <div className="p-5 max-h-[60vh] overflow-y-auto space-y-6">
           {mode === 'structured' ? (
             <div className="space-y-4">
+              {/* Year Picker */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Year</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={isCustomYear || !yearOptions.includes(selectedYear) ? 'custom' : selectedYear}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setIsCustomYear(true);
+                      } else {
+                        setIsCustomYear(false);
+                        setSelectedYear(parseInt(e.target.value));
+                        setSelectedWeek(null);
+                        setSelectedDay(null);
+                      }
+                    }}
+                    className="flex-1 bg-slate-800/50 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all cursor-pointer"
+                  >
+                    {yearOptions.map(yr => (
+                      <option className="bg-slate-800 text-slate-200" key={yr} value={yr}>{yr}</option>
+                    ))}
+                    <option className="bg-slate-800 text-slate-200" value="custom">Custom...</option>
+                  </select>
+                  {(isCustomYear || !yearOptions.includes(selectedYear)) && (
+                    <input
+                      type="number"
+                      value={selectedYear}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                          setSelectedYear(val);
+                          setSelectedWeek(null); // Optional: reset week/day on custom year typing
+                          setSelectedDay(null);
+                        }
+                      }}
+                      className="w-24 bg-slate-800/50 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all text-center"
+                      placeholder="Year"
+                    />
+                  )}
+                </div>
+              </div>
+
               {/* Month Picker */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Month</label>
@@ -218,20 +283,34 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
               {selectedWeek && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Specific Day (Optional)</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {daysOfWeek.map((day, index) => (
-                      <button
-                        key={day}
-                        onClick={() => setSelectedDay(selectedDay === index ? null : index)}
-                        className={`py-2 text-[10px] rounded-lg border transition-all ${
-                          selectedDay === index
-                            ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                            : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
-                        }`}
-                      >
-                        {day.slice(0, 3)}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {daysOfWeek.map((day, index) => {
+                      const resolved = resolveDate(selectedWeek, index);
+                      const dateStr = resolved
+                        ? resolved.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : null;
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => resolved ? setSelectedDay(selectedDay === index ? null : index) : undefined}
+                          disabled={!resolved}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all ${
+                            !resolved
+                              ? 'opacity-30 cursor-not-allowed bg-slate-800/10 border-slate-800 text-slate-600'
+                              : selectedDay === index
+                              ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
+                              : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                          }`}
+                        >
+                          <span className="text-[11px] font-semibold">{day.slice(0, 3)}</span>
+                          {dateStr && (
+                            <span className={`text-[10px] font-mono ${
+                              selectedDay === index ? 'text-indigo-400' : 'text-slate-500'
+                            }`}>{dateStr}</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

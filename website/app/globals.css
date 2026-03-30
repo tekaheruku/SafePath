@@ -55,3 +55,7 @@ body {
   background: #1e293b !important;
 }
 
+/* Hide scrollbar but keep scrolling functional */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
