@@ -17,20 +17,19 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+    <div className="space-y-4 pb-4">
+      <header className="space-y-1">
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
           SafePath Interactive Map
         </h1>
         {!user && (
-          <p className="text-slate-400 text-lg max-w-2xl">
+          <p className="text-slate-400 text-sm md:text-base max-w-2xl leading-tight">
             Visualizing community safety through real-time incident reports and detailed street ratings. 
-            Use the heatmap to identify areas with high concern.
           </p>
         )}
       </header>
 
-      <section className="bg-slate-900/50 rounded-2xl border border-slate-800 p-1 shadow-2xl backdrop-blur-sm">
+      <section className="bg-slate-900/50 rounded-2xl border border-slate-800 p-0.5 shadow-2xl backdrop-blur-sm">
         <MapDashboard />
       </section>
 

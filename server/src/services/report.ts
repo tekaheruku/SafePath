@@ -45,7 +45,11 @@ export class ReportService {
     }
 
     // Time filter
-    if (filters?.daysBack) {
+    if (filters?.startDate && filters?.endDate) {
+      whereClause += ` AND r.created_at BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      params.push(filters.startDate, filters.endDate);
+      paramIndex += 2;
+    } else if (filters?.daysBack) {
       whereClause += ` AND r.created_at >= NOW() - ($${paramIndex}::text || ' days')::interval`;
       params.push(filters.daysBack);
       paramIndex++;

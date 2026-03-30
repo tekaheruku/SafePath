@@ -15,6 +15,8 @@ export class HeatmapController {
         min_longitude: req.query.minLng ? parseFloat(req.query.minLng as string) : undefined,
         max_longitude: req.query.maxLng ? parseFloat(req.query.maxLng as string) : undefined,
         days_back: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
+        start_date: req.query.startDate as string,
+        end_date: req.query.endDate as string,
       });
 
       const heatmapData = await HeatmapService.generateHeatmapData({

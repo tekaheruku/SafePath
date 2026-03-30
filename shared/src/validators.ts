@@ -31,6 +31,13 @@ export const heatmapFilterSchema = Joi.object({
   min_longitude: Joi.number().required(),
   max_longitude: Joi.number().required(),
   days_back: Joi.number().min(1).max(365).default(30),
+  // Use plain .string() here — Joi's built-in .isoDate() only accepts
+  // bare date strings (YYYY-MM-DD) and silently rejects full ISO-8601
+  // datetimes like "2026-06-07T16:00:00.000Z", causing the dates to be
+  // stripped by validateSync and the query to fall back to days_back:30.
+  // PostgreSQL's ::timestamptz cast handles both formats natively.
+  start_date: Joi.string().optional(),
+  end_date: Joi.string().optional(),
 });
 
 export const createStreetRatingSchema = Joi.object({

@@ -13,6 +13,9 @@ import { useMapStore } from '../store/useMapStore';
 import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
+import { DateFilterModal } from './DateFilterModal';
+import { Calendar, FilterX, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -157,6 +160,16 @@ const MapDashboard: React.FC = () => {
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
+  const [dateRange, setDateRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
+  // Ref that always holds the latest dateRange so stale closures (socket handlers,
+  // window.deleteReport, etc.) always read the current filter value.
+  const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+
+  // Keep dateRangeRef in sync so that stale closures always read the current filter
+  useEffect(() => {
+    dateRangeRef.current = dateRange;
+  }, [dateRange]);
 
   useEffect(() => {
     const rid = searchParams.get('reportId');
@@ -175,12 +188,26 @@ const MapDashboard: React.FC = () => {
     }
   }, [searchParams, router]);
 
+  // Consolidated Rendering Effect: The single source of truth for map visual state
   useEffect(() => {
-    updateIncidentsHeatmap(incidentHeatPoints);
-    updateRatingsHeatmap(ratingHeatPoints);
+    if (!mapRef.current) return;
+    
+    // Clear and redraw everything in sync
     updateMarkers(reports);
     updateRatingMarkers(ratings);
-  }, [selectedReportId, selectedRatingId, showIncidentsHeat, showRatingsHeat]);
+    updateIncidentsHeatmap(incidentHeatPoints);
+    updateRatingsHeatmap(ratingHeatPoints);
+  }, [
+    reports, 
+    ratings, 
+    incidentHeatPoints, 
+    ratingHeatPoints, 
+    selectedReportId, 
+    selectedRatingId, 
+    showIncidentsHeat, 
+    showRatingsHeat, 
+    dateRange
+  ]);
 
   useEffect(() => {
     if (selectionMode) {
@@ -217,8 +244,20 @@ const MapDashboard: React.FC = () => {
   });
 
   const fetchMapData = async () => {
+    // Always read from the ref so stale closures (socket handlers, delete/vote
+    // handlers) use the current date filter rather than the value at the time
+    // the closure was created.
+    const currentDateRange = dateRangeRef.current;
+
     setLoading(true);
     setError(null);
+    
+    // Clear old data immediately to provide visual feedback that filtering is active
+    setReports([]);
+    setRatings([]);
+    setIncidentHeatPoints([]);
+    setRatingHeatPoints([]);
+
     try {
       const b = {
         minLat: 15.30,
@@ -228,12 +267,21 @@ const MapDashboard: React.FC = () => {
       };
 
 
-      // Use allSettled so one failing call doesn't kill the entire map load
+      // Use allSettled so one failing call doesn't kill the entire map load.
+      // All calls go through Next.js proxy routes (/api/*) which:
+      //  1. Accept ?from/&to (bare date) OR ?startDate/&endDate (full ISO)
+      //  2. Correct bare dates to start/end of day in PHT (UTC+8) before
+      //     forwarding to the Express backend, so that "2026-03-01" covers
+      //     the full Philippine day instead of truncating at UTC midnight.
+      const fromParam = currentDateRange.from  ? { from: currentDateRange.from }  : {};
+      const toParam   = currentDateRange.to    ? { to:   currentDateRange.to   }  : {};
+      const dateParams = { ...fromParam, ...toParam };
+
       const [reportsResult, incidentHeatResult, ratingHeatResult, ratingsResult] = await Promise.allSettled([
-        apiClient.get('/reports', { params: { ...b, page: 1, limit: 100 } }),
-        apiClient.get('/heatmap/data', { params: { ...b, type: 'incidents' } }),
-        apiClient.get('/heatmap/data', { params: { ...b, type: 'ratings' } }),
-        apiClient.get('/streets/ratings', { params: { ...b, page: 1, limit: 100 } }),
+        axios.get('/api/reports',  { params: { ...b, page: 1, limit: 100, ...dateParams } }),
+        axios.get('/api/heatmap',  { params: { ...b, type: 'incidents', ...dateParams } }),
+        axios.get('/api/heatmap',  { params: { ...b, type: 'ratings',   ...dateParams } }),
+        axios.get('/api/ratings',  { params: { ...b, page: 1, limit: 100, ...dateParams } }),
       ]);
 
       let reports: any[] = [];
@@ -267,11 +315,6 @@ const MapDashboard: React.FC = () => {
       setRatings(ratings);
       setIncidentHeatPoints(incidentPoints);
       setRatingHeatPoints(ratingPoints);
-
-      updateMarkers(reports);
-      updateRatingMarkers(ratings);
-      updateIncidentsHeatmap(incidentPoints);
-      updateRatingsHeatmap(ratingPoints);
     } catch (err: any) {
       console.error('Data fetch failed:', err);
       setError('Failed to load map data');
@@ -322,13 +365,14 @@ const MapDashboard: React.FC = () => {
         .bindPopup(`
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <strong class="text-indigo-300 capitalize">${r.type}</strong>
+              <strong class="text-indigo-300 capitalize text-sm">${r.type}</strong>
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 border border-slate-700 ${
                 r.severity_level === 'high' ? 'text-red-400 border-red-900/50' : 
                 r.severity_level === 'medium' ? 'text-orange-400 border-orange-900/50' : 'text-emerald-400 border-emerald-900/50'
               }">${r.severity_level}</span>
             </div>
-            <p class="text-xs text-slate-300 leading-relaxed">${r.description}</p>
+            <div class="text-[10px] text-indigo-400/90 mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
+            <p class="text-[13px] text-slate-100 leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
             ${voteHtml}
           </div>
         `, { className: 'custom-popup-glass' })
@@ -344,16 +388,34 @@ const MapDashboard: React.FC = () => {
   };
 
   const updateIncidentsHeatmap = (points: any[]) => {
-    if (!mapRef.current) return;
-    if (incidentsHeatLayerRef.current) incidentsHeatLayerRef.current.remove();
-    
-    // Suppress heatmap if a report is focused
-    if (!showIncidentsHeatRef.current || points.length === 0 || selectedReportId) return;
-    
-    incidentsHeatLayerRef.current = (L as any).heatLayer(
-      points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
-      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.2: '#fde68a', 0.5: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444' } }
-    ).addTo(mapRef.current);
+    if (!mapRef.current || !incidentsHeatLayerRef.current) return;
+
+    const layer = incidentsHeatLayerRef.current;
+    const map   = mapRef.current;
+    const shouldShow = showIncidentsHeatRef.current && points.length > 0 && !selectedReportId;
+
+    if (shouldShow) {
+      // Update the internal lat/lng data array.
+      layer._latlngs = points.map((p: any) => [p.latitude, p.longitude, p.intensity]);
+
+      // Re-add to map if it was previously removed (safe if already present).
+      if (!map.hasLayer(layer)) {
+        layer.addTo(map);
+      } else {
+        // Already on map — just force a synchronous redraw with new data.
+        if (typeof layer._reset === 'function') layer._reset();
+      }
+    } else {
+      // Clear the data so any stale rAF that fires draws nothing.
+      layer._latlngs = [];
+
+      // Physically remove the canvas from the DOM and unregister moveend.
+      // This is the only 100%-reliable way to make the heat disappear —
+      // display:none can be undone by leaflet internals on map events.
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    }
   };
 
   const updateRatingMarkers = (ratings: any[]) => {
@@ -374,16 +436,21 @@ const MapDashboard: React.FC = () => {
 
       const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: RatingIcon })
         .bindPopup(`
-          <strong>Street Safety Rating</strong><br/>
-          Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span><br/>
-          ${r.comment ? `<p class="italic text-xs mt-1">"${r.comment}"</p>` : ''}
-          <div class="mt-2 text-[10px] space-y-0.5 text-slate-400">
+          <div class="min-w-[150px]">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <strong class="text-indigo-300 text-sm">Street Safety Rating</strong>
+            </div>
+            <div class="text-[10px] text-indigo-400/90 mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
+            <div class="mb-2 text-slate-100 font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
+            ${r.comment ? `<p class="italic text-[13px] mt-1 text-slate-100 leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
+          <div class="mt-2 text-[10px] space-y-0.5 text-slate-300 font-medium bg-slate-800/40 p-2 rounded-lg border border-white/5">
             <div>Lighting: ${r.lighting_score}/5</div>
             <div>Pedestrian: ${r.pedestrian_safety_score}/5</div>
             <div>Driver: ${r.driver_safety_score}/5</div>
           </div>
           ${deleteHtml}
-        `)
+          </div>
+        `, { className: 'custom-popup-glass' })
         .addTo(mapRef.current!);
 
       if (r.id === selectedRatingId) {
@@ -395,16 +462,27 @@ const MapDashboard: React.FC = () => {
   };
 
   const updateRatingsHeatmap = (points: any[]) => {
-    if (!mapRef.current) return;
-    if (ratingsHeatLayerRef.current) ratingsHeatLayerRef.current.remove();
+    if (!mapRef.current || !ratingsHeatLayerRef.current) return;
 
-    // Suppress heatmap if a rating is focused
-    if (!showRatingsHeatRef.current || points.length === 0 || selectedRatingId) return;
+    const layer = ratingsHeatLayerRef.current;
+    const map   = mapRef.current;
+    const shouldShow = showRatingsHeatRef.current && points.length > 0 && !selectedRatingId;
 
-    ratingsHeatLayerRef.current = (L as any).heatLayer(
-      points.map((p: any) => [p.latitude, p.longitude, p.intensity]),
-      { radius: 28, blur: 18, maxZoom: 17, gradient: { 0.3: '#34d399', 0.6: '#a78bfa', 1.0: '#7c3aed' } }
-    ).addTo(mapRef.current);
+    if (shouldShow) {
+      layer._latlngs = points.map((p: any) => [p.latitude, p.longitude, p.intensity]);
+
+      if (!map.hasLayer(layer)) {
+        layer.addTo(map);
+      } else {
+        if (typeof layer._reset === 'function') layer._reset();
+      }
+    } else {
+      layer._latlngs = [];
+
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    }
   };
 
   useEffect(() => {
@@ -440,6 +518,22 @@ const MapDashboard: React.FC = () => {
     // Attach fog-of-war canvas layer
     const cleanupFog = createFogLayer(map);
 
+    // Create heat layer objects but do NOT add them to the map yet.
+    // updateIncidentsHeatmap / updateRatingsHeatmap will call .addTo(map)
+    // when data arrives and .removeLayer when data is empty or hidden.
+    // This guarantees the canvas never exists in the DOM while heat is off.
+    const incidentHeat = (L as any).heatLayer([], {
+      radius: 28, blur: 18, maxZoom: 17,
+      gradient: { 0.2: '#fde68a', 0.5: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444' }
+    });
+    incidentsHeatLayerRef.current = incidentHeat;
+
+    const ratingHeat = (L as any).heatLayer([], {
+      radius: 28, blur: 18, maxZoom: 17,
+      gradient: { 0.3: '#34d399', 0.6: '#a78bfa', 1.0: '#7c3aed' }
+    });
+    ratingsHeatLayerRef.current = ratingHeat;
+
     // Initial fetch for the entire Iba area
     mapRef.current = map;
     fetchMapData();
@@ -459,13 +553,16 @@ const MapDashboard: React.FC = () => {
     socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchMapData());
     socket.on(SOCKET_EVENTS.HEATMAP_UPDATED, () => fetchMapData());
 
-    // Force size recalculation to ensure the map fills the container
-    setTimeout(() => {
+    // Force size recalculation to ensure the map fills the container.
+    // Store the timer so we can cancel it in cleanup — during HMR the cleanup
+    // runs before the 100ms fires, which would call invalidateSize() on a
+    // destroyed map and crash with "_leaflet_pos of undefined".
+    const sizeTimer = setTimeout(() => {
       map.invalidateSize();
     }, 100);
 
-
     return () => {
+      clearTimeout(sizeTimer);
       cleanupFog();
       socket.off(SOCKET_EVENTS.REPORT_NEW);
       socket.off(SOCKET_EVENTS.HEATMAP_UPDATED);
@@ -473,6 +570,12 @@ const MapDashboard: React.FC = () => {
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      fetchMapData();
+    }
+  }, [dateRange]);
 
   useEffect(() => {
     (window as any).deleteReport = async (id: string) => {
@@ -603,7 +706,7 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[750px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900">
+    <div className="relative w-full h-[62vh] md:h-[68vh] min-h-[480px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900">
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
@@ -639,18 +742,24 @@ const MapDashboard: React.FC = () => {
       {/* Top Left: Title & Stats (Glassmorphic) */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
         <div className="glass-panel p-4 rounded-xl text-white shadow-xl min-w-[180px]">
-          <h3 className="font-extrabold text-sm mb-1 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">SafePath Iba</h3>
-          <div className="flex flex-col gap-1">
-             <div className="flex justify-between items-center text-[10px]">
-               <span className="text-slate-400">Reports</span>
+          <h3 className="font-extrabold text-base mb-1 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">SafePath Iba</h3>
+          <div className="flex flex-col gap-1 mt-2">
+             <div className="flex justify-between items-center text-xs">
+               <span className="text-slate-300">Reports</span>
                <span className="font-mono text-indigo-300 font-bold">{stats.reports}</span>
              </div>
-             <div className="flex justify-between items-center text-[10px]">
-               <span className="text-slate-400">Heat Points</span>
+             <div className="flex justify-between items-center text-xs">
+               <span className="text-slate-300">Heat Points</span>
                <span className="font-mono text-orange-300 font-bold">{stats.heatmapPoints}</span>
              </div>
              {loading && <div className="animate-pulse text-[9px] text-blue-400 mt-1">Fetching live data...</div>}
              {error && <div className="text-[9px] text-red-400 mt-1">{error}</div>}
+             {!loading && stats.reports === 0 && dateRange.from && (
+               <div className="flex items-center gap-1 text-[9px] text-orange-400 mt-1 font-bold animate-pulse">
+                 <AlertCircle className="w-3 h-3" />
+                 No data found for this range
+               </div>
+             )}
           </div>
         </div>
       </div>
@@ -669,18 +778,16 @@ const MapDashboard: React.FC = () => {
             <button
               onClick={() => {
                 const next = !showIncidentsHeat;
+                // Update store + ref synchronously so the consolidated rendering
+                // effect (which fires after this render) reads the correct value.
                 setIncidentsHeat(next);
                 showIncidentsHeatRef.current = next;
                 setSelectedReportId(null);
                 setSelectedRatingId(null);
-                if (!next) {
-                  if (incidentsHeatLayerRef.current) {
-                    incidentsHeatLayerRef.current.remove(); 
-                    incidentsHeatLayerRef.current = null; 
-                  }
-                  updateMarkers(reports);
-                } else if (mapRef.current) {
-                  updateMarkers(reports);
+                // When enabling, fetch fresh data for the current date filter.
+                // When disabling, the consolidated effect will call
+                // updateIncidentsHeatmap which clears the canvas and shows pins.
+                if (next && mapRef.current) {
                   fetchMapData();
                 }
               }}
@@ -700,14 +807,7 @@ const MapDashboard: React.FC = () => {
                 showRatingsHeatRef.current = next;
                 setSelectedReportId(null);
                 setSelectedRatingId(null);
-                if (!next) {
-                  if (ratingsHeatLayerRef.current) {
-                    ratingsHeatLayerRef.current.remove(); 
-                    ratingsHeatLayerRef.current = null; 
-                  }
-                  updateRatingMarkers(ratings);
-                } else if (mapRef.current) {
-                  updateRatingMarkers(ratings);
+                if (next && mapRef.current) {
                   fetchMapData();
                 }
               }}
@@ -720,6 +820,33 @@ const MapDashboard: React.FC = () => {
               <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
               🛡️ Safety Heat
             </button>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+            <button
+              onClick={() => setIsDateModalOpen(true)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold transition-all border ${
+                dateRange.from 
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
+                  : 'bg-slate-800/50 border-white/5 text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3 h-3" />
+                {dateRange.from ? 'Filtered Dates' : 'Filter by Date'}
+              </div>
+              {dateRange.from && <span className="text-[8px] opacity-70">Active</span>}
+            </button>
+            
+            {dateRange.from && (
+              <button
+                onClick={() => setDateRange({ from: null, to: null })}
+                className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
+              >
+                <FilterX className="w-3 h-3" />
+                Reset Time Range
+              </button>
+            )}
           </div>
         </div>
 
@@ -780,6 +907,14 @@ const MapDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      
+      <DateFilterModal 
+        isOpen={isDateModalOpen}
+        onClose={() => setIsDateModalOpen(false)}
+        onApply={(from, to) => setDateRange({ from, to })}
+        initialFrom={dateRange.from}
+        initialTo={dateRange.to}
+      />
     </div>
   );
 };

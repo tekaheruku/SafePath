@@ -177,6 +177,8 @@ export interface HeatmapFilter {
     max_longitude: number;
     severity_level?: SeverityLevel;
     days_back?: number;
+    start_date?: string;
+    end_date?: string;
 }
 
 export interface ApiResponse<T> {

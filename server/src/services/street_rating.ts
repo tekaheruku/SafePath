@@ -76,7 +76,11 @@ export class StreetRatingService {
     }
 
     // Time filter
-    if (filters?.daysBack) {
+    if (filters?.startDate && filters?.endDate) {
+      whereClause += ` AND created_at BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      params.push(filters.startDate, filters.endDate);
+      paramIndex += 2;
+    } else if (filters?.daysBack) {
       whereClause += ` AND created_at >= NOW() - ($${paramIndex}::text || ' days')::interval`;
       params.push(filters.daysBack);
       paramIndex++;

@@ -12,6 +12,36 @@ export class HeatmapService {
    */
   static async generateHeatmapData(filter: HeatmapFilter & { heatmap_type?: string }): Promise<{ data: HeatmapPoint[] }> {
     const type = filter.heatmap_type || 'all';
+    
+    // Robust date parsing (handle stringified "null" or empty strings from frontend)
+    const filterAny = filter as any;
+    const start_date = filterAny.start_date && filterAny.start_date !== 'null' && filterAny.start_date !== '' ? filterAny.start_date : null;
+    const end_date = filterAny.end_date && filterAny.end_date !== 'null' && filterAny.end_date !== '' ? filterAny.end_date : null;
+    const days_back = filterAny.days_back || 30;
+
+    const params: any[] = [
+      filter.min_longitude,
+      filter.min_latitude,
+      filter.max_longitude,
+      filter.max_latitude,
+    ];
+
+    let timeFilter = '';
+    if (start_date && end_date) {
+      timeFilter = `AND created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
+      params.push(start_date, end_date);
+    } else {
+      timeFilter = `AND created_at >= NOW() - ($5::text || ' days')::interval`;
+      params.push(days_back);
+    }
+
+    // Interval for recency weight calculation
+    const intervalExpr = start_date && end_date 
+      ? `(($6::timestamptz - $5::timestamptz))` 
+      : `($5::text || ' days')::interval`;
+    
+    // Reference time for recency (NOW() or end_date)
+    const refTime = start_date && end_date ? `$6::timestamptz` : `NOW()`;
 
     let query = '';
 
@@ -31,20 +61,20 @@ export class HeatmapService {
             ) as avg_severity,
             COUNT(*) as report_count,
             AVG(
-              1.0 - (
-                EXTRACT(EPOCH FROM (NOW() - created_at)) /
-                EXTRACT(EPOCH FROM (($5::text || ' days')::interval))
-              )
+              1.0 - LEAST(1.0, GREATEST(0.0, 
+                EXTRACT(EPOCH FROM (${refTime} - created_at)) /
+                NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
+              ))
             ) as recency_weight
           FROM reports
           WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-            AND created_at >= NOW() - ($5::text || ' days')::interval
+            ${timeFilter}
           GROUP BY lng, lat
         )
         SELECT 
           lng, 
           lat,
-          (avg_severity / 5.0) * (0.5 + 0.5 * recency_weight) * (1.0 + LOG(report_count)) as intensity
+          (avg_severity / 5.0) * (0.5 + 0.5 * COALESCE(recency_weight, 1.0)) * (1.0 + LOG(report_count)) as intensity
         FROM GridStats
       `;
     } else if (type === 'ratings') {
@@ -56,6 +86,7 @@ export class HeatmapService {
           COUNT(*) as rating_count
         FROM street_ratings
         WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+          ${timeFilter}
         GROUP BY lng, lat
       `;
     } else {
@@ -75,14 +106,14 @@ export class HeatmapService {
             ) as avg_severity,
             COUNT(*) as report_count,
             AVG(
-              1.0 - (
-                EXTRACT(EPOCH FROM (NOW() - created_at)) /
-                EXTRACT(EPOCH FROM (($5::text || ' days')::interval))
-              )
+              1.0 - LEAST(1.0, GREATEST(0.0, 
+                EXTRACT(EPOCH FROM (${refTime} - created_at)) /
+                NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
+              ))
             ) as recency_weight
           FROM reports
           WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-            AND created_at >= NOW() - ($5::text || ' days')::interval
+            ${timeFilter}
           GROUP BY lng, lat
         ),
         StreetStats AS (
@@ -93,6 +124,7 @@ export class HeatmapService {
             COUNT(*) as rating_count
           FROM street_ratings
           WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            ${timeFilter}
           GROUP BY lng, lat
         )
         SELECT 
@@ -112,17 +144,9 @@ export class HeatmapService {
       `;
     }
 
-    const params = [
-      filter.min_longitude,
-      filter.min_latitude,
-      filter.max_longitude,
-      filter.max_latitude,
-      filter.days_back || 30
-    ];
+    const result = await pool.query(query, params);
 
-    const result = await pool.query(query, type === 'ratings' ? params.slice(0, 4) : params);
-
-    // Map results — ratings query has a different column name
+    // Map results
     let rawPoints: { lng: number; lat: number; intensity: number }[];
     if (type === 'ratings') {
       rawPoints = result.rows.map(r => ({
@@ -143,11 +167,16 @@ export class HeatmapService {
     rawPoints.forEach(p => { if (p.intensity > maxIntensity) maxIntensity = p.intensity; });
     maxIntensity = Math.max(0.1, maxIntensity);
 
-    const points: HeatmapPoint[] = rawPoints.map(p => ({
-      longitude: p.lng,
-      latitude: p.lat,
-      intensity: Math.min(1, Math.max(0.05, p.intensity / maxIntensity)),
-    }));
+    const points: HeatmapPoint[] = rawPoints.map(p => {
+      const normalized = p.intensity / maxIntensity;
+      return {
+        longitude: p.lng,
+        latitude: p.lat,
+        // If the point has zero intensity, it should stay zero. 
+        // Only apply the 0.05 visual floor to points with actual data.
+        intensity: p.intensity <= 0 ? 0 : Math.min(1, Math.max(0.05, normalized)),
+      };
+    });
 
     return { data: points };
   }

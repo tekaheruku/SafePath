@@ -86,6 +86,8 @@ export class ReportController {
         maxLng: req.query.maxLng ? parseFloat(req.query.maxLng as string) : undefined,
         severity: req.query.severity as string,
         daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
       };
 
       const currentUserId = (req as any).user?.id;

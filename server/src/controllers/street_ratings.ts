@@ -81,6 +81,8 @@ export class StreetRatingController {
         minLng: req.query.minLng ? parseFloat(req.query.minLng as string) : undefined,
         maxLng: req.query.maxLng ? parseFloat(req.query.maxLng as string) : undefined,
         daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
       };
 
       const ratings = await StreetRatingService.listRatings(filters, paginationData.page, paginationData.limit);
