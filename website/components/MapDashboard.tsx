@@ -161,6 +161,7 @@ const MapDashboard: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
+  const [dateLabel, setDateLabel] = useState<string | null>(null);
   // Ref that always holds the latest dateRange so stale closures (socket handlers,
   // window.deleteReport, etc.) always read the current filter value.
   const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
@@ -837,6 +838,11 @@ const MapDashboard: React.FC = () => {
               </div>
               {dateRange.from && <span className="text-[8px] opacity-70">Active</span>}
             </button>
+            {dateRange.from && dateLabel && (
+              <div className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <p className="text-[9px] text-indigo-300 font-semibold text-center leading-tight">{dateLabel}</p>
+              </div>
+            )}
             
             <button
               onClick={() => {
@@ -846,6 +852,7 @@ const MapDashboard: React.FC = () => {
                 const dd = String(today.getDate()).padStart(2, '0');
                 const todayStr = `${yyyy}-${mm}-${dd}`;
                 setDateRange({ from: todayStr, to: todayStr });
+                setDateLabel(today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
               }}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
             >
@@ -855,7 +862,10 @@ const MapDashboard: React.FC = () => {
 
             {dateRange.from && (
               <button
-                onClick={() => setDateRange({ from: null, to: null })}
+                onClick={() => {
+                  setDateRange({ from: null, to: null });
+                  setDateLabel(null);
+                }}
                 className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
               >
                 <FilterX className="w-3 h-3" />
@@ -926,7 +936,10 @@ const MapDashboard: React.FC = () => {
       <DateFilterModal 
         isOpen={isDateModalOpen}
         onClose={() => setIsDateModalOpen(false)}
-        onApply={(from, to) => setDateRange({ from, to })}
+        onApply={(from, to, label) => {
+          setDateRange({ from, to });
+          setDateLabel(label ?? null);
+        }}
         initialFrom={dateRange.from}
         initialTo={dateRange.to}
       />

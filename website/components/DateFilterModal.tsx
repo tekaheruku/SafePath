@@ -13,7 +13,7 @@ import {
 interface DateFilterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (from: string | null, to: string | null) => void;
+  onApply: (from: string | null, to: string | null, label?: string | null) => void;
   initialFrom?: string | null;
   initialTo?: string | null;
 }
@@ -52,13 +52,29 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
 
   const handleApply = () => {
     if (mode === 'custom') {
-      onApply(customFrom || null, customTo || null);
+      // Build a readable label for custom range
+      let label: string | null = null;
+      if (customFrom || customTo) {
+        const fmt = (s: string) => {
+          const d = new Date(s + 'T00:00:00');
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        };
+        if (customFrom && customTo && customFrom !== customTo) {
+          label = `${fmt(customFrom)} – ${fmt(customTo)}`;
+        } else if (customFrom) {
+          label = fmt(customFrom);
+        } else if (customTo) {
+          label = fmt(customTo);
+        }
+      }
+      onApply(customFrom || null, customTo || null, label);
     } else {
       // Calculate date range for structured mode using date-fns
       const monthStart = startOfMonth(new Date(selectedYear, selectedMonth));
       
       let fromDate: Date;
       let toDate: Date;
+      let label: string;
 
       if (selectedWeek !== null) {
         // Week calculation: Start from (selectedWeek - 1) * 7 days after month start
@@ -76,24 +92,30 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
           }
           fromDate = startOfDay(targetDay);
           toDate = endOfDay(targetDay);
+          // Label: "May 3, 2026"
+          label = fromDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         } else {
           // Whole 7-day "week"
           fromDate = startOfDay(weekStart);
           toDate = endOfDay(addDays(weekStart, 6));
+          // Label: "May Week 2, 2026"
+          label = `${months[selectedMonth]} Week ${selectedWeek}, ${selectedYear}`;
         }
       } else {
         // Entire month
         fromDate = monthStart;
         toDate = endOfDay(endOfMonth(monthStart));
+        // Label: "May 2026"
+        label = `${months[selectedMonth]} ${selectedYear}`;
       }
 
-      onApply(fromDate.toISOString(), toDate.toISOString());
+      onApply(fromDate.toISOString(), toDate.toISOString(), label);
     }
     onClose();
   };
 
   const handleReset = () => {
-    onApply(null, null);
+    onApply(null, null, null);
     onClose();
   };
 
