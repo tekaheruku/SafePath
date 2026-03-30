@@ -798,7 +798,7 @@ const MapDashboard: React.FC = () => {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
-              ⚠️ Incident Heat
+              Incident Heat
             </button>
             <button
               onClick={() => {
@@ -818,7 +818,7 @@ const MapDashboard: React.FC = () => {
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
-              🛡️ Safety Heat
+              Safety Heat
             </button>
           </div>
 
@@ -838,6 +838,21 @@ const MapDashboard: React.FC = () => {
               {dateRange.from && <span className="text-[8px] opacity-70">Active</span>}
             </button>
             
+            <button
+              onClick={() => {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${yyyy}-${mm}-${dd}`;
+                setDateRange({ from: todayStr, to: todayStr });
+              }}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
+            >
+              <Calendar className="w-3 h-3" />
+              Present day
+            </button>
+
             {dateRange.from && (
               <button
                 onClick={() => setDateRange({ from: null, to: null })}
@@ -854,13 +869,13 @@ const MapDashboard: React.FC = () => {
         <div className="flex flex-col gap-2">
           <button
             onClick={() => setSelectionMode(selectionMode === 'report' ? null : 'report')}
-            className={`w-full ${selectionMode === 'report' ? 'bg-orange-500 shadow-orange-500/40 text-white border-orange-400/50' : 'bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border-orange-500/30'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
+            className={`w-full ${selectionMode === 'report' ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
           >
             {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
           </button>
           <button
             onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-violet-600 shadow-violet-500/40 text-white border-violet-400/50' : 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 border-violet-500/30'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
+            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
           >
             {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
           </button>
