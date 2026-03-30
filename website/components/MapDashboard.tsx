@@ -727,15 +727,15 @@ const MapDashboard: React.FC = () => {
         <div className="flex flex-col gap-2">
           <button
             onClick={() => setSelectionMode(selectionMode === 'report' ? null : 'report')}
-            className={`w-full ${selectionMode === 'report' ? 'bg-orange-500 shadow-orange-500/40' : 'bg-indigo-600/90 hover:bg-indigo-500 shadow-indigo-500/30'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border border-white/10`}
+            className={`w-full ${selectionMode === 'report' ? 'bg-orange-500 shadow-orange-500/40 text-white border-orange-400/50' : 'bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border-orange-500/30'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
           >
-            <span>⚠️</span> {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
+            {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
           </button>
           <button
             onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-orange-500 shadow-orange-500/40' : 'glass-panel hover:bg-slate-800/80'} text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 border border-white/10`}
+            className={`w-full ${selectionMode === 'rating' ? 'bg-violet-600 shadow-violet-500/40 text-white border-violet-400/50' : 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 border-violet-500/30'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
           >
-            <span>⭐</span> {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
+            {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
           </button>
         </div>
       </div>

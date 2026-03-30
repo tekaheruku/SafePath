@@ -7,6 +7,7 @@ import * as z from 'zod';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
+import LoginModal from './LoginModal';
 
 const ratingSchema = z.object({
   lighting_score: z.coerce.number().min(1).max(5).optional().nullable(),
@@ -70,6 +71,7 @@ function ScoreSlider({ label, fieldName, register, watch }: {
 
 const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess, onCancel }) => {
   const [rateLighting, setRateLighting] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const { token } = useAuth();
 
   const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<RatingFormValues>({
@@ -86,7 +88,7 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
 
   const onSubmit = async (data: RatingFormValues) => {
     if (!token) {
-      alert('Please sign in to submit a rating.');
+      setShowLoginModal(true);
       return;
     }
 
@@ -108,14 +110,23 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
         headers: { Authorization: `Bearer ${token}` }
       });
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to submit rating:', err);
-      alert('Failed to submit rating. Please try again.');
+      if (err.response?.status === 401) {
+        setShowLoginModal(true);
+      } else {
+        alert('Failed to submit rating. Please try again.');
+      }
     }
   };
 
   return (
     <div className="p-6 glass-panel rounded-xl space-y-5 shadow-2xl max-w-md min-w-[320px]">
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        message="Please sign in to submit a rating."
+      />
 
       <div>
         <h2 className="text-xl font-bold text-white">Rate Street Safety</h2>

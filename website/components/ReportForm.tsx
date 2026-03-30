@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
+import LoginModal from './LoginModal';
 
 const reportSchema = z.object({
   type: z.string().min(1, 'Type is required'),
@@ -34,6 +35,7 @@ const SEVERITY_LABELS: Record<number, string> = {
 
 const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }) => {
   const { token } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
     defaultValues: {
@@ -46,6 +48,12 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
   const severityValue = Number(watch('severity_level')) || 3;
 
   const onSubmit = async (data: ReportFormValues) => {
+    // Authentication Check
+    if (!token) {
+      setShowLoginModal(true);
+      return;
+    }
+
     // Boundary Check
     if (!isPointInPolygon([data.latitude, data.longitude], IBA_POLYGON)) {
       alert('Selected location is outside the supported area (Iba, Zambales).');
@@ -69,14 +77,23 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
         { headers: { Authorization: `Bearer ${token}` } }
       );
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to submit report:', err);
-      alert('Failed to submit report. Please try again.');
+      if (err.response?.status === 401) {
+        setShowLoginModal(true);
+      } else {
+        alert('Failed to submit report. Please try again.');
+      }
     }
   };
 
   return (
     <div className="p-6 glass-panel rounded-xl space-y-4 shadow-2xl min-w-[320px]">
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        message="Please sign in to submit a rating."
+      />
 
       <h2 className="text-xl font-bold text-white">Report Incident</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
