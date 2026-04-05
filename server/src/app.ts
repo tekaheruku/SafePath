@@ -45,6 +45,11 @@ const apiRoot = '/api/v1';
 app.post(`${apiRoot}/auth/login`, (req, res) => AuthController.login(req, res));
 app.post(`${apiRoot}/auth/register`, (req, res) => AuthController.register(req, res));
 app.get(`${apiRoot}/auth/me`, authMiddleware, (req, res) => AuthController.getCurrentUser(req, res));
+// Email verification & account recovery
+app.get(`${apiRoot}/auth/verify-email`, (req, res) => AuthController.verifyEmail(req, res));
+app.post(`${apiRoot}/auth/resend-verification`, (req, res) => AuthController.resendVerification(req, res));
+app.post(`${apiRoot}/auth/request-password-reset`, (req, res) => AuthController.requestPasswordReset(req, res));
+app.post(`${apiRoot}/auth/reset-password`, (req, res) => AuthController.resetPassword(req, res));
 
 // Reports
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));

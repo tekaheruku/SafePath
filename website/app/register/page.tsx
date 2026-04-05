@@ -56,14 +56,13 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/register`, {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/register`, {
         email,
         password,
         name: trimmedName,
       });
-      const { token, user } = res.data.data;
-      login(token, user);
-      router.push('/');
+      // Redirect to check-email page (Option B: hard gate — must verify before login)
+      router.push(`/check-email?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Registration failed');
     } finally {

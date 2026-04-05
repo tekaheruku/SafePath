@@ -14,6 +14,15 @@ const registerSchema = Joi.object({
   name: Joi.string().trim().min(3).pattern(/^[a-zA-Z\s]+$/).required(),
 });
 
+const emailSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
+  password: Joi.string().min(8).required(),
+});
+
 export class AuthController {
   static async login(req: Request, res: Response) {
     try {
@@ -45,6 +54,50 @@ export class AuthController {
       const data = validateSync(registerSchema, req.body);
       const result = await AuthService.register(data);
       res.status(201).json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async verifyEmail(req: Request, res: Response) {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        return res.status(400).json({ success: false, error: { message: 'Verification token is required.' } });
+      }
+      const result = await AuthService.verifyEmail(token);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async resendVerification(req: Request, res: Response) {
+    try {
+      const { email } = validateSync(emailSchema, req.body);
+      await AuthService.resendVerification(email);
+      res.json({ success: true, data: { sent: true } });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async requestPasswordReset(req: Request, res: Response) {
+    try {
+      const { email } = validateSync(emailSchema, req.body);
+      await AuthService.requestPasswordReset(email);
+      // Always return 200 to prevent email enumeration
+      res.json({ success: true, data: { sent: true } });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, password } = validateSync(resetPasswordSchema, req.body);
+      await AuthService.resetPassword(token, password);
+      res.json({ success: true, data: { message: 'Password reset successfully.' } });
     } catch (err: any) {
       res.status(400).json({ success: false, error: { message: err.message } });
     }

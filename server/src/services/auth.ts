@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { pool } from '../config/database.js';
+import { EmailService } from './email.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'safepath-secret-key-change-it';
 
@@ -19,6 +21,11 @@ export class AuthService {
       throw new Error('Invalid email or password');
     }
 
+    // Check email verification before anything else
+    if (!user.is_verified) {
+      throw new Error('Please verify your email address before signing in. Check your inbox for the verification link.');
+    }
+
     if (user.banned_until && new Date(user.banned_until) > new Date()) {
       return { 
         banned: true, 
@@ -28,7 +35,7 @@ export class AuthService {
     }
 
     const token = this.generateToken(user);
-    const { password: _, ...userWithoutPassword } = user;
+    const { password_hash: _, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };
   }
 
@@ -68,7 +75,7 @@ export class AuthService {
       'kantot', 'iyot', 'burat', 'pekpek', 'puke', 'dede', 'salsal', 'jakol', 'etits',
       // English
       'fuck', 'shit', 'asshole', 'bitch', 'dick', 'pussy', 'bastard', 'cunt', 'cock', 'faggot', 'whore', 'slut',
-      // Slurs (Aggressive n-word variations)
+      // Slurs
       'nigger', 'nigga', 'nigur', 'nigor', 'niga', 'niggah', 'nigg3r', 'nigg4', 'n*gger', 'n.i.g.g.e.r',
       'kike', 'chink', 'spic', 'negro', 'necro'
     ]; 
@@ -85,16 +92,151 @@ export class AuthService {
       throw new Error('Name contains inappropriate language. Please use a professional name.');
     }
 
+    // Check if email is already registered
+    const existingUser = await pool.query('SELECT id, is_verified FROM users WHERE email = $1', [email]);
+    if (existingUser.rows[0]) {
+      if (!existingUser.rows[0].is_verified) {
+        // Resend verification for existing unverified account
+        throw new Error('An account with this email already exists but is not verified. Please check your inbox or request a new verification email.');
+      }
+      throw new Error('An account with this email already exists.');
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email, hashedPassword, trimmedName, 'user']
+      `INSERT INTO users (email, password_hash, name, role, is_verified, verification_token, verification_token_expires)
+       VALUES ($1, $2, $3, $4, false, $5, $6)
+       RETURNING id, email, name, role`,
+      [email, hashedPassword, trimmedName, 'user', verificationToken, verificationExpires]
     );
     
     const user = result.rows[0];
-    const token = this.generateToken(user);
-    return { user, token };
+
+    // Send verification email (fire and forget, don't block response)
+    EmailService.sendVerificationEmail(email, verificationToken).catch((err) => {
+      console.error('Failed to send verification email:', err.message);
+    });
+
+    return { pending: true, email: user.email };
+  }
+
+  static async verifyEmail(token: string) {
+    if (!token) throw new Error('Verification token is required.');
+
+    const result = await pool.query(
+      'SELECT * FROM users WHERE verification_token = $1',
+      [token]
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      throw new Error('Invalid or expired verification link.');
+    }
+
+    if (new Date(user.verification_token_expires) < new Date()) {
+      throw new Error('This verification link has expired. Please request a new one.');
+    }
+
+    if (user.is_verified) {
+      // Already verified — just log them in
+      const jwtToken = this.generateToken(user);
+      const { password_hash: _, ...userWithoutPassword } = user;
+      return { user: userWithoutPassword, token: jwtToken };
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET is_verified = true, verification_token = NULL, verification_token_expires = NULL
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    const updatedResult = await pool.query(
+      'SELECT id, email, name, role, is_verified FROM users WHERE id = $1',
+      [user.id]
+    );
+    const updatedUser = updatedResult.rows[0];
+    const jwtToken = this.generateToken(updatedUser);
+    return { user: updatedUser, token: jwtToken };
+  }
+
+  static async resendVerification(email: string) {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    // Always return success to prevent email enumeration
+    if (!user || user.is_verified) return { sent: true };
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE users
+       SET verification_token = $1, verification_token_expires = $2
+       WHERE id = $3`,
+      [verificationToken, verificationExpires, user.id]
+    );
+
+    EmailService.sendVerificationEmail(email, verificationToken).catch((err) => {
+      console.error('Failed to resend verification email:', err.message);
+    });
+
+    return { sent: true };
+  }
+
+  static async requestPasswordReset(email: string) {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    // Always return success to prevent email enumeration
+    if (!user) return { sent: true };
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await pool.query(
+      `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3`,
+      [resetToken, resetExpires, user.id]
+    );
+
+    EmailService.sendPasswordResetEmail(email, resetToken).catch((err) => {
+      console.error('Failed to send password reset email:', err.message);
+    });
+
+    return { sent: true };
+  }
+
+  static async resetPassword(token: string, newPassword: string) {
+    if (!token) throw new Error('Reset token is required.');
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('Password must be at least 8 characters long.');
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM users WHERE reset_token = $1',
+      [token]
+    );
+    const user = result.rows[0];
+
+    if (!user) throw new Error('Invalid or expired password reset link.');
+
+    if (new Date(user.reset_token_expires) < new Date()) {
+      throw new Error('This password reset link has expired. Please request a new one.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await pool.query(
+      `UPDATE users
+       SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL
+       WHERE id = $2`,
+      [hashedPassword, user.id]
+    );
+
+    return { success: true };
   }
 
   static async getUserById(id: string) {

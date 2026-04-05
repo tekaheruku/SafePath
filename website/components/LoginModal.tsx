@@ -104,7 +104,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
             
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">Password</label>
+                <a
+                  href="/forgot-password"
+                  className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  onClick={onClose}
+                >
+                  Forgot password?
+                </a>
+              </div>
               <input
                 type="password"
                 required
@@ -130,9 +139,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </form>
 
           <p className="mt-8 text-center text-slate-500 text-sm font-medium">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a 
-              href="/register" 
+              href="/register"
+              onClick={onClose}
               className="text-blue-400 hover:text-blue-300 font-bold transition-colors underline underline-offset-4 decoration-blue-400/30 hover:decoration-blue-300"
             >
               Create an account
