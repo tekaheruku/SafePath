@@ -111,14 +111,14 @@ export default function AccountListPage() {
   if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
+    <div className="min-h-screen bg-theme-bg-start text-theme-fg p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
               Account Management
             </h1>
-            <p className="text-slate-400 mt-1">Manage user access and review community activity</p>
+            <p className="text-theme-fg-muted mt-1">Manage user access and review community activity</p>
           </div>
           
           <div className="relative w-full md:w-72">
@@ -127,9 +127,9 @@ export default function AccountListPage() {
               placeholder="Search users..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full bg-theme-panel border border-theme-border rounded-xl px-4 py-2.5 pl-10 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             />
-            <svg className="w-5 h-5 text-slate-500 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-theme-fg-muted absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -144,11 +144,11 @@ export default function AccountListPage() {
           </div>
         )}
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="bg-theme-panel border border-theme-border rounded-2xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                <tr className="bg-theme-panel/50 text-theme-fg-muted text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-semibold">
                     <div className="flex items-center space-x-4">
                        <span>Name</span>
@@ -158,7 +158,7 @@ export default function AccountListPage() {
                            className={`flex items-center space-x-1 px-1.5 py-0.5 rounded border transition-all ${
                              sortConfig?.key === 'first_name' 
                                ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' 
-                               : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                               : 'border-slate-700 text-theme-fg-muted hover:text-theme-fg-muted'
                            }`}
                            title="Sort by First Name"
                          >
@@ -170,7 +170,7 @@ export default function AccountListPage() {
                            className={`flex items-center space-x-1 px-1.5 py-0.5 rounded border transition-all ${
                              sortConfig?.key === 'last_name' 
                                ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-400' 
-                               : 'border-slate-700 text-slate-500 hover:text-slate-300'
+                               : 'border-slate-700 text-theme-fg-muted hover:text-theme-fg-muted'
                            }`}
                            title="Sort by Last Name"
                          >
@@ -181,23 +181,23 @@ export default function AccountListPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-slate-800/50 transition-colors"
+                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-theme-panel/50 transition-colors"
                     onClick={() => requestSort('role')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Role</span>
-                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'role' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'role' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-theme-fg-muted'}`}>
                         {sortConfig?.key === 'role' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}
                       </span>
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-slate-800/50 transition-colors"
+                    className="px-6 py-4 font-semibold cursor-pointer group hover:bg-theme-panel/50 transition-colors"
                     onClick={() => requestSort('created_at')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Created</span>
-                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'created_at' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400'}`}>
+                      <span className={`text-[10px] transition-colors ${sortConfig?.key === 'created_at' ? 'text-indigo-400' : 'text-slate-600 group-hover:text-theme-fg-muted'}`}>
                         {sortConfig?.key === 'created_at' ? (sortConfig.direction === 'asc' ? '▴' : '▾') : '▴'}
                       </span>
                     </div>
@@ -211,14 +211,14 @@ export default function AccountListPage() {
                 {loading ? (
                   Array(5).fill(0).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={6} className="px-6 py-6 h-16 bg-slate-900/50"></td>
+                      <td colSpan={6} className="px-6 py-6 h-16 bg-theme-panel/50"></td>
                     </tr>
                   ))
                 ) : processedUsers.length > 0 ? (
                   processedUsers.map((u) => (
                     <tr 
                       key={u.id} 
-                      className="hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                      className="hover:bg-theme-panel/30 transition-colors cursor-pointer group"
                       onClick={() => setSelectedUser(u)}
                     >
                       <td className="px-6 py-4">
@@ -228,7 +228,7 @@ export default function AccountListPage() {
                           </div>
                           <div>
                             <div className="font-semibold">{u.name}</div>
-                            <div className="text-xs text-slate-500">{u.email}</div>
+                            <div className="text-xs text-theme-fg-muted">{u.email}</div>
                           </div>
                         </div>
                       </td>
@@ -236,12 +236,12 @@ export default function AccountListPage() {
                         <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight ${
                           u.role === 'superadmin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
                           u.role === 'lgu_admin' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                          'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                          'bg-slate-500/10 text-theme-fg-muted border border-slate-500/20'
                         }`}>
                           {u.role.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-400">
+                      <td className="px-6 py-4 text-sm text-theme-fg-muted">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
@@ -274,7 +274,7 @@ export default function AccountListPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-slate-500 group-hover:text-white transition-colors">
+                        <button className="text-theme-fg-muted group-hover:text-theme-fg transition-colors">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                           </svg>
@@ -284,7 +284,7 @@ export default function AccountListPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-theme-fg-muted">
                       No users found matching your search.
                     </td>
                   </tr>

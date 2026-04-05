@@ -84,10 +84,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-      <div className="max-w-md w-full bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl">
-        <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-        <p className="text-slate-400 mb-8">Sign in to report and track incidents</p>
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
+      <div className="max-w-md w-full bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
+        <h1 className="text-3xl font-bold text-theme-fg mb-2">Welcome Back</h1>
+        <p className="text-theme-fg-muted mb-8">Sign in to report and track incidents</p>
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-xl mb-6 text-sm flex flex-col gap-2">
@@ -98,8 +98,8 @@ export default function LoginPage() {
             <p className="font-medium text-slate-200">{error}</p>
             {bannedUntil && (
               <div className="mt-2 pt-2 border-t border-red-500/20">
-                <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">Time Remaining</p>
-                <p className="text-2xl font-black text-white italic tabular-nums ">{timeLeft}</p>
+                <p className="text-theme-fg-muted text-[10px] uppercase font-bold tracking-widest mb-1">Time Remaining</p>
+                <p className="text-2xl font-black text-theme-fg italic tabular-nums ">{timeLeft}</p>
               </div>
             )}
           </div>
@@ -107,22 +107,22 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+            <label className="block text-sm font-medium text-theme-fg-muted mb-2">Email Address</label>
             <input
               type="email"
               required
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full bg-theme-panel border border-slate-700 rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+            <label className="block text-sm font-medium text-theme-fg-muted mb-2">Password</label>
             <input
               type="password"
               required
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full bg-theme-panel border border-slate-700 rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -132,13 +132,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-theme-fg font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="mt-8 text-center text-slate-500 text-sm">
+        <p className="mt-8 text-center text-theme-fg-muted text-sm">
           Don't have an account?{' '}
           <a href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">Create an account</a>
         </p>

@@ -20,14 +20,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-slate-50 min-h-screen flex flex-col`}>
+      <body className={`${inter.className} min-h-screen flex flex-col`}>
         <ThemeProvider>
           <AuthProvider>
             <AppNav />
             <main className="flex-grow container mx-auto px-4 py-8">
               {children}
             </main>
-            <footer className="border-t border-slate-800 py-6 text-center text-slate-500 text-sm">
+            <footer className="border-t border-theme-border py-6 text-center text-theme-fg-muted text-sm">
               &copy; {new Date().getFullYear()} SafePath. All rights reserved.
             </footer>
           </AuthProvider>

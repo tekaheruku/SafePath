@@ -4,43 +4,103 @@
 
 /* Default variables (fallbacks) */
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 0, 0, 0;
+  --theme-bg-start: 2, 6, 23;
+  --theme-bg-end: 0, 0, 0;
+
+  --theme-fg: 255, 255, 255;
+  --theme-fg-muted: 148, 163, 184;
+
+  --theme-glass-bg: 15, 23, 42;
+  --theme-glass-border: 255, 255, 255;
+
+  --theme-panel-bg: 30, 41, 59;
+  
+  --theme-border: 255, 255, 255;
+  --theme-border-hover: 255, 255, 255;
+
+  --theme-accent: 79, 70, 229;
 }
 
 body.theme-dark {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
+  --theme-bg-start: 0, 0, 0;
+  --theme-bg-end: 0, 0, 0;
+
+  --theme-fg: 255, 255, 255;
+  --theme-fg-muted: 148, 163, 184;
+
+  --theme-glass-bg: 10, 10, 10;
+  --theme-glass-border: 255, 255, 255;
+
+  --theme-panel-bg: 17, 17, 17;
+  
+  --theme-border: 255, 255, 255;
+  --theme-border-hover: 255, 255, 255;
+
+  --theme-accent: 79, 70, 229;
 }
 
 body.theme-dark-slate {
-  --foreground-rgb: 248, 250, 252; /* slate-50 */
-  --background-start-rgb: 15, 23, 42; /* slate-900 */
-  --background-end-rgb: 2, 6, 23; /* slate-950 */
+  --theme-bg-start: 15, 23, 42; /* slate-900 */
+  --theme-bg-end: 2, 6, 23; /* slate-950 */
+
+  --theme-fg: 248, 250, 252; /* slate-50 */
+  --theme-fg-muted: 148, 163, 184;
+
+  --theme-glass-bg: 15, 23, 42;
+  --theme-glass-border: 255, 255, 255;
+
+  --theme-panel-bg: 30, 41, 59;
+  
+  --theme-border: 255, 255, 255;
+  --theme-border-hover: 255, 255, 255;
+
+  --theme-accent: 79, 70, 229;
 }
 
 body.theme-dark-blue {
-  --foreground-rgb: 238, 242, 255; /* indigo-50 */
-  --background-start-rgb: 30, 27, 75; /* indigo-950 */
-  --background-end-rgb: 10, 10, 30; /* darker indigo base */
+  --theme-bg-start: 30, 27, 75; /* indigo-950 */
+  --theme-bg-end: 10, 10, 30; /* darker indigo base */
+
+  --theme-fg: 238, 242, 255; /* indigo-50 */
+  --theme-fg-muted: 165, 180, 252;
+
+  --theme-glass-bg: 30, 27, 75;
+  --theme-glass-border: 99, 102, 241;
+
+  --theme-panel-bg: 49, 46, 129;
+  
+  --theme-border: 99, 102, 241;
+  --theme-border-hover: 99, 102, 241;
+
+  --theme-accent: 99, 102, 241;
 }
 
 body.theme-white {
-  --foreground-rgb: 15, 23, 42; /* slate-900 */
-  --background-start-rgb: 248, 250, 252; /* slate-50 */
-  --background-end-rgb: 255, 255, 255; /* white */
+  --theme-bg-start: 248, 250, 252; /* slate-50 */
+  --theme-bg-end: 248, 250, 252; /* white */
+
+  --theme-fg: 15, 23, 42; /* slate-900 */
+  --theme-fg-muted: 71, 85, 105;
+
+  --theme-glass-bg: 255, 255, 255;
+  --theme-glass-border: 0, 0, 0;
+
+  --theme-panel-bg: 255, 255, 255;
+  
+  --theme-border: 0, 0, 0;
+  --theme-border-hover: 0, 0, 0;
+
+  --theme-accent: 99, 102, 241;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: rgb(var(--theme-fg));
   background: linear-gradient(
       to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
+      rgb(var(--theme-bg-end))
     )
-    rgb(var(--background-start-rgb));
+    rgb(var(--theme-bg-start));
 }
 
 .leaflet-container {
@@ -48,39 +108,38 @@ body {
 }
 
 .glass-panel {
-  background: rgba(15, 23, 42, 0.7) !important;
+  background: rgb(var(--theme-glass-bg) / 0.7) !important;
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(var(--theme-glass-border) / 0.1);
 }
 
 .custom-popup-glass .leaflet-popup-content-wrapper {
-  background: rgba(15, 23, 42, 0.8) !important;
+  background: rgb(var(--theme-glass-bg) / 0.8) !important;
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f8fafc !important;
+  border: 1px solid rgb(var(--theme-border) / 0.15);
+  color: rgb(var(--theme-fg)) !important;
   border-radius: 12px !important;
   padding: 4px;
 }
 
 .custom-popup-glass .leaflet-popup-tip {
-  background: rgba(15, 23, 42, 0.8) !important;
+  background: rgb(var(--theme-glass-bg) / 0.8) !important;
   backdrop-filter: blur(12px);
 }
 
 .leaflet-popup-content-wrapper {
-  background: #1e293b !important;
-  color: #f8fafc !important;
+  background: rgb(var(--theme-panel-bg)) !important;
+  color: rgb(var(--theme-fg)) !important;
   border-radius: 8px !important;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5) !important;
 }
 
 .leaflet-popup-tip {
-  background: #1e293b !important;
+  background: rgb(var(--theme-panel-bg)) !important;
 }
 
 /* Hide scrollbar but keep scrolling functional */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-

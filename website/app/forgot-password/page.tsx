@@ -25,11 +25,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
       <div className="max-w-md w-full">
 
         {!submitted ? (
-          <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl">
+          <div className="bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
             {/* Header */}
             <div className="mb-8">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-5">
@@ -38,22 +38,22 @@ export default function ForgotPasswordPage() {
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Forgot your password?</h1>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <h1 className="text-2xl font-bold text-theme-fg mb-2">Forgot your password?</h1>
+              <p className="text-theme-fg-muted text-sm leading-relaxed">
                 No worries! Enter the email address linked to your account and we&apos;ll send you a link to reset your password.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
-                <label htmlFor="forgot-email" className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">
+                <label htmlFor="forgot-email" className="block text-xs font-bold text-theme-fg-muted uppercase tracking-widest pl-1">
                   Email Address
                 </label>
                 <input
                   id="forgot-email"
                   type="email"
                   required
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                  className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
                 id="reset-request-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-theme-fg font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <a href="/login" className="text-slate-500 hover:text-slate-300 text-sm font-medium transition-colors">
+              <a href="/login" className="text-theme-fg-muted hover:text-theme-fg-muted text-sm font-medium transition-colors">
                 ← Back to sign in
               </a>
             </div>
@@ -94,18 +94,18 @@ export default function ForgotPasswordPage() {
                 </svg>
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">Check your inbox</h1>
-            <p className="text-slate-400 text-base leading-relaxed mb-2">
+            <h1 className="text-3xl font-bold text-theme-fg mb-3">Check your inbox</h1>
+            <p className="text-theme-fg-muted text-base leading-relaxed mb-2">
               If an account exists for
             </p>
             <p className="text-amber-400 font-semibold text-base mb-6 break-all">{email}</p>
-            <p className="text-slate-500 text-sm leading-relaxed mb-10">
+            <p className="text-theme-fg-muted text-sm leading-relaxed mb-10">
               you&apos;ll receive a password reset link shortly.<br />
-              The link expires in <span className="text-slate-300 font-medium">1 hour</span>.
+              The link expires in <span className="text-theme-fg-muted font-medium">1 hour</span>.
             </p>
             <a
               href="/login"
-              className="inline-block bg-slate-800 hover:bg-slate-700 text-white font-semibold px-8 py-3 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200"
+              className="inline-block bg-theme-panel hover:bg-theme-border-hover text-theme-fg font-semibold px-8 py-3 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200"
             >
               Back to sign in
             </a>

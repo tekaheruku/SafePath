@@ -55,16 +55,16 @@ function ResetPasswordContent() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
         <div className="max-w-md w-full text-center">
           <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3">Invalid Reset Link</h1>
-          <p className="text-slate-400 text-sm mb-8">This link is missing a reset token. Please use the link from your email.</p>
-          <a href="/forgot-password" className="inline-block bg-slate-800 text-white font-semibold px-6 py-3 rounded-xl border border-slate-700 transition-all hover:bg-slate-700">
+          <h1 className="text-2xl font-bold text-theme-fg mb-3">Invalid Reset Link</h1>
+          <p className="text-theme-fg-muted text-sm mb-8">This link is missing a reset token. Please use the link from your email.</p>
+          <a href="/forgot-password" className="inline-block bg-theme-panel text-theme-fg font-semibold px-6 py-3 rounded-xl border border-slate-700 transition-all hover:bg-theme-border-hover">
             Request a new link
           </a>
         </div>
@@ -73,11 +73,11 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
       <div className="max-w-md w-full">
 
         {!success ? (
-          <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl">
+          <div className="bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
             {/* Header */}
             <div className="mb-8">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5">
@@ -86,8 +86,8 @@ function ResetPasswordContent() {
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Set a new password</h1>
-              <p className="text-slate-400 text-sm">Choose a strong password for your SafePath account.</p>
+              <h1 className="text-2xl font-bold text-theme-fg mb-2">Set a new password</h1>
+              <p className="text-theme-fg-muted text-sm">Choose a strong password for your SafePath account.</p>
             </div>
 
             {error && (
@@ -100,7 +100,7 @@ function ResetPasswordContent() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* New password */}
               <div className="space-y-1.5">
-                <label htmlFor="new-password" className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">
+                <label htmlFor="new-password" className="block text-xs font-bold text-theme-fg-muted uppercase tracking-widest pl-1">
                   New Password
                 </label>
                 <div className="relative">
@@ -108,7 +108,7 @@ function ResetPasswordContent() {
                     id="new-password"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 pr-12 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="At least 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -116,7 +116,7 @@ function ResetPasswordContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-theme-fg-muted hover:text-theme-fg-muted transition-colors"
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? (
@@ -140,8 +140,8 @@ function ResetPasswordContent() {
                     <div className="w-full bg-slate-700 rounded-full h-1">
                       <div className={`h-1 rounded-full transition-all duration-300 ${strength.color} ${strength.width}`} />
                     </div>
-                    <p className="text-xs text-slate-500 pl-1">
-                      Strength: <span className="font-semibold text-slate-300">{strength.label}</span>
+                    <p className="text-xs text-theme-fg-muted pl-1">
+                      Strength: <span className="font-semibold text-theme-fg-muted">{strength.label}</span>
                     </p>
                   </div>
                 )}
@@ -149,14 +149,14 @@ function ResetPasswordContent() {
 
               {/* Confirm password */}
               <div className="space-y-1.5">
-                <label htmlFor="confirm-password" className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">
+                <label htmlFor="confirm-password" className="block text-xs font-bold text-theme-fg-muted uppercase tracking-widest pl-1">
                   Confirm Password
                 </label>
                 <input
                   id="confirm-password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 outline-none transition-all ${
+                  className={`w-full bg-theme-panel border rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 outline-none transition-all ${
                     confirmPassword && password !== confirmPassword
                       ? 'border-red-500/60 focus:ring-red-500'
                       : confirmPassword && password === confirmPassword
@@ -179,7 +179,7 @@ function ResetPasswordContent() {
                 id="reset-password-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-theme-fg font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -202,15 +202,15 @@ function ResetPasswordContent() {
                 </svg>
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-3">Password Reset!</h1>
-            <p className="text-slate-400 text-base leading-relaxed mb-8">
+            <h1 className="text-3xl font-bold text-theme-fg mb-3">Password Reset!</h1>
+            <p className="text-theme-fg-muted text-base leading-relaxed mb-8">
               Your password has been updated successfully.<br />
               You can now sign in with your new password.
             </p>
             <button
               id="goto-login-btn"
               onClick={() => router.push('/login')}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-theme-fg font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/20"
             >
               Sign In
             </button>
@@ -225,7 +225,7 @@ function ResetPasswordContent() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg-start">
         <div className="w-8 h-8 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin" />
       </div>
     }>

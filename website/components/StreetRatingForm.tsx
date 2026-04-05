@@ -60,7 +60,7 @@ function ScoreSlider({ label, fieldName, register, watch }: {
         {...register(fieldName)}
         className="w-full h-2 rounded-full appearance-none cursor-pointer accent-emerald-400 bg-slate-600"
       />
-      <div className="flex justify-between text-[11px] text-slate-400 select-none font-medium px-0.5">
+      <div className="flex justify-between text-[11px] text-theme-fg-muted select-none font-medium px-0.5">
         <span>1 · Very Poor</span>
         <span>3 · Neutral</span>
         <span>5 · Very Safe</span>
@@ -129,8 +129,8 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
       />
 
       <div>
-        <h2 className="text-xl font-bold text-white">Rate Street Safety</h2>
-        <p className="text-xs text-slate-400 mt-1">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+        <h2 className="text-xl font-bold text-theme-fg">Rate Street Safety</h2>
+        <p className="text-xs text-theme-fg-muted mt-1">📍 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 text-sm">
@@ -140,18 +140,18 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
         <ScoreSlider label="Overall Safety"    fieldName="overall_safety_score"    register={register} watch={watch} />
 
         {/* Lighting — optional toggle */}
-        <div className="rounded-lg border border-slate-600 bg-slate-800/60 p-3 space-y-3">
+        <div className="rounded-lg border border-slate-600 bg-theme-panel/60 p-3 space-y-3">
           <button
             type="button"
             onClick={() => setRateLighting(v => !v)}
             className={`w-full flex items-center justify-between text-sm font-semibold transition-colors ${
-              rateLighting ? 'text-yellow-300' : 'text-slate-300'
+              rateLighting ? 'text-yellow-300' : 'text-theme-fg-muted'
             }`}
           >
             <span className="flex items-center gap-2">
               <span>💡</span>
               <span>Rate Lighting</span>
-              <span className="text-xs font-normal text-slate-400">(night-time only)</span>
+              <span className="text-xs font-normal text-theme-fg-muted">(night-time only)</span>
             </span>
             <span className={`w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${
               rateLighting ? 'bg-yellow-500' : 'bg-slate-600'
@@ -169,11 +169,11 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Comment <span className="normal-case text-slate-400 font-normal text-xs">(optional)</span>
+            Comment <span className="normal-case text-theme-fg-muted font-normal text-xs">(optional)</span>
           </label>
           <textarea
             {...register('comment')}
-            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white placeholder-slate-500 h-20 focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-sm"
+            className="w-full bg-theme-panel border border-slate-600 rounded-lg p-2.5 text-theme-fg placeholder-slate-500 h-20 focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-sm"
             placeholder="Any specific observations?"
           />
         </div>
@@ -181,13 +181,13 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
         <div className="flex space-x-3 pt-1">
           <button
             type="button" onClick={onCancel}
-            className="flex-1 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 font-semibold transition-colors text-white text-sm"
+            className="flex-1 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 font-semibold transition-colors text-theme-fg text-sm"
           >
             Cancel
           </button>
           <button
             type="submit" disabled={isSubmitting}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 text-white text-sm"
+            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 text-theme-fg text-sm"
           >
             {isSubmitting ? 'Submitting…' : 'Save Rating'}
           </button>

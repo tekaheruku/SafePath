@@ -27,13 +27,13 @@ const UserStats: React.FC<UserStatsProps> = ({ stats }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.1 }}
-          className="relative overflow-hidden rounded-2xl p-4 bg-slate-900 border border-slate-800 shadow-lg group hover:border-slate-700 transition-colors"
+          className="relative overflow-hidden rounded-2xl p-4 bg-theme-panel border border-theme-border shadow-lg group hover:border-slate-700 transition-colors"
         >
           <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${card.color} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`} />
           <div className="flex flex-col gap-1">
             <span className="text-2xl mb-1">{card.icon}</span>
-            <span className="text-2xl font-black text-white">{card.value}</span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{card.label}</span>
+            <span className="text-2xl font-black text-theme-fg">{card.value}</span>
+            <span className="text-[10px] font-bold text-theme-fg-muted uppercase tracking-widest">{card.label}</span>
           </div>
         </motion.div>
       ))}

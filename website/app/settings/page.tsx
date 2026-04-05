@@ -112,7 +112,7 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Settings</h1>
-        <p className="text-slate-400 mt-2">Manage your preferences and security.</p>
+        <p className="text-theme-fg-muted mt-2">Manage your preferences and security.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -123,7 +123,7 @@ export default function SettingsPage() {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
               activeTab === 'appearance' 
                 ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30' 
-                : 'text-slate-400 hover:bg-white/5 border border-transparent'
+                : 'text-theme-fg-muted hover:bg-theme-border border border-transparent'
             }`}
           >
             <span className="text-xl">🎨</span> Appearance
@@ -133,7 +133,7 @@ export default function SettingsPage() {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
               activeTab === 'security' 
                 ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' 
-                : 'text-slate-400 hover:bg-white/5 border border-transparent'
+                : 'text-theme-fg-muted hover:bg-theme-border border border-transparent'
             }`}
           >
             <span className="text-xl">🔒</span> Security & Login
@@ -141,11 +141,11 @@ export default function SettingsPage() {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 glass-panel rounded-2xl p-6 sm:p-10 border border-white/5 shadow-2xl">
+        <div className="flex-1 glass-panel rounded-2xl p-6 sm:p-10 border border-theme-border shadow-2xl">
           {activeTab === 'appearance' && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <h2 className="text-2xl font-bold text-white mb-6">Interface Theme</h2>
-              <p className="text-slate-400 text-sm mb-8">
+              <h2 className="text-2xl font-bold text-theme-fg mb-6">Interface Theme</h2>
+              <p className="text-theme-fg-muted text-sm mb-8">
                 Customize the look and feel of your SafePath application.
               </p>
               
@@ -157,16 +157,16 @@ export default function SettingsPage() {
                     className={`flex flex-col items-center gap-4 p-6 rounded-2xl border transition-all ${
                       theme === t 
                         ? 'bg-indigo-600/10 border-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.2)] scale-105' 
-                        : 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-white/5'
+                        : 'bg-theme-glass-bg border-theme-border hover:border-white/20 hover:bg-theme-border'
                     }`}
                   >
                     <div className={`w-16 h-16 rounded-full border-4 shadow-xl ${
-                      t === 'dark' ? 'bg-[#000000] border-slate-800' :
+                      t === 'dark' ? 'bg-[#000000] border-theme-border' :
                       t === 'dark-slate' ? 'bg-[#0f172a] border-slate-700' :
                       t === 'dark-blue' ? 'bg-[#1e1b4b] border-indigo-500/50' :
                       'bg-[#ffffff] border-slate-200'
                     }`} />
-                    <span className={`text-sm font-bold capitalize ${theme === t ? 'text-indigo-400' : 'text-slate-300'}`}>
+                    <span className={`text-sm font-bold capitalize ${theme === t ? 'text-indigo-400' : 'text-theme-fg-muted'}`}>
                       {t.replace('-', ' ')}
                     </span>
                   </button>
@@ -179,18 +179,18 @@ export default function SettingsPage() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-10">
               
               {/* Two-Factor Auth Box */}
-              <section className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
+              <section className="bg-theme-glass-bg rounded-2xl border border-theme-border overflow-hidden">
                 <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-theme-fg flex items-center gap-2">
                       Two-Factor Authentication 
                       {is2faEnabled ? (
                         <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold border border-emerald-500/30">Active</span>
                       ) : (
-                        <span className="bg-slate-500/20 text-slate-400 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold border border-slate-500/30">Disabled</span>
+                        <span className="bg-slate-500/20 text-theme-fg-muted text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold border border-slate-500/30">Disabled</span>
                       )}
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1 max-w-lg">
+                    <p className="text-theme-fg-muted text-sm mt-1 max-w-lg">
                       Require an email verification code when changing your password. Adds an extra layer of security.
                     </p>
                   </div>
@@ -211,21 +211,21 @@ export default function SettingsPage() {
               {/* Password Box */}
               <section className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-white">Change Password</h3>
-                  <p className="text-slate-400 text-sm">Update your account password. {is2faEnabled ? 'Two-Factor Authentication will require an email code.' : ''}</p>
+                  <h3 className="text-lg font-bold text-theme-fg">Change Password</h3>
+                  <p className="text-theme-fg-muted text-sm">Update your account password. {is2faEnabled ? 'Two-Factor Authentication will require an email code.' : ''}</p>
                 </div>
 
                 <form onSubmit={initiatePasswordChange} className="max-w-md space-y-4">
                   
                   {!is2faEnabled && !otpMode && (
                     <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-bold">Current Password</label>
+                      <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">Current Password</label>
                       <input
                         type="password"
                         required
                         value={oldPassword}
                         onChange={(e) => setOldPassword(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50"
                         placeholder="••••••••"
                       />
                     </div>
@@ -233,14 +233,14 @@ export default function SettingsPage() {
 
                   {otpMode && (
                     <div className="space-y-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-bold">6-Digit Verification Code</label>
+                      <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">6-Digit Verification Code</label>
                       <input
                         type="text"
                         required
                         maxLength={6}
                         value={otpToken}
                         onChange={(e) => setOtpToken(e.target.value)}
-                        className="w-full bg-indigo-500/10 border border-indigo-500/50 rounded-xl p-3 text-sm text-center tracking-[0.5em] font-mono font-bold text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-indigo-500/10 border border-indigo-500/50 rounded-xl p-3 text-sm text-center tracking-[0.5em] font-mono font-bold text-theme-fg focus:ring-2 focus:ring-indigo-500"
                         placeholder="XXXXXX"
                       />
                       <p className="text-[10px] text-indigo-400">Sent to {user?.email}</p>
@@ -248,25 +248,25 @@ export default function SettingsPage() {
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-xs text-slate-400 uppercase tracking-wider font-bold">New Password</label>
+                    <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">New Password</label>
                     <input
                       type="password"
                       required
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="••••••••"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs text-slate-400 uppercase tracking-wider font-bold">Confirm New Password</label>
+                    <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">Confirm New Password</label>
                     <input
                       type="password"
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50"
                       placeholder="••••••••"
                     />
                   </div>
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98] disabled:opacity-50"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-theme-fg font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98] disabled:opacity-50"
                     >
                       {isSubmitting ? 'Processing...' : (otpMode ? 'Verify & Change Password' : 'Change Password')}
                     </button>
@@ -291,7 +291,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => { setOtpMode(false); setOtpToken(''); setMessage(null); }}
-                        className="w-full mt-3 text-slate-400 hover:text-white text-sm py-2"
+                        className="w-full mt-3 text-theme-fg-muted hover:text-theme-fg text-sm py-2"
                       >
                         Cancel
                       </button>

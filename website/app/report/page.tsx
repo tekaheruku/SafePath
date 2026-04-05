@@ -38,21 +38,21 @@ export default function ReportPage() {
   return (
     <div className="container mx-auto px-4 py-10 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Incident Reports</h1>
-        <p className="text-slate-400 mt-1">All reported incidents in Iba, Zambales</p>
+        <h1 className="text-3xl font-bold text-theme-fg">Incident Reports</h1>
+        <p className="text-theme-fg-muted mt-1">All reported incidents in Iba, Zambales</p>
       </div>
 
       {loading && (
-        <div className="text-slate-400 text-center py-16 animate-pulse text-sm">Loading reports…</div>
+        <div className="text-theme-fg-muted text-center py-16 animate-pulse text-sm">Loading reports…</div>
       )}
 
       {!loading && error && (
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-12 text-center space-y-4">
-          <p className="text-slate-300 text-base">No reports to display yet.</p>
-          <p className="text-slate-500 text-sm">{error}</p>
+        <div className="bg-theme-panel rounded-2xl border border-theme-border p-12 text-center space-y-4">
+          <p className="text-theme-fg-muted text-base">No reports to display yet.</p>
+          <p className="text-theme-fg-muted text-sm">{error}</p>
           <button
             onClick={load}
-            className="mt-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
+            className="mt-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-theme-fg transition-colors"
           >
             Try Again
           </button>
@@ -60,9 +60,9 @@ export default function ReportPage() {
       )}
 
       {!loading && !error && reports.length === 0 && (
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-12 text-center">
-          <p className="text-slate-300 text-base">No reports have been filed yet.</p>
-          <p className="text-slate-500 text-sm mt-1">Be the first to report an incident on the map.</p>
+        <div className="bg-theme-panel rounded-2xl border border-theme-border p-12 text-center">
+          <p className="text-theme-fg-muted text-base">No reports have been filed yet.</p>
+          <p className="text-theme-fg-muted text-sm mt-1">Be the first to report an incident on the map.</p>
         </div>
       )}
 
@@ -70,22 +70,22 @@ export default function ReportPage() {
         {reports.map((r) => {
           const sev = SEVERITY_MAP[r.severity_level] ?? SEVERITY_MAP['low'];
           return (
-            <div key={r.id} className="bg-slate-900 rounded-xl border border-slate-800 p-5 hover:border-slate-600 transition-colors">
+            <div key={r.id} className="bg-theme-panel rounded-xl border border-theme-border p-5 hover:border-slate-600 transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                    <h3 className="text-white font-semibold text-base">{r.type}</h3>
+                    <h3 className="text-theme-fg font-semibold text-base">{r.type}</h3>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${sev.cls}`}>
                       {sev.label}
                     </span>
                   </div>
-                  <p className="text-slate-300 text-sm leading-relaxed">{r.description}</p>
+                  <p className="text-theme-fg-muted text-sm leading-relaxed">{r.description}</p>
                   {r.author_name && (
-                    <p className="text-xs text-slate-500 mt-2">by {r.author_name}</p>
+                    <p className="text-xs text-theme-fg-muted mt-2">by {r.author_name}</p>
                   )}
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-theme-fg-muted">
                     {new Date(r.created_at).toLocaleDateString('en-PH', {
                       year: 'numeric', month: 'short', day: 'numeric',
                     })}

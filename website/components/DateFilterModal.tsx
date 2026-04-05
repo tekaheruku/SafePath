@@ -143,33 +143,33 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all duration-300">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-theme-bg-start backdrop-blur-sm transition-all duration-300">
       <div 
-        className="relative w-full max-w-md bg-slate-900/90 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden glass-panel active-glow animate-in fade-in zoom-in duration-200"
+        className="relative w-full max-w-md bg-theme-panel/90 border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden glass-panel active-glow animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-theme-border">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-semibold text-white">Filter by Date</h2>
+            <h2 className="text-xl font-semibold text-theme-fg">Filter by Date</h2>
           </div>
           <button 
             onClick={onClose}
-            className="p-1 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+            className="p-1 hover:bg-theme-panel rounded-lg transition-colors text-theme-fg-muted hover:text-theme-fg"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Mode Tabs */}
-        <div className="flex p-1 m-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
+        <div className="flex p-1 m-4 bg-theme-panel/50 rounded-xl border border-slate-700/30">
           <button
             onClick={() => setMode('structured')}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
               mode === 'structured' 
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                ? 'bg-indigo-600 text-theme-fg shadow-lg shadow-indigo-900/20' 
+                : 'text-theme-fg-muted hover:text-slate-200 hover:bg-theme-border-hover/50'
             }`}
           >
             Structured
@@ -178,8 +178,8 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
             onClick={() => setMode('custom')}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
               mode === 'custom' 
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                ? 'bg-indigo-600 text-theme-fg shadow-lg shadow-indigo-900/20' 
+                : 'text-theme-fg-muted hover:text-slate-200 hover:bg-theme-border-hover/50'
             }`}
           >
             Custom Range
@@ -192,7 +192,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
             <div className="space-y-4">
               {/* Year Picker */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Year</label>
+                <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Select Year</label>
                 <div className="flex items-center gap-2">
                   <select
                     value={isCustomYear || !yearOptions.includes(selectedYear) ? 'custom' : selectedYear}
@@ -206,12 +206,12 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
                         setSelectedDay(null);
                       }
                     }}
-                    className="flex-1 bg-slate-800/50 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all cursor-pointer"
+                    className="flex-1 bg-theme-panel/50 border border-slate-700 text-theme-fg-muted text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all cursor-pointer"
                   >
                     {yearOptions.map(yr => (
-                      <option className="bg-slate-800 text-slate-200" key={yr} value={yr}>{yr}</option>
+                      <option className="bg-theme-panel text-slate-200" key={yr} value={yr}>{yr}</option>
                     ))}
-                    <option className="bg-slate-800 text-slate-200" value="custom">Custom...</option>
+                    <option className="bg-theme-panel text-slate-200" value="custom">Custom...</option>
                   </select>
                   {(isCustomYear || !yearOptions.includes(selectedYear)) && (
                     <input
@@ -225,7 +225,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
                           setSelectedDay(null);
                         }
                       }}
-                      className="w-24 bg-slate-800/50 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all text-center"
+                      className="w-24 bg-theme-panel/50 border border-slate-700 text-theme-fg text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 outline-none p-2.5 transition-all text-center"
                       placeholder="Year"
                     />
                   )}
@@ -234,7 +234,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
 
               {/* Month Picker */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Month</label>
+                <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Select Month</label>
                 <div className="grid grid-cols-3 gap-2">
                   {months.map((month, index) => (
                     <button
@@ -247,7 +247,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
                       className={`py-2 text-xs rounded-lg border transition-all ${
                         selectedMonth === index
                           ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                          : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                          : 'bg-theme-panel/30 border-slate-700 text-theme-fg-muted hover:bg-theme-panel hover:border-slate-600'
                       }`}
                     >
                       {month}
@@ -258,7 +258,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
 
               {/* Week Picker */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Week</label>
+                <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Select Week</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((week) => (
                     <button
@@ -270,7 +270,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
                       className={`flex-1 py-2 text-xs rounded-lg border transition-all ${
                         selectedWeek === week
                           ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                          : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                          : 'bg-theme-panel/30 border-slate-700 text-theme-fg-muted hover:bg-theme-panel hover:border-slate-600'
                       }`}
                     >
                       Week {week}
@@ -282,7 +282,7 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
               {/* Day Picker */}
               {selectedWeek && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Specific Day (Optional)</label>
+                  <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Specific Day (Optional)</label>
                   <div className="grid grid-cols-2 gap-2">
                     {daysOfWeek.map((day, index) => {
                       const resolved = resolveDate(selectedWeek, index);
@@ -296,16 +296,16 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
                           disabled={!resolved}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all ${
                             !resolved
-                              ? 'opacity-30 cursor-not-allowed bg-slate-800/10 border-slate-800 text-slate-600'
+                              ? 'opacity-30 cursor-not-allowed bg-theme-panel/10 border-theme-border text-slate-600'
                               : selectedDay === index
                               ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                              : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                              : 'bg-theme-panel/30 border-slate-700 text-theme-fg-muted hover:bg-theme-panel hover:border-slate-600'
                           }`}
                         >
                           <span className="text-[11px] font-semibold">{day.slice(0, 3)}</span>
                           {dateStr && (
                             <span className={`text-[10px] font-mono ${
-                              selectedDay === index ? 'text-indigo-400' : 'text-slate-500'
+                              selectedDay === index ? 'text-indigo-400' : 'text-theme-fg-muted'
                             }`}>{dateStr}</span>
                           )}
                         </button>
@@ -318,21 +318,21 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Start Date</label>
+                <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Start Date</label>
                 <input
                   type="date"
                   value={customFrom}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
+                  className="w-full bg-theme-panel border border-slate-700 rounded-xl p-3 text-theme-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">End Date</label>
+                <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">End Date</label>
                 <input
                   type="date"
                   value={customTo}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
+                  className="w-full bg-theme-panel border border-slate-700 rounded-xl p-3 text-theme-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
                 />
               </div>
             </div>
@@ -340,17 +340,17 @@ export const DateFilterModal: React.FC<DateFilterModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-5 flex gap-3 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-5 flex gap-3 border-t border-theme-border bg-theme-panel/50">
           <button
             onClick={handleReset}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-theme-panel hover:bg-theme-border-hover text-theme-fg-muted rounded-xl font-medium transition-all"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
           </button>
           <button
             onClick={handleApply}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-semibold shadow-lg shadow-indigo-900/40 transition-all active:scale-[0.98]"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-theme-fg py-3 rounded-xl font-semibold shadow-lg shadow-indigo-900/40 transition-all active:scale-[0.98]"
           >
             Apply Filter
           </button>

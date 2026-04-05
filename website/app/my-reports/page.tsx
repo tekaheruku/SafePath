@@ -55,7 +55,7 @@ export default function MyReportsPage() {
     return (
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         <h1 className="text-3xl font-bold mb-8">My Reports</h1>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center text-slate-400">
+        <div className="bg-theme-panel rounded-2xl border border-theme-border p-8 text-center text-theme-fg-muted">
           <p>Please log in to view your submitted reports.</p>
         </div>
       </div>
@@ -67,11 +67,11 @@ export default function MyReportsPage() {
       <h1 className="text-3xl font-bold mb-8">My Reports</h1>
       
       {loading ? (
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center text-slate-400">
+        <div className="bg-theme-panel rounded-2xl border border-theme-border p-8 text-center text-theme-fg-muted">
           <p className="animate-pulse">Loading your report history...</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 text-center text-slate-400">
+        <div className="bg-theme-panel rounded-2xl border border-theme-border p-8 text-center text-theme-fg-muted">
           <p>You haven't submitted any incident reports yet.</p>
         </div>
       ) : (
@@ -80,10 +80,10 @@ export default function MyReportsPage() {
             <div 
               key={r.id} 
               onClick={() => handleReportClick(r)}
-              className="bg-slate-900 border border-slate-800 p-5 rounded-2xl cursor-pointer hover:bg-slate-800 hover:border-slate-600 transition-all shadow-lg active:scale-[0.98]"
+              className="bg-theme-panel border border-theme-border p-5 rounded-2xl cursor-pointer hover:bg-theme-panel hover:border-slate-600 transition-all shadow-lg active:scale-[0.98]"
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg text-white">{r.type}</h3>
+                <h3 className="font-bold text-lg text-theme-fg">{r.type}</h3>
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                   r.severity_level === 'high' ? 'bg-red-500/20 text-red-400' :
                   r.severity_level === 'medium' ? 'bg-orange-500/20 text-orange-400' :
@@ -92,8 +92,8 @@ export default function MyReportsPage() {
                   {typeof r.severity_level === 'string' ? r.severity_level.toUpperCase() : r.severity_level}
                 </span>
               </div>
-              <p className="text-sm text-slate-400 mb-4 line-clamp-2">{r.description}</p>
-              <div className="text-xs text-slate-500 flex justify-between items-center">
+              <p className="text-sm text-theme-fg-muted mb-4 line-clamp-2">{r.description}</p>
+              <div className="text-xs text-theme-fg-muted flex justify-between items-center">
                 <span>{new Date(r.created_at).toLocaleDateString()}</span>
                 {user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role)) && (
                   <button 

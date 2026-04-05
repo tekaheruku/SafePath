@@ -94,12 +94,12 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-theme-bg-start/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-theme-panel border border-theme-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Account Details</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white">
+        <div className="px-6 py-4 border-b border-theme-border flex justify-between items-center">
+          <h2 className="text-xl font-bold text-theme-fg">Account Details</h2>
+          <button onClick={onClose} className="p-2 hover:bg-theme-panel rounded-lg transition-colors text-theme-fg-muted hover:text-theme-fg">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -113,35 +113,35 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
               {targetUser.name[0]}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">{targetUser.name}</h3>
-              <p className="text-slate-400">{targetUser.email}</p>
-              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">UID: {targetUser.id.slice(0, 8)}...</span>
+              <h3 className="text-xl font-bold text-theme-fg">{targetUser.name}</h3>
+              <p className="text-theme-fg-muted">{targetUser.email}</p>
+              <span className="text-xs text-theme-fg-muted uppercase tracking-widest font-bold">UID: {targetUser.id.slice(0, 8)}...</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-slate-500 text-xs font-bold uppercase mb-1">Role</p>
-              <p className="text-white font-semibold">{targetUser.role}</p>
+            <div className="bg-theme-panel/50 p-4 rounded-xl border border-theme-border">
+              <p className="text-theme-fg-muted text-xs font-bold uppercase mb-1">Role</p>
+              <p className="text-theme-fg font-semibold">{targetUser.role}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-slate-500 text-xs font-bold uppercase mb-1">Joined</p>
-              <p className="text-white font-semibold">{new Date(targetUser.created_at).toLocaleDateString()}</p>
+            <div className="bg-theme-panel/50 p-4 rounded-xl border border-theme-border">
+              <p className="text-theme-fg-muted text-xs font-bold uppercase mb-1">Joined</p>
+              <p className="text-theme-fg font-semibold">{new Date(targetUser.created_at).toLocaleDateString()}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-slate-500 text-xs font-bold uppercase mb-1">Reports</p>
-              <p className="text-white font-bold text-lg">{targetUser.reports_count}</p>
+            <div className="bg-theme-panel/50 p-4 rounded-xl border border-theme-border">
+              <p className="text-theme-fg-muted text-xs font-bold uppercase mb-1">Reports</p>
+              <p className="text-theme-fg font-bold text-lg">{targetUser.reports_count}</p>
             </div>
-            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-800">
-              <p className="text-slate-500 text-xs font-bold uppercase mb-1">Ratings</p>
-              <p className="text-white font-bold text-lg">{targetUser.ratings_count}</p>
+            <div className="bg-theme-panel/50 p-4 rounded-xl border border-theme-border">
+              <p className="text-theme-fg-muted text-xs font-bold uppercase mb-1">Ratings</p>
+              <p className="text-theme-fg font-bold text-lg">{targetUser.ratings_count}</p>
             </div>
           </div>
 
           {isBanned && (
             <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-6">
               <h4 className="text-red-400 font-bold text-sm mb-1 uppercase tracking-wider">Account Active Ban</h4>
-              <p className="text-white text-sm mb-2">{targetUser.ban_reason}</p>
+              <p className="text-theme-fg text-sm mb-2">{targetUser.ban_reason}</p>
               <p className="text-xs text-red-300">Expires: {new Date(targetUser.banned_until!).toLocaleString()}</p>
             </div>
           )}
@@ -165,7 +165,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                   <button 
                     onClick={handleUnban}
                     disabled={loading || (currentUser?.role === 'lgu_admin' && targetUser.role !== 'user')}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Lift Ban
                   </button>
@@ -173,7 +173,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                   <button 
                     onClick={() => setShowBanForm(true)}
                     disabled={currentUser?.role === 'lgu_admin' && targetUser.role !== 'user'}
-                    className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="bg-orange-600 hover:bg-orange-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Ban User
                   </button>
@@ -181,7 +181,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                 <button 
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={currentUser?.role === 'lgu_admin' && targetUser.role !== 'user'}
-                  className="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="bg-red-600 hover:bg-red-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Delete Account
                 </button>
@@ -189,37 +189,37 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
             )}
 
             {showBanForm && (
-              <div className="space-y-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="space-y-4 p-4 bg-theme-panel/50 rounded-xl border border-slate-700 animate-in slide-in-from-bottom-2 duration-200">
                 <h4 className="text-orange-400 font-bold text-sm uppercase">Ban Configuration</h4>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Duration (Hours, 0 for Permanent)</label>
+                  <label className="block text-xs text-theme-fg-muted mb-1">Duration (Hours, 0 for Permanent)</label>
                   <input 
                     type="number" 
                     value={banDuration}
                     onChange={(e) => setBanDuration(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-orange-500 outline-none"
+                    className="w-full bg-theme-panel border border-slate-700 rounded-lg px-3 py-2 text-sm text-theme-fg focus:ring-1 focus:ring-orange-500 outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Reason for Ban</label>
+                  <label className="block text-xs text-theme-fg-muted mb-1">Reason for Ban</label>
                   <textarea 
                     value={banReason}
                     onChange={(e) => setBanReason(e.target.value)}
                     placeholder="e.g. Repeated false reporting"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-orange-500 outline-none h-20 resize-none"
+                    className="w-full bg-theme-panel border border-slate-700 rounded-lg px-3 py-2 text-sm text-theme-fg focus:ring-1 focus:ring-orange-500 outline-none h-20 resize-none"
                   />
                 </div>
                 <div className="flex space-x-3">
                   <button 
                     onClick={handleBan}
                     disabled={loading}
-                    className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                    className="flex-1 bg-orange-600 hover:bg-orange-500 text-theme-fg font-bold py-2 rounded-lg transition-all disabled:opacity-50"
                   >
                     {loading ? 'Processing...' : 'Confirm Ban'}
                   </button>
                   <button 
                     onClick={() => setShowBanForm(false)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-theme-fg font-bold py-2 rounded-lg transition-all"
                   >
                     Cancel
                   </button>
@@ -228,29 +228,29 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
             )}
 
             {showDeleteConfirm && (
-              <div className="space-y-4 p-4 bg-slate-800/50 rounded-xl border border-red-900/50 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="space-y-4 p-4 bg-theme-panel/50 rounded-xl border border-red-900/50 animate-in slide-in-from-bottom-2 duration-200">
                 <h4 className="text-red-400 font-bold text-sm uppercase">Permanent Deletion</h4>
-                <p className="text-xs text-slate-400 italic">This action cannot be undone. All user data, reports, and ratings will be removed.</p>
+                <p className="text-xs text-theme-fg-muted italic">This action cannot be undone. All user data, reports, and ratings will be removed.</p>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Reason for Deletion</label>
+                  <label className="block text-xs text-theme-fg-muted mb-1">Reason for Deletion</label>
                   <textarea 
                     value={deleteReason}
                     onChange={(e) => setDeleteReason(e.target.value)}
                     placeholder="e.g. Requested by user / Severe violation"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-red-500 outline-none h-20 resize-none"
+                    className="w-full bg-theme-panel border border-slate-700 rounded-lg px-3 py-2 text-sm text-theme-fg focus:ring-1 focus:ring-red-500 outline-none h-20 resize-none"
                   />
                 </div>
                 <div className="flex space-x-3">
                   <button 
                     onClick={handleDelete}
                     disabled={loading}
-                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-theme-fg font-bold py-2 rounded-lg transition-all disabled:opacity-50"
                   >
                     {loading ? 'Deleting...' : 'Confirm Wipe'}
                   </button>
                   <button 
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-theme-fg font-bold py-2 rounded-lg transition-all"
                   >
                     Cancel
                   </button>

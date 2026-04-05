@@ -59,17 +59,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-[6px] transition-all duration-300"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-theme-bg-start/60 backdrop-blur-[6px] transition-all duration-300"
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden relative transform transition-all animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-md bg-theme-panel border border-slate-700 rounded-2xl shadow-2xl overflow-hidden relative transform transition-all animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 transition-colors z-10"
+          className="absolute top-4 right-4 text-theme-fg-muted hover:text-theme-fg p-1 rounded-full hover:bg-theme-panel transition-colors z-10"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -79,8 +79,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
         <div className="p-8">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2 leading-tight">Sign In Required</h2>
-            <p className="text-slate-400 text-sm font-medium">{message}</p>
+            <h2 className="text-2xl font-bold text-theme-fg mb-2 leading-tight">Sign In Required</h2>
+            <p className="text-theme-fg-muted text-sm font-medium">{message}</p>
           </div>
 
           {error && (
@@ -92,11 +92,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">Email Address</label>
+              <label className="block text-xs font-bold text-theme-fg-muted uppercase tracking-widest pl-1">Email Address</label>
               <input
                 type="email"
                 required
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -105,7 +105,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-widest pl-1">Password</label>
+                <label className="block text-xs font-bold text-theme-fg-muted uppercase tracking-widest pl-1">Password</label>
                 <a
                   href="/forgot-password"
                   className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
@@ -117,7 +117,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <input
                 type="password"
                 required
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -127,7 +127,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-theme-fg font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -138,7 +138,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </button>
           </form>
 
-          <p className="mt-8 text-center text-slate-500 text-sm font-medium">
+          <p className="mt-8 text-center text-theme-fg-muted text-sm font-medium">
             Don&apos;t have an account?{' '}
             <a 
               href="/register"

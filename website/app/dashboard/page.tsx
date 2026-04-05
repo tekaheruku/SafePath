@@ -64,7 +64,7 @@ export default function DashboardPage() {
     return (
       <div className="container mx-auto px-4 py-12 max-w-5xl h-[80vh] flex flex-col items-center justify-center">
         <h1 className="text-4xl font-black mb-4 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent italic">Join the Movement</h1>
-        <p className="text-slate-400 mb-8 max-w-md text-center">Log in to track your safety reports, earn community impact points, and help make Iba safer for everyone.</p>
+        <p className="text-theme-fg-muted mb-8 max-w-md text-center">Log in to track your safety reports, earn community impact points, and help make Iba safer for everyone.</p>
         <button 
           onClick={() => router.push('/login')}
           className="px-8 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-bold transition-all shadow-xl shadow-indigo-500/20 active:scale-95 text-sm uppercase tracking-widest"
@@ -81,7 +81,7 @@ export default function DashboardPage() {
          <motion.h1 
            initial={{ x: -20, opacity: 0 }}
            animate={{ x: 0, opacity: 1 }}
-           className="text-4xl font-black mb-2 text-white italic tracking-tight"
+           className="text-4xl font-black mb-2 text-theme-fg italic tracking-tight"
          >
            DASHBOARD
          </motion.h1>
@@ -89,7 +89,7 @@ export default function DashboardPage() {
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-slate-400 text-sm font-bold uppercase tracking-[0.2em] border-l-4 border-emerald-500 pl-4"
+            className="text-theme-fg-muted text-sm font-bold uppercase tracking-[0.2em] border-l-4 border-emerald-500 pl-4"
           >
            Your Safety Impact in Iba, Zambales
          </motion.p>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-slate-500 font-bold animate-pulse text-xs tracking-widest uppercase">Syncing Data...</p>
+          <p className="text-theme-fg-muted font-bold animate-pulse text-xs tracking-widest uppercase">Syncing Data...</p>
         </div>
       ) : (
         <motion.div
@@ -110,7 +110,7 @@ export default function DashboardPage() {
           
           <div className="mt-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-white italic uppercase tracking-wider">Report History</h2>
+              <h2 className="text-xl font-black text-theme-fg italic uppercase tracking-wider">Report History</h2>
               <button 
                 onClick={() => router.push('/report')}
                 className="text-xs font-black text-emerald-400 hover:text-emerald-300 uppercase tracking-widest"
@@ -120,11 +120,11 @@ export default function DashboardPage() {
             </div>
             
             {reports.length === 0 ? (
-              <div className="bg-slate-900/40 rounded-3xl border border-slate-800/60 p-12 text-center">
-                <p className="text-slate-500 font-bold italic mb-6">You haven't submitted any reports yet. Be the eyes of your community.</p>
+              <div className="bg-theme-panel/40 rounded-3xl border border-theme-border/60 p-12 text-center">
+                <p className="text-theme-fg-muted font-bold italic mb-6">You haven't submitted any reports yet. Be the eyes of your community.</p>
                 <button 
                   onClick={() => router.push('/report')}
-                  className="px-6 py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-black text-[10px] uppercase tracking-widest transition-all"
+                  className="px-6 py-2.5 rounded-full bg-theme-panel hover:bg-theme-border-hover text-theme-fg font-black text-[10px] uppercase tracking-widest transition-all"
                 >
                   Create Your First Report
                 </button>

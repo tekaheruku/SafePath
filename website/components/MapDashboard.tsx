@@ -343,8 +343,8 @@ const MapDashboard: React.FC = () => {
         : '';
 
       const userVote = r.user_vote;
-      const upvoteClass = userVote === 'up' ? 'text-indigo-400 font-bold' : 'text-slate-400 hover:text-indigo-400';
-      const downvoteClass = userVote === 'down' ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-orange-400';
+      const upvoteClass = userVote === 'up' ? 'text-indigo-400 font-bold' : 'text-theme-fg-muted hover:text-indigo-400';
+      const downvoteClass = userVote === 'down' ? 'text-orange-400 font-bold' : 'text-theme-fg-muted hover:text-orange-400';
 
       const voteHtml = `
         <div class="mt-3 pt-2 border-t border-slate-700 flex items-center justify-between gap-2">
@@ -367,7 +367,7 @@ const MapDashboard: React.FC = () => {
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
               <strong class="text-indigo-300 capitalize text-sm">${r.type}</strong>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 border border-slate-700 ${
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-theme-panel border border-slate-700 ${
                 r.severity_level === 'high' ? 'text-red-400 border-red-900/50' : 
                 r.severity_level === 'medium' ? 'text-orange-400 border-orange-900/50' : 'text-emerald-400 border-emerald-900/50'
               }">${r.severity_level}</span>
@@ -444,7 +444,7 @@ const MapDashboard: React.FC = () => {
             <div class="text-[10px] text-indigo-400/90 mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             <div class="mb-2 text-slate-100 font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-slate-100 leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
-          <div class="mt-2 text-[10px] space-y-0.5 text-slate-300 font-medium bg-slate-800/40 p-2 rounded-lg border border-white/5">
+          <div class="mt-2 text-[10px] space-y-0.5 text-theme-fg-muted font-medium bg-theme-panel/40 p-2 rounded-lg border border-theme-border">
             <div>Lighting: ${r.lighting_score}/5</div>
             <div>Pedestrian: ${r.pedestrian_safety_score}/5</div>
             <div>Driver: ${r.driver_safety_score}/5</div>
@@ -707,7 +707,7 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[62vh] md:h-[68vh] min-h-[480px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-900">
+    <div className="relative w-full h-[62vh] md:h-[68vh] min-h-[480px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-theme-panel">
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
@@ -716,7 +716,7 @@ const MapDashboard: React.FC = () => {
       {/* Top Center: Search Box & Selection Banner */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[320px] px-4">
         {selectionMode ? (
-          <div className="w-full bg-blue-600/90 text-white px-6 py-2.5 rounded-full font-bold shadow-2xl backdrop-blur-md text-center text-xs border border-white/20 whitespace-nowrap">
+          <div className="w-full bg-blue-600/90 text-theme-fg px-6 py-2.5 rounded-full font-bold shadow-2xl backdrop-blur-md text-center text-xs border border-white/20 whitespace-nowrap">
             📍 Click on the map to select location
           </div>
         ) : (
@@ -726,12 +726,12 @@ const MapDashboard: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search local streets/landmarks..."
-              className="w-full glass-panel bg-slate-900/60 text-white pl-4 pr-12 py-2.5 rounded-full text-xs outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all border-white/10 group-hover:border-white/20 shadow-2xl"
+              className="w-full glass-panel bg-theme-panel/60 text-theme-fg pl-4 pr-12 py-2.5 rounded-full text-xs outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all border-theme-border group-hover:border-white/20 shadow-2xl"
             />
             <button
               type="submit"
               disabled={isSearching}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-theme-fg transition-colors disabled:opacity-50"
             >
               {isSearching ? <span className="animate-spin text-[10px]">⌛</span> : <span>🔍</span>}
             </button>
@@ -742,15 +742,15 @@ const MapDashboard: React.FC = () => {
 
       {/* Top Left: Title & Stats (Glassmorphic) */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-        <div className="glass-panel p-4 rounded-xl text-white shadow-xl min-w-[180px]">
+        <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl min-w-[180px]">
           <h3 className="font-extrabold text-base mb-1 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">SafePath Iba</h3>
           <div className="flex flex-col gap-1 mt-2">
              <div className="flex justify-between items-center text-xs">
-               <span className="text-slate-300">Reports</span>
+               <span className="text-theme-fg-muted">Reports</span>
                <span className="font-mono text-indigo-300 font-bold">{stats.reports}</span>
              </div>
              <div className="flex justify-between items-center text-xs">
-               <span className="text-slate-300">Heat Points</span>
+               <span className="text-theme-fg-muted">Heat Points</span>
                <span className="font-mono text-orange-300 font-bold">{stats.heatmapPoints}</span>
              </div>
              {loading && <div className="animate-pulse text-[9px] text-blue-400 mt-1">Fetching live data...</div>}
@@ -773,7 +773,7 @@ const MapDashboard: React.FC = () => {
       {/* Top Right: Layer Toggles & Action Buttons */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4 w-[220px]">
         {/* Heatmap Layer Toggles (Glassmorphic) */}
-        <div className="glass-panel p-4 rounded-xl text-white shadow-xl flex flex-col gap-3">
+        <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl flex flex-col gap-3">
           <h3 className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Heatmap Layers</h3>
           <div className="flex flex-col gap-2">
             <button
@@ -795,7 +795,7 @@ const MapDashboard: React.FC = () => {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
                 showIncidentsHeat 
                   ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' 
-                  : 'bg-slate-800/50 border-white/5 text-slate-500 hover:text-slate-400'
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
@@ -815,7 +815,7 @@ const MapDashboard: React.FC = () => {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
                 showRatingsHeat 
                   ? 'bg-violet-500/20 border-violet-500/50 text-violet-400' 
-                  : 'bg-slate-800/50 border-white/5 text-slate-500 hover:text-slate-400'
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
@@ -823,13 +823,13 @@ const MapDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+          <div className="mt-3 pt-3 border-t border-theme-border space-y-2">
             <button
               onClick={() => setIsDateModalOpen(true)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold transition-all border ${
                 dateRange.from 
                   ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
-                  : 'bg-slate-800/50 border-white/5 text-slate-400 hover:text-slate-300'
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -866,7 +866,7 @@ const MapDashboard: React.FC = () => {
                   setDateRange({ from: null, to: null });
                   setDateLabel(null);
                 }}
-                className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
+                className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-theme-fg-muted hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
               >
                 <FilterX className="w-3 h-3" />
                 Reset Time Range
@@ -895,7 +895,7 @@ const MapDashboard: React.FC = () => {
 
 
       {showReportForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 
           <div className="max-w-md w-full">
             <ReportForm
@@ -914,7 +914,7 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
       {showRatingForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 
           <div className="max-w-md w-full">
             <StreetRatingForm

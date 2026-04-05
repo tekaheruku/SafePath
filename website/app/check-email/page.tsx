@@ -34,7 +34,7 @@ function CheckEmailContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
       <div className="max-w-md w-full text-center">
 
         {/* Icon */}
@@ -49,16 +49,16 @@ function CheckEmailContent() {
         </div>
 
         {/* Content */}
-        <h1 className="text-3xl font-bold text-white mb-3">Check your inbox</h1>
-        <p className="text-slate-400 text-base leading-relaxed mb-2">
+        <h1 className="text-3xl font-bold text-theme-fg mb-3">Check your inbox</h1>
+        <p className="text-theme-fg-muted text-base leading-relaxed mb-2">
           We sent a verification link to
         </p>
         {email && (
           <p className="text-blue-400 font-semibold text-base mb-6 break-all">{email}</p>
         )}
-        <p className="text-slate-500 text-sm leading-relaxed mb-10">
+        <p className="text-theme-fg-muted text-sm leading-relaxed mb-10">
           Click the link in the email to activate your account.<br />
-          The link expires in <span className="text-slate-300 font-medium">24 hours</span>.
+          The link expires in <span className="text-theme-fg-muted font-medium">24 hours</span>.
         </p>
 
         {/* Resend button */}
@@ -84,7 +84,7 @@ function CheckEmailContent() {
             id="resend-verification-btn"
             onClick={handleResend}
             disabled={resending || cooldown > 0}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3.5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-theme-panel hover:bg-theme-border-hover text-theme-fg font-semibold py-3.5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resending ? (
               <span className="flex items-center justify-center gap-2">
@@ -100,24 +100,24 @@ function CheckEmailContent() {
 
           <a
             href="/login"
-            className="block text-center text-slate-500 hover:text-slate-300 text-sm font-medium transition-colors py-2"
+            className="block text-center text-theme-fg-muted hover:text-theme-fg-muted text-sm font-medium transition-colors py-2"
           >
             Back to sign in
           </a>
         </div>
 
         {/* Tips */}
-        <div className="mt-10 p-4 bg-slate-900 border border-slate-800 rounded-xl text-left space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Didn&apos;t receive it?</p>
-          <div className="flex items-start gap-2 text-slate-500 text-xs">
+        <div className="mt-10 p-4 bg-theme-panel border border-theme-border rounded-xl text-left space-y-2">
+          <p className="text-xs font-semibold text-theme-fg-muted uppercase tracking-widest mb-3">Didn&apos;t receive it?</p>
+          <div className="flex items-start gap-2 text-theme-fg-muted text-xs">
             <span className="text-slate-600 mt-0.5">•</span>
-            Check your <span className="text-slate-400 mx-1">Spam</span> or <span className="text-slate-400 mx-1">Junk</span> folder
+            Check your <span className="text-theme-fg-muted mx-1">Spam</span> or <span className="text-theme-fg-muted mx-1">Junk</span> folder
           </div>
-          <div className="flex items-start gap-2 text-slate-500 text-xs">
+          <div className="flex items-start gap-2 text-theme-fg-muted text-xs">
             <span className="text-slate-600 mt-0.5">•</span>
             Make sure the email address above is correct
           </div>
-          <div className="flex items-start gap-2 text-slate-500 text-xs">
+          <div className="flex items-start gap-2 text-theme-fg-muted text-xs">
             <span className="text-slate-600 mt-0.5">•</span>
             Wait a few minutes — it can take up to 5 minutes
           </div>
@@ -130,7 +130,7 @@ function CheckEmailContent() {
 export default function CheckEmailPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-theme-bg-start">
         <div className="w-8 h-8 border-2 border-slate-700 border-t-blue-500 rounded-full animate-spin" />
       </div>
     }>
