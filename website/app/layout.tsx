@@ -6,6 +6,7 @@ import AppNav from '../components/AppNav'
 const inter = Inter({ subsets: ['latin'] })
 
 import { AuthProvider } from '../components/AuthContext';
+import { ThemeProvider } from '../components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'SafePath | Urban Safety Mapping',
@@ -20,15 +21,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-slate-950 text-slate-50 min-h-screen flex flex-col`}>
-        <AuthProvider>
-          <AppNav />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            {children}
-          </main>
-          <footer className="border-t border-slate-800 py-6 text-center text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} SafePath. All rights reserved.
-          </footer>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppNav />
+            <main className="flex-grow container mx-auto px-4 py-8">
+              {children}
+            </main>
+            <footer className="border-t border-slate-800 py-6 text-center text-slate-500 text-sm">
+              &copy; {new Date().getFullYear()} SafePath. All rights reserved.
+            </footer>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

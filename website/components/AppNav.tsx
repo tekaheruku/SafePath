@@ -59,6 +59,16 @@ const AppNav: React.FC = () => {
           {user ? (
             <div className="flex items-center space-x-4">
               <span className="text-sm text-slate-300">Hi, <span className="text-white font-semibold">{user.name}</span></span>
+              
+              <Link
+                href="/settings"
+                className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-sm font-semibold transition-all"
+                title="Settings"
+                aria-label="Settings"
+              >
+                ⚙️
+              </Link>
+
               <button
                 onClick={() => {
                   if (window.confirm('Are you sure you want to logout?')) {

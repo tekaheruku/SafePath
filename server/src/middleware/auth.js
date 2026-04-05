@@ -1,0 +1,24 @@
+import jwt from 'jsonwebtoken';
+const JWT_SECRET = process.env.JWT_SECRET || 'safepath-secret-key-change-it';
+export const authMiddleware = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ success: false, error: { message: 'Authentication required' } });
+    }
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    }
+    catch (err) {
+        return res.status(401).json({ success: false, error: { message: 'Invalid or expired token' } });
+    }
+};
+export const roleMiddleware = (roles) => {
+    return (req, res, next) => {
+        if (!req.user || !roles.includes(req.user.role)) {
+            return res.status(403).json({ success: false, error: { message: 'Forbidden: Access denied' } });
+        }
+        next();
+    };
+};

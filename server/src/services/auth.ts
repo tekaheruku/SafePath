@@ -18,12 +18,29 @@ export class AuthService {
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
+      const newAttempts = (user.failed_login_attempts || 0) + 1;
+      await pool.query('UPDATE users SET failed_login_attempts = $1 WHERE id = $2', [newAttempts, user.id]);
+
+      if (newAttempts === 3) {
+        let token = user.verification_token;
+        if (!token) {
+           token = crypto.randomBytes(32).toString('hex');
+           const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+           await pool.query('UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3', [token, verificationExpires, user.id]);
+        }
+        EmailService.sendVerificationEmail(email, token).catch((err) => {
+          console.error('Failed to send verification email:', err.message);
+        });
+        throw new Error('Invalid email or password. You have failed to login 3 times. A verification link has been sent to your email.');
+      } else if (newAttempts > 3) {
+        throw new Error('Too many failed attempts. Please check your email for the verification link.');
+      }
+
       throw new Error('Invalid email or password');
     }
 
-    // Check email verification before anything else
-    if (!user.is_verified) {
-      throw new Error('Please verify your email address before signing in. Check your inbox for the verification link.');
+    if (user.failed_login_attempts > 0) {
+      await pool.query('UPDATE users SET failed_login_attempts = 0 WHERE id = $1', [user.id]);
     }
 
     if (user.banned_until && new Date(user.banned_until) > new Date()) {
@@ -115,11 +132,6 @@ export class AuthService {
     
     const user = result.rows[0];
 
-    // Send verification email (fire and forget, don't block response)
-    EmailService.sendVerificationEmail(email, verificationToken).catch((err) => {
-      console.error('Failed to send verification email:', err.message);
-    });
-
     return { pending: true, email: user.email };
   }
 
@@ -194,15 +206,15 @@ export class AuthService {
     // Always return success to prevent email enumeration
     if (!user) return { sent: true };
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     await pool.query(
       `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3`,
-      [resetToken, resetExpires, user.id]
+      [resetOtp, resetExpires, user.id]
     );
 
-    EmailService.sendPasswordResetEmail(email, resetToken).catch((err) => {
+    EmailService.sendPasswordResetEmail(email, resetOtp).catch((err) => {
       console.error('Failed to send password reset email:', err.message);
     });
 
@@ -239,15 +251,75 @@ export class AuthService {
     return { success: true };
   }
 
+  static async toggle2fa(userId: string, enable: boolean) {
+    if (typeof enable !== 'boolean') {
+      throw new Error('Invalid input');
+    }
+    await pool.query(
+      `UPDATE users SET two_factor_enabled = $1 WHERE id = $2`,
+      [enable, userId]
+    );
+    return { enabled: enable };
+  }
+
+  static async changePassword(userId: string, oldPassword?: string, newPassword?: string, otpToken?: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long.');
+    }
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = result.rows[0];
+    if (!user) throw new Error('User not found.');
+
+    // If 2FA is enabled, they must use the OTP flow correctly.
+    if (user.two_factor_enabled) {
+      if (!otpToken) {
+        throw new Error('Two-Factor Authentication is enabled. An OTP code is required to change your password.');
+      }
+      
+      // If OTP token is provided, verify it. 
+      // Assuming they requested it via the requestPasswordReset mechanism and we check reset_token
+      if (user.reset_token !== otpToken) {
+         throw new Error('Invalid OTP code.');
+      }
+      if (new Date(user.reset_token_expires) < new Date()) {
+         throw new Error('This OTP code has expired. Please request a new one.');
+      }
+      
+      // Clear OTP
+      await pool.query(
+        `UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE id = $1`,
+        [user.id]
+      );
+    } else {
+      // 2FA not enabled, check old password
+      if (!oldPassword) {
+        throw new Error('Current password is required.');
+      }
+      const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!isMatch) {
+         throw new Error('Current password is incorrect.');
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      `UPDATE users SET password_hash = $1 WHERE id = $2`,
+      [hashedPassword, user.id]
+    );
+
+    return { message: 'Password updated successfully.' };
+  }
+
   static async getUserById(id: string) {
-    const result = await pool.query('SELECT id, email, name, role FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT id, email, name, role, two_factor_enabled FROM users WHERE id = $1', [id]);
     if (result.rowCount === 0) throw new Error('User not found');
     return result.rows[0];
   }
 
   private static generateToken(user: any) {
     return jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, two_factor_enabled: user.two_factor_enabled },
       JWT_SECRET,
       { expiresIn: '24h' }
     );

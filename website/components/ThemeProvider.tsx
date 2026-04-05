@@ -16,12 +16,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!mounted) return;
     
     // Remove all theme classes
-    document.body.classList.remove('theme-dark', 'theme-gray', 'theme-white');
+    document.body.classList.remove('theme-dark', 'theme-dark-slate', 'theme-dark-blue', 'theme-white');
     
     // Add current theme class
-    if (theme !== 'dark') {
-      document.body.classList.add(`theme-${theme}`);
-    }
+    document.body.classList.add(`theme-${theme}`);
   }, [theme, mounted]);
 
   if (!mounted) {

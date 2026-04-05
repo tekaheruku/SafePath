@@ -111,4 +111,26 @@ export class AuthController {
       res.status(404).json({ success: false, error: { message: err.message } });
     }
   }
+
+  static async toggle2fa(req: any, res: Response) {
+    try {
+      const { enable } = req.body;
+      const result = await AuthService.toggle2fa(req.user.id, enable);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async changePassword(req: any, res: Response) {
+    try {
+      // oldPassword can be optional if 2FA OTP is provided and verified inside the service, but usually we require both or either.
+      const { oldPassword, newPassword, otpToken } = req.body;
+      const result = await AuthService.changePassword(req.user.id, oldPassword, newPassword, otpToken);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      // Sending back 400 or 403 depending on error
+      res.status(400).json({ success: false, error: { message: err.message } });
+    }
+  }
 }

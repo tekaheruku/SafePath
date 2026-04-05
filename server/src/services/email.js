@@ -1,27 +1,23 @@
 import nodemailer from 'nodemailer';
-
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
 });
-
 const FROM = process.env.SMTP_FROM || '"SafePath" <noreply@safepath.app>';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3002';
-
 export class EmailService {
-  static async sendVerificationEmail(to: string, token: string): Promise<void> {
-    const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
-
-    await transporter.sendMail({
-      from: FROM,
-      to,
-      subject: 'Verify your SafePath account',
-      html: `
+    static async sendVerificationEmail(to, token) {
+        const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
+        await transporter.sendMail({
+            from: FROM,
+            to,
+            subject: 'Verify your SafePath account',
+            html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -80,15 +76,14 @@ export class EmailService {
           </body>
         </html>
       `,
-    });
-  }
-
-  static async sendPasswordResetEmail(to: string, otp: string): Promise<void> {
-    await transporter.sendMail({
-      from: FROM,
-      to,
-      subject: 'Reset your SafePath password',
-      html: `
+        });
+    }
+    static async sendPasswordResetEmail(to, otp) {
+        await transporter.sendMail({
+            from: FROM,
+            to,
+            subject: 'Reset your SafePath password',
+            html: `
         <!DOCTYPE html>
         <html>
           <head>
@@ -142,10 +137,9 @@ export class EmailService {
           </body>
         </html>
       `,
-    });
-  }
-
-  static async sendVerificationReminderEmail(to: string, token: string): Promise<void> {
-    return this.sendVerificationEmail(to, token);
-  }
+        });
+    }
+    static async sendVerificationReminderEmail(to, token) {
+        return this.sendVerificationEmail(to, token);
+    }
 }

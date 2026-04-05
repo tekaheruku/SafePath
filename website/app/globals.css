@@ -2,10 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default variables (fallbacks) */
 :root {
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 2, 6, 23;
   --background-end-rgb: 0, 0, 0;
+}
+
+body.theme-dark {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body.theme-dark-slate {
+  --foreground-rgb: 248, 250, 252; /* slate-50 */
+  --background-start-rgb: 15, 23, 42; /* slate-900 */
+  --background-end-rgb: 2, 6, 23; /* slate-950 */
+}
+
+body.theme-dark-blue {
+  --foreground-rgb: 238, 242, 255; /* indigo-50 */
+  --background-start-rgb: 30, 27, 75; /* indigo-950 */
+  --background-end-rgb: 10, 10, 30; /* darker indigo base */
+}
+
+body.theme-white {
+  --foreground-rgb: 15, 23, 42; /* slate-900 */
+  --background-start-rgb: 248, 250, 252; /* slate-50 */
+  --background-end-rgb: 255, 255, 255; /* white */
 }
 
 body {
