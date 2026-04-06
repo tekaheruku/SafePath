@@ -233,12 +233,12 @@ No backend refactoring needed—the architecture is ready for multi-platform exp
 ### Phase 1: MVP (Current)
 - [x] User registration & JWT auth
 - [x] Project structure & scaffolding
-- [ ] Incident report submission
-- [ ] Street safety ratings
-- [ ] Interactive Leaflet map
-- [ ] Real-time Socket.io updates
+- [x] Incident report submission
+- [x] Street safety ratings
+- [x] Interactive Leaflet map
+- [x] Real-time Socket.io updates
 - [ ] Sentiment analysis
-- [ ] LGU admin dashboard
+- [x] LGU admin dashboard
 
 ### Phase 2: Enhanced
 - [ ] Photo uploads for incidents
