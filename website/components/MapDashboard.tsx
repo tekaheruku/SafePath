@@ -347,7 +347,7 @@ const MapDashboard: React.FC = () => {
       const downvoteClass = userVote === 'down' ? 'text-orange-400 font-bold' : 'text-theme-fg-muted hover:text-orange-400';
 
       const voteHtml = `
-        <div class="mt-3 pt-2 border-t border-slate-700 flex items-center justify-between gap-2">
+        <div class="mt-3 pt-2 border-t border-theme-border flex items-center justify-between gap-2">
           <div class="flex items-center gap-3">
             <button onclick="window.voteReport('${r.id}', 'up')" class="flex items-center gap-1 transition-all hover:scale-110 active:scale-95 ${upvoteClass}" title="Upvote">
               <span class="text-sm">🔼</span>
@@ -366,14 +366,14 @@ const MapDashboard: React.FC = () => {
         .bindPopup(`
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <strong class="text-indigo-300 capitalize text-sm">${r.type}</strong>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-theme-panel border border-slate-700 ${
+              <strong class="text-indigo-400 font-bold capitalize text-sm">${r.type}</strong>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-theme-panel border border-theme-border ${
                 r.severity_level === 'high' ? 'text-red-400 border-red-900/50' : 
                 r.severity_level === 'medium' ? 'text-orange-400 border-orange-900/50' : 'text-emerald-400 border-emerald-900/50'
               }">${r.severity_level}</span>
             </div>
-            <div class="text-[10px] text-indigo-400/90 mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
-            <p class="text-[13px] text-slate-100 leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
+            <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
+            <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
             ${voteHtml}
           </div>
         `, { className: 'custom-popup-glass' })
@@ -439,11 +439,11 @@ const MapDashboard: React.FC = () => {
         .bindPopup(`
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <strong class="text-indigo-300 text-sm">Street Safety Rating</strong>
+              <strong class="text-indigo-400 font-bold text-sm">Street Safety Rating</strong>
             </div>
-            <div class="text-[10px] text-indigo-400/90 mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
-            <div class="mb-2 text-slate-100 font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
-            ${r.comment ? `<p class="italic text-[13px] mt-1 text-slate-100 leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
+            <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
+            <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
+            ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
           <div class="mt-2 text-[10px] space-y-0.5 text-theme-fg-muted font-medium bg-theme-panel/40 p-2 rounded-lg border border-theme-border">
             <div>Lighting: ${r.lighting_score}/5</div>
             <div>Pedestrian: ${r.pedestrian_safety_score}/5</div>
@@ -743,16 +743,16 @@ const MapDashboard: React.FC = () => {
       {/* Top Left: Title & Stats (Glassmorphic) */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
         <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl min-w-[180px]">
-          <h3 className="font-extrabold text-base mb-1 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">SafePath Iba</h3>
-          <div className="flex flex-col gap-1 mt-2">
-             <div className="flex justify-between items-center text-xs">
-               <span className="text-theme-fg-muted">Reports</span>
-               <span className="font-mono text-indigo-300 font-bold">{stats.reports}</span>
-             </div>
-             <div className="flex justify-between items-center text-xs">
-               <span className="text-theme-fg-muted">Heat Points</span>
-               <span className="font-mono text-orange-300 font-bold">{stats.heatmapPoints}</span>
-             </div>
+          <h3 className="font-extrabold text-base mb-1 bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent text-outline">SafePath Iba</h3>
+            <div className="flex flex-col gap-1 mt-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-medium text-outline">Reports</span>
+                <span className="font-mono text-indigo-100 font-extrabold text-outline">{stats.reports}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-medium text-outline">Heat Points</span>
+                <span className="font-mono text-orange-100 font-extrabold text-outline">{stats.heatmapPoints}</span>
+              </div>
              {loading && <div className="animate-pulse text-[9px] text-blue-400 mt-1">Fetching live data...</div>}
              {error && <div className="text-[9px] text-red-400 mt-1">{error}</div>}
              {!loading && stats.reports === 0 && dateRange.from && (
@@ -774,7 +774,7 @@ const MapDashboard: React.FC = () => {
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4 w-[220px]">
         {/* Heatmap Layer Toggles (Glassmorphic) */}
         <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl flex flex-col gap-3">
-          <h3 className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Heatmap Layers</h3>
+          <h3 className="text-[10px] font-bold text-indigo-100 uppercase tracking-wider text-outline">Heatmap Layers</h3>
           <div className="flex flex-col gap-2">
             <button
               onClick={() => {
@@ -794,12 +794,12 @@ const MapDashboard: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
                 showIncidentsHeat 
-                  ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
+                  ? 'bg-orange-500/20 border-orange-500/50' 
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
-              Incident Heat
+              <span className="text-outline">Incident Heat</span>
             </button>
             <button
               onClick={() => {
@@ -814,12 +814,12 @@ const MapDashboard: React.FC = () => {
               }}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
                 showRatingsHeat 
-                  ? 'bg-violet-500/20 border-violet-500/50 text-violet-400' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
+                  ? 'bg-violet-500/20 border-violet-500/50' 
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
-              Safety Heat
+              <span className="text-outline">Safety Heat</span>
             </button>
           </div>
 
@@ -828,19 +828,19 @@ const MapDashboard: React.FC = () => {
               onClick={() => setIsDateModalOpen(true)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold transition-all border ${
                 dateRange.from 
-                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted hover:text-theme-fg-muted'
+                  ? 'bg-indigo-500/20 border-indigo-500/50' 
+                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
               }`}
             >
               <div className="flex items-center gap-2">
-                <Calendar className="w-3 h-3" />
-                {dateRange.from ? 'Filtered Dates' : 'Filter by Date'}
+                <Calendar className="w-3 h-3 text-white dark:text-indigo-400" />
+                <span className="text-outline">{dateRange.from ? 'Filtered Dates' : 'Filter by Date'}</span>
               </div>
-              {dateRange.from && <span className="text-[8px] opacity-70">Active</span>}
+              {dateRange.from && <span className="text-[8px] opacity-70 text-outline">Active</span>}
             </button>
             {dateRange.from && dateLabel && (
               <div className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                <p className="text-[9px] text-indigo-300 font-semibold text-center leading-tight">{dateLabel}</p>
+                <p className="text-[9px] font-semibold text-center leading-tight text-outline">{dateLabel}</p>
               </div>
             )}
             

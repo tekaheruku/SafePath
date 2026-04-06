@@ -111,7 +111,7 @@ export default function LoginPage() {
             <input
               type="email"
               required
-              className="w-full bg-theme-panel border border-slate-700 rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full bg-theme-panel/50 border border-theme-border rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -122,7 +122,7 @@ export default function LoginPage() {
             <input
               type="password"
               required
-              className="w-full bg-theme-panel border border-slate-700 rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full bg-theme-panel/50 border border-theme-border rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -12,7 +12,7 @@
 
   --theme-glass-bg: 15, 23, 42;
   --theme-glass-border: 255, 255, 255;
-
+  --theme-overlay-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 1) 100%);
   --theme-panel-bg: 30, 41, 59;
   
   --theme-border: 255, 255, 255;
@@ -30,7 +30,7 @@ body.theme-dark {
 
   --theme-glass-bg: 10, 10, 10;
   --theme-glass-border: 255, 255, 255;
-
+  --theme-overlay-bg: linear-gradient(135deg, rgb(10, 10, 10) 0%, rgb(20, 20, 20) 100%);
   --theme-panel-bg: 17, 17, 17;
   
   --theme-border: 255, 255, 255;
@@ -48,7 +48,7 @@ body.theme-dark-slate {
 
   --theme-glass-bg: 15, 23, 42;
   --theme-glass-border: 255, 255, 255;
-
+  --theme-overlay-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(45, 55, 85, 1) 100%);
   --theme-panel-bg: 30, 41, 59;
   
   --theme-border: 255, 255, 255;
@@ -66,7 +66,7 @@ body.theme-dark-blue {
 
   --theme-glass-bg: 30, 27, 75;
   --theme-glass-border: 99, 102, 241;
-
+  --theme-overlay-bg: linear-gradient(135deg, rgb(30, 27, 75) 0%, rgb(49, 46, 129) 100%);
   --theme-panel-bg: 49, 46, 129;
   
   --theme-border: 99, 102, 241;
@@ -76,21 +76,21 @@ body.theme-dark-blue {
 }
 
 body.theme-white {
-  --theme-bg-start: 248, 250, 252; /* slate-50 */
-  --theme-bg-end: 248, 250, 252; /* white */
+  --theme-bg-start: 226, 232, 240; /* slate-200 */
+  --theme-bg-end: 203, 213, 225; /* slate-300 */
 
   --theme-fg: 15, 23, 42; /* slate-900 */
-  --theme-fg-muted: 71, 85, 105;
+  --theme-fg-muted: 51, 65, 85; /* slate-700 */
 
   --theme-glass-bg: 255, 255, 255;
-  --theme-glass-border: 0, 0, 0;
-
+  --theme-glass-border: 148, 163, 184; /* slate-400 */
+  --theme-overlay-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   --theme-panel-bg: 255, 255, 255;
   
-  --theme-border: 0, 0, 0;
-  --theme-border-hover: 0, 0, 0;
+  --theme-border: 148, 163, 184; /* slate-400 */
+  --theme-border-hover: 71, 85, 105; /* slate-600 */
 
-  --theme-accent: 99, 102, 241;
+  --theme-accent: 79, 70, 229;
 }
 
 body {
@@ -108,32 +108,32 @@ body {
 }
 
 .glass-panel {
-  background: rgb(var(--theme-glass-bg) / 0.7) !important;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgb(var(--theme-glass-border) / 0.1);
+  background: var(--theme-overlay-bg) !important;
+  border: 1px solid rgb(var(--theme-glass-border) / 0.2);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .custom-popup-glass .leaflet-popup-content-wrapper {
-  background: rgb(var(--theme-glass-bg) / 0.8) !important;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgb(var(--theme-border) / 0.15);
+  background: var(--theme-overlay-bg) !important;
+  border: 1px solid rgb(var(--theme-border) / 0.2);
   color: rgb(var(--theme-fg)) !important;
   border-radius: 12px !important;
   padding: 4px;
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 .custom-popup-glass .leaflet-popup-tip {
-  background: rgb(var(--theme-glass-bg) / 0.8) !important;
-  backdrop-filter: blur(12px);
+  background: var(--theme-overlay-bg) !important;
 }
 
 .leaflet-popup-content-wrapper {
   background: rgb(var(--theme-panel-bg)) !important;
   color: rgb(var(--theme-fg)) !important;
   border-radius: 8px !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5) !important;
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.5) !important;
 }
 
 .leaflet-popup-tip {
@@ -143,3 +143,18 @@ body {
 /* Hide scrollbar but keep scrolling functional */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* High-contrast outline utility (White inner, black outer) for map labels */
+.text-outline {
+  color: white !important;
+  text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0 0 5px rgba(0,0,0,0.5);
+}
+
+.text-contrast-shadow {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}

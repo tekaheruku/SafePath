@@ -20,6 +20,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     // Add current theme class
     document.body.classList.add(`theme-${theme}`);
+
+    // Sync dark mode class on html element for Tailwind/Browser defaults
+    if (theme === 'white') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
   }, [theme, mounted]);
 
   if (!mounted) {

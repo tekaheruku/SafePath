@@ -27,16 +27,15 @@ export default function SettingsPage() {
   const [otpMode, setOtpMode] = useState(false);
   const [otpToken, setOtpToken] = useState('');
 
-  // Protect the route
-  if (!loading && !user) {
-    router.replace('/login');
-    return null;
+  // If not logged in, ensure we stay on appearance tab
+  if (!loading && !user && activeTab === 'security') {
+    setActiveTab('appearance');
   }
 
   // Define API Client correctly
   const apiClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
-    headers: { Authorization: `Bearer ${token}` }
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 
   const handleToggle2FA = async () => {
@@ -128,16 +127,18 @@ export default function SettingsPage() {
           >
             <span className="text-xl">🎨</span> Appearance
           </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
-              activeTab === 'security' 
-                ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' 
-                : 'text-theme-fg-muted hover:bg-theme-border border border-transparent'
-            }`}
-          >
-            <span className="text-xl">🔒</span> Security & Login
-          </button>
+          {user && (
+            <button
+              onClick={() => setActiveTab('security')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+                activeTab === 'security' 
+                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' 
+                  : 'text-theme-fg-muted hover:bg-theme-border border border-transparent'
+              }`}
+            >
+              <span className="text-xl">🔒</span> Security & Login
+            </button>
+          )}
         </div>
 
         {/* Content area */}
