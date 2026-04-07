@@ -95,7 +95,7 @@ export default function LoginPage() {
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               Access Denied
             </div>
-            <p className="font-medium text-slate-200">{error}</p>
+            <p className="font-medium text-theme-fg">{error}</p>
             {bannedUntil && (
               <div className="mt-2 pt-2 border-t border-red-500/20">
                 <p className="text-theme-fg-muted text-[10px] uppercase font-bold tracking-widest mb-1">Time Remaining</p>
@@ -132,7 +132,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-theme-fg font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -140,7 +140,7 @@ export default function LoginPage() {
 
         <p className="mt-8 text-center text-theme-fg-muted text-sm">
           Don't have an account?{' '}
-          <a href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">Create an account</a>
+          <a href="/register" className="text-theme-accent hover:opacity-80 font-bold transition-all underline underline-offset-4 decoration-theme-accent/30">Create an account</a>
         </p>
       </div>
     </div>

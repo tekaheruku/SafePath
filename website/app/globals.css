@@ -140,6 +140,42 @@ body {
   background: rgb(var(--theme-panel-bg)) !important;
 }
 
+/* =====================================================
+   GLOBAL INPUT CONTRAST FIX
+   Browsers (especially Chrome) override background-color
+   on inputs, causing white bg + white text (invisible typed text).
+   These rules force theme-aware colors to always apply.
+   ===================================================== */
+input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+textarea,
+select {
+  color: rgb(var(--theme-fg)) !important;
+  background-color: rgb(var(--theme-panel-bg) / 0.6) !important;
+  -webkit-text-fill-color: rgb(var(--theme-fg)) !important;
+}
+
+/* Fix Chrome autofill background override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px rgb(var(--theme-panel-bg)) inset !important;
+  -webkit-text-fill-color: rgb(var(--theme-fg)) !important;
+  caret-color: rgb(var(--theme-fg)) !important;
+}
+
+/* Placeholder text color */
+input::placeholder,
+textarea::placeholder {
+  color: rgb(var(--theme-fg-muted)) !important;
+  opacity: 0.6;
+}
+
 /* Hide scrollbar but keep scrolling functional */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -63,7 +63,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-md bg-theme-panel border border-slate-700 rounded-2xl shadow-2xl overflow-hidden relative transform transition-all animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-md bg-theme-panel border border-theme-border rounded-2xl shadow-2xl overflow-hidden relative transform transition-all animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -96,7 +96,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <input
                 type="email"
                 required
-                className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-theme-panel/50 border border-theme-border rounded-xl px-4 py-3 text-theme-fg placeholder-theme-fg-muted/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -117,7 +117,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <input
                 type="password"
                 required
-                className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-theme-panel/50 border border-theme-border rounded-xl px-4 py-3 text-theme-fg placeholder-theme-fg-muted/50 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -127,7 +127,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-theme-fg font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 mt-2"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
