@@ -14,7 +14,8 @@ import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
 import { DateFilterModal } from './DateFilterModal';
-import { Calendar, FilterX, AlertCircle } from 'lucide-react';
+import SearchBar from './SearchBar';
+import { Calendar, FilterX, AlertCircle, Search, X, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
 
@@ -142,7 +143,6 @@ const MapDashboard: React.FC = () => {
   useEffect(() => {
     showRatingsHeatRef.current = showRatingsHeat;
   }, [showRatingsHeat]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
   const [reports, setReports] = useState<any[]>([]);
@@ -625,44 +625,48 @@ const MapDashboard: React.FC = () => {
     };
 
   }, [token]);
+  
+  const handleSuggestionSelect = (suggestion: any) => {
+    const { lat, lon } = suggestion;
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (mapRef.current) {
+      mapRef.current.flyTo([lat, lon], 17, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+
+      const highlight = L.circle([lat, lon], {
+        radius: 40,
+        color: '#4f46e5',
+        fillColor: '#818cf8',
+        fillOpacity: 0.4,
+        weight: 2
+      }).addTo(mapRef.current);
+      
+      setTimeout(() => highlight.remove(), 4000);
+    }
+  };
+  
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) return;
   
     setIsSearching(true);
     try {
-      // Iba Bounding Box: [lon1, lat1, lon2, lat2] -> [west, north, east, south]
-      const viewbox = "119.92,15.41,120.18,15.30";
-      const baseParams = `format=json&viewbox=${viewbox}&bounded=1&limit=5&addressdetails=1`;
-      
-      // Step 1: Formal search with town/province
-      let q = `${searchQuery}, Iba, Zambales`;
-      let response = await fetch(`https://nominatim.openstreetmap.org/search?${baseParams}&q=${encodeURIComponent(q)}`);
-      let data = await response.json();
+      // Step 1: Use Photon with strict bbox for full-submission search
+      const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lat=15.35&lon=119.98&bbox=119.92,15.30,120.18,15.41`);
+      const data = await response.json();
   
-      // Step 2: Fallback to loose search if first attempt fails
-      if (!data || data.length === 0) {
-        q = searchQuery;
-        response = await fetch(`https://nominatim.openstreetmap.org/search?${baseParams}&q=${encodeURIComponent(q)}`);
-        data = await response.json();
-      }
-  
-      if (data && data.length > 0) {
-        // Prefer building/poi results if multiple exist
-        const bestMatch = data.find((d: any) => d.class === 'building' || d.class === 'amenity' || d.type === 'building') || data[0];
-        
-        const { lat, lon } = bestMatch;
-        const latNum = parseFloat(lat);
-        const lonNum = parseFloat(lon);
+      if (data && data.features && data.features.length > 0) {
+        const bestMatch = data.features[0];
+        const [lon, lat] = bestMatch.geometry.coordinates;
   
         if (mapRef.current) {
-          mapRef.current.flyTo([latNum, lonNum], 17, {
+          mapRef.current.flyTo([lat, lon], 17, {
             duration: 1.5,
             easeLinearity: 0.25
           });
   
-          const highlight = L.circle([latNum, lonNum], {
+          const highlight = L.circle([lat, lon], {
             radius: 40,
             color: '#4f46e5',
             fillColor: '#818cf8',
@@ -673,7 +677,7 @@ const MapDashboard: React.FC = () => {
           setTimeout(() => highlight.remove(), 4000);
         }
       } else {
-        alert(`Location "${searchQuery}" not found within Iba boundaries. Please try a more specific name or street.`);
+        alert(`Location "${query}" not found within Iba boundaries. Please try a more specific name or street.`);
       }
     } catch (err) {
       console.error('Search failed:', err);
@@ -713,31 +717,14 @@ const MapDashboard: React.FC = () => {
 
 
 
-      {/* Top Center: Search Box & Selection Banner */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-[320px] px-4">
-        {selectionMode ? (
-          <div className="w-full bg-blue-600/90 text-theme-fg px-6 py-2.5 rounded-full font-bold shadow-2xl backdrop-blur-md text-center text-xs border border-white/20 whitespace-nowrap">
-            📍 Click on the map to select location
-          </div>
-        ) : (
-          <form onSubmit={handleSearch} className="relative group hidden md:block">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search local streets/landmarks..."
-              className="w-full glass-panel bg-theme-panel/60 text-theme-fg pl-4 pr-12 py-2.5 rounded-full text-xs outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all border-theme-border group-hover:border-white/20 shadow-2xl"
-            />
-            <button
-              type="submit"
-              disabled={isSearching}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 text-theme-fg transition-colors disabled:opacity-50"
-            >
-              {isSearching ? <span className="animate-spin text-[10px]">⌛</span> : <span>🔍</span>}
-            </button>
-          </form>
-        )}
-      </div>
+      {/* Top Center: Search Bar & Selection Banner */}
+      <SearchBar 
+        onSuggestionSelect={handleSuggestionSelect} 
+        onSearch={handleSearch} 
+        isSearching={isSearching}
+        selectionMode={selectionMode}
+        boundaryPolygon={IBA_POLYGON}
+      />
 
 
       {/* Top Left: Title & Stats (Glassmorphic) */}

@@ -1,0 +1,282 @@
+[
+  {
+    "name": "Iba Town Center",
+    "lat": 15.3291746,
+    "lon": 119.9737431,
+    "type": "mall",
+    "address": "Iba - Palauig Road, Zone 1, Iba, Zambales"
+  },
+  {
+    "name": "Jollibee Iba",
+    "lat": 15.3285,
+    "lon": 119.9752,
+    "type": "fast_food",
+    "address": "Rizal Street, Zone 1, Iba, Zambales"
+  },
+  {
+    "name": "Mang Inasal Iba",
+    "lat": 15.3288,
+    "lon": 119.9745,
+    "type": "fast_food",
+    "address": "Iba Town Center, Iba, Zambales"
+  },
+  {
+    "name": "Chowking Iba",
+    "lat": 15.3293,
+    "lon": 119.9740,
+    "type": "fast_food",
+    "address": "Iba Town Center, Iba, Zambales"
+  },
+  {
+    "name": "7-Eleven Iba (Zone 1)",
+    "lat": 15.3295,
+    "lon": 119.9735,
+    "type": "convenience",
+    "address": "Iba - Palauig Road, Iba, Zambales"
+  },
+  {
+    "name": "7-Eleven Iba (Zone 5)",
+    "lat": 15.3255,
+    "lon": 119.9815,
+    "type": "convenience",
+    "address": "Zambales Highway, Iba, Zambales"
+  },
+  {
+    "name": "Mercury Drug Iba",
+    "lat": 15.3282,
+    "lon": 119.9768,
+    "type": "pharmacy",
+    "address": "Rizal Street, Iba, Zambales"
+  },
+  {
+    "name": "Zambales Provincial Capitol",
+    "lat": 15.3257987,
+    "lon": 119.981144,
+    "type": "government",
+    "address": "Zambales Highway, Zone 5, Iba, Zambales"
+  },
+  {
+    "name": "Iba Municipal Hall",
+    "lat": 15.3277447,
+    "lon": 119.976597,
+    "type": "government",
+    "address": "Ramon Magsaysay Street, Iba, Zambales"
+  },
+  {
+    "name": "Iba Airport",
+    "lat": 15.3259256,
+    "lon": 119.9685938,
+    "type": "airport",
+    "address": "Iba - Palauig Road, Iba, Zambales"
+  },
+  {
+    "name": "Zambales National High School",
+    "lat": 15.3228137,
+    "lon": 119.9832776,
+    "type": "school",
+    "address": "J. P. Rizal Street, Iba, Zambales"
+  },
+  {
+    "name": "Ramon Magsaysay Technological University (RMTU/PRMSU)",
+    "lat": 15.3315,
+    "lon": 119.9790,
+    "type": "university",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Our Lady of Fatima University (OLFU) Iba",
+    "lat": 15.3350,
+    "lon": 119.9720,
+    "type": "university",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Iba Public Market",
+    "lat": 15.3367908,
+    "lon": 119.9739801,
+    "type": "market",
+    "address": "Dirita-Baloguen, Iba, Zambales"
+  },
+  {
+    "name": "St. Augustine Cathedral",
+    "lat": 15.3285,
+    "lon": 119.9772,
+    "type": "church",
+    "address": "Zone 2, Iba, Zambales"
+  },
+  {
+    "name": "Emerald Beach Resort",
+    "lat": 15.3385,
+    "lon": 119.9650,
+    "type": "resort",
+    "address": "Beach Road, Iba, Zambales"
+  },
+  {
+    "name": "Tampisaw Resort",
+    "lat": 15.3410,
+    "lon": 119.9660,
+    "type": "resort",
+    "address": "Beach Road, Iba, Zambales"
+  },
+  {
+    "name": "Paynauen Beach Resort",
+    "lat": 15.3395,
+    "lon": 119.9655,
+    "type": "resort",
+    "address": "Beach Road, Iba, Zambales"
+  },
+  {
+    "name": "Laguna Beach Resort",
+    "lat": 15.3425,
+    "lon": 119.9645,
+    "type": "resort",
+    "address": "Beach Road, Iba, Zambales"
+  },
+  {
+    "name": "Iba Police Station",
+    "lat": 15.3267553,
+    "lon": 119.9686064,
+    "type": "police",
+    "address": "Lipay Dingin Road, Zone 1, Iba, Zambales"
+  },
+  {
+    "name": "Zambales Provincial Hospital",
+    "lat": 15.3330,
+    "lon": 119.9820,
+    "type": "hospital",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "SM Savemore Iba",
+    "lat": 15.3300,
+    "lon": 119.9742,
+    "type": "supermarket",
+    "address": "Iba - Palauig Road, Iba, Zambales"
+  },
+  {
+    "name": "Puregold Iba",
+    "lat": 15.3325,
+    "lon": 119.9715,
+    "type": "supermarket",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "BDO Iba",
+    "lat": 15.3280,
+    "lon": 119.9775,
+    "type": "bank",
+    "address": "Rizal Street, Iba, Zambales"
+  },
+  {
+    "name": "Metrobank Iba",
+    "lat": 15.3292,
+    "lon": 119.9758,
+    "type": "bank",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "RCBC Iba",
+    "lat": 15.3288,
+    "lon": 119.9765,
+    "type": "bank",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "PNB Iba",
+    "lat": 15.3275,
+    "lon": 119.9785,
+    "type": "bank",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Andok's Iba",
+    "lat": 15.3298,
+    "lon": 119.9748,
+    "type": "fast_food",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Dunkin' Iba",
+    "lat": 15.3284,
+    "lon": 119.9755,
+    "type": "cafe",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Red Ribbon Iba",
+    "lat": 15.3294,
+    "lon": 119.9742,
+    "type": "bakery",
+    "address": "Iba Town Center, Iba, Zambales"
+  },
+  {
+    "name": "LBC Iba",
+    "lat": 15.3286,
+    "lon": 119.9760,
+    "type": "courier",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Zone 1, Iba",
+    "lat": 15.3290,
+    "lon": 119.9740,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Zone 2, Iba",
+    "lat": 15.3275,
+    "lon": 119.9770,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Zone 5, Iba",
+    "lat": 15.3250,
+    "lon": 119.9820,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Zone 6, Iba",
+    "lat": 15.3220,
+    "lon": 119.9840,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Amungan, Iba",
+    "lat": 15.3650,
+    "lon": 119.9520,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Bangantalinga, Iba",
+    "lat": 15.3450,
+    "lon": 119.9650,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Lipay-Dingin, Iba",
+    "lat": 15.3250,
+    "lon": 119.9550,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Palanginan, Iba",
+    "lat": 15.3150,
+    "lon": 119.9950,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  },
+  {
+    "name": "Santa Barbara, Iba",
+    "lat": 15.3550,
+    "lon": 119.9550,
+    "type": "suburb",
+    "address": "Iba, Zambales"
+  }
+]
