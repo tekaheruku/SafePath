@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
@@ -10,12 +10,14 @@ import { SOCKET_EVENTS } from '@safepath/shared';
 import { useAuth } from './AuthContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMapStore } from '../store/useMapStore';
+import { useDirectionsStore, ScoredRoute } from '../store/useDirectionsStore';
 import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
 import { DateFilterModal } from './DateFilterModal';
 import SearchBar from './SearchBar';
-import { Calendar, FilterX, AlertCircle, Search, X, MapPin } from 'lucide-react';
+import DirectionsPanel from './DirectionsPanel';
+import { Calendar, FilterX, AlertCircle, Search, X, MapPin, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
 
 
@@ -115,6 +117,13 @@ function createFogLayer(map: L.Map): () => void {
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
+// ── Safety color thresholds for route polylines ────────────────────────────
+function routePolylineColor(safetyScore: number): string {
+  if (safetyScore >= 4.0) return '#22c55e';
+  if (safetyScore >= 2.5) return '#f59e0b';
+  return '#ef4444';
+}
+
 const MapDashboard: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -122,6 +131,9 @@ const MapDashboard: React.FC = () => {
   const ratingsHeatLayerRef = useRef<any>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const ratingMarkersRef = useRef<L.Marker[]>([]);
+  // Route polylines
+  const routePolylinesRef = useRef<L.Polyline[]>([]);
+  const routeMarkersRef = useRef<L.Marker[]>([]); // start/end pins
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +143,18 @@ const MapDashboard: React.FC = () => {
     lat: storeLat, lng: storeLng, zoom: storeZoom, setView,
     showIncidentsHeat, showRatingsHeat, setIncidentsHeat, setRatingsHeat
   } = useMapStore();
+
+  // Directions store
+  const {
+    isOpen: directionsOpen,
+    setOpen: setDirectionsOpen,
+    selectionTarget: directionsSelectionTarget,
+    setSelectionTarget: setDirectionsSelectionTarget,
+    setStartPoint: setDirectionsStart,
+    setEndPoint: setDirectionsEnd,
+    routes: directionRoutes,
+    selectedRouteIndex,
+  } = useDirectionsStore();
 
   const showIncidentsHeatRef = useRef(showIncidentsHeat);
   const showRatingsHeatRef = useRef(showRatingsHeat);
@@ -166,6 +190,12 @@ const MapDashboard: React.FC = () => {
   // window.deleteReport, etc.) always read the current filter value.
   const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+
+  // Directions selection mode ref (for use inside map click handler)
+  const directionsSelectionTargetRef = useRef<'start' | 'end' | null>(null);
+  useEffect(() => {
+    directionsSelectionTargetRef.current = directionsSelectionTarget;
+  }, [directionsSelectionTarget]);
 
   // Keep dateRangeRef in sync so that stale closures always read the current filter
   useEffect(() => {
@@ -552,7 +582,29 @@ const MapDashboard: React.FC = () => {
 
 
     socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchMapData());
-    socket.on(SOCKET_EVENTS.HEATMAP_UPDATED, () => fetchMapData());
+    socket.on(SOCKET_EVENTS.HEATMAP_UPDATED, () => {
+      fetchMapData();
+      // If directions panel is open and routes are displayed, re-score silently
+      const storeState = useDirectionsStore.getState();
+      if (storeState.isOpen && storeState.routes.length > 0 && storeState.startPoint && storeState.endPoint) {
+        // Trigger re-fetch by slightly nudging — store will auto-detect both points set
+        // We call the scoring endpoint directly with existing geometries
+        const routesToRescore = storeState.routes.map(r => ({
+          index: r.index,
+          geometry: r.geometry,
+          distance: r.distance,
+          duration: r.duration,
+        }));
+        axios.post('/api/v1/routes/safety', { routes: routesToRescore })
+          .then(res => {
+            const newRoutes: ScoredRoute[] = res.data.data.routes;
+            storeState.setRoutes(newRoutes);
+            // Redraw polylines with updated colors
+            drawRoutesOnMap(newRoutes, storeState.selectedRouteIndex);
+          })
+          .catch(() => {}); // silent — don't interrupt UI
+      }
+    });
 
     // Force size recalculation to ensure the map fills the container.
     // Store the timer so we can cancel it in cleanup — during HMR the cleanup
@@ -688,10 +740,108 @@ const MapDashboard: React.FC = () => {
   };
 
 
+  // ── Route drawing helpers ────────────────────────────────────────────────
+  const drawRoutesOnMap = useCallback((routes: ScoredRoute[], selectedIdx: number) => {
+    if (!mapRef.current) return;
+
+    // Clear old polylines
+    routePolylinesRef.current.forEach(p => p.remove());
+    routePolylinesRef.current = [];
+    routeMarkersRef.current.forEach(m => m.remove());
+    routeMarkersRef.current = [];
+
+    if (routes.length === 0) return;
+
+    routes.forEach((route, i) => {
+      const isSelected = i === selectedIdx;
+      const color = routePolylineColor(route.safetyScore);
+      // Geometry is in [lng, lat] order; Leaflet needs [lat, lng]
+      const latlngs: [number, number][] = route.geometry.map(([lng, lat]) => [lat, lng]);
+
+      // Unselected routes: thinner, semi-transparent
+      const polyline = L.polyline(latlngs, {
+        color,
+        weight: isSelected ? 6 : 3,
+        opacity: isSelected ? 0.92 : 0.38,
+        lineCap: 'round',
+        lineJoin: 'round',
+        dashArray: isSelected ? undefined : '8, 6',
+        // Bring selected route to front via pane z-index
+        pane: isSelected ? 'markerPane' : 'overlayPane',
+      }).addTo(mapRef.current!);
+
+      routePolylinesRef.current.push(polyline);
+    });
+
+    // Start and end markers for the selected route
+    const selected = routes[selectedIdx];
+    if (selected && selected.geometry.length >= 2) {
+      const [startLng, startLat] = selected.geometry[0];
+      const [endLng, endLat] = selected.geometry[selected.geometry.length - 1];
+
+      const startIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      const endIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+
+      const sm = L.marker([startLat, startLng], { icon: startIcon, zIndexOffset: 900 }).addTo(mapRef.current!);
+      const em = L.marker([endLat, endLng],     { icon: endIcon,   zIndexOffset: 900 }).addTo(mapRef.current!);
+      routeMarkersRef.current.push(sm, em);
+
+      // Fit map to selected route — build bounds from the geometry directly
+      const allLatLngs: L.LatLngExpression[] = selected.geometry.map(([lng, lat]) => [lat, lng] as [number, number]);
+      const bounds = L.latLngBounds(allLatLngs);
+      mapRef.current!.fitBounds(bounds, { padding: [48, 48], maxZoom: 17 });
+    }
+  }, []);
+
+  const clearRoutesFromMap = useCallback(() => {
+    routePolylinesRef.current.forEach(p => p.remove());
+    routePolylinesRef.current = [];
+    routeMarkersRef.current.forEach(m => m.remove());
+    routeMarkersRef.current = [];
+  }, []);
+
+  // Re-draw whenever selected route index changes
+  useEffect(() => {
+    if (directionsOpen && directionRoutes.length > 0) {
+      drawRoutesOnMap(directionRoutes, selectedRouteIndex);
+    }
+  }, [selectedRouteIndex, directionRoutes, directionsOpen]);
+
+  // Clear routes when panel closes
+  useEffect(() => {
+    if (!directionsOpen) {
+      clearRoutesFromMap();
+    }
+  }, [directionsOpen]);
+
   useEffect(() => {
     if (!mapRef.current) return;
 
     const onMapClick = (e: L.LeafletMouseEvent) => {
+      // Directions panel click-to-select takes priority
+      const dirTarget = directionsSelectionTargetRef.current;
+      if (dirTarget) {
+        const { lat, lng } = e.latlng;
+        const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        if (dirTarget === 'start') {
+          setDirectionsStart({ lat, lng, label });
+        } else {
+          setDirectionsEnd({ lat, lng, label });
+        }
+        setDirectionsSelectionTarget(null);
+        return;
+      }
+
       setSelectedLocation(e.latlng);
       setSelectedReportId(null);
       setSelectedRatingId(null);
@@ -756,6 +906,16 @@ const MapDashboard: React.FC = () => {
       <div className="absolute bottom-6 left-6 z-[1000] hidden md:block">
         <HeatmapLegend />
       </div>
+
+      {/* Directions map-click mode banner */}
+      {directionsSelectionTarget && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1600] pointer-events-none">
+          <div className="px-5 py-2 rounded-full text-xs font-bold text-white shadow-2xl border border-indigo-400/40 animate-pulse"
+               style={{ background: 'rgba(79,70,229,0.85)', backdropFilter: 'blur(12px)' }}>
+            📍 Click map to set {directionsSelectionTarget === 'start' ? 'starting point' : 'destination'}
+          </div>
+        </div>
+      )}
 
       {/* Top Right: Layer Toggles & Action Buttons */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4 w-[220px]">
@@ -864,15 +1024,37 @@ const MapDashboard: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2">
+          {/* Directions button */}
+          <button
+            onClick={() => {
+              setDirectionsOpen(!directionsOpen);
+              if (directionsOpen) clearRoutesFromMap();
+              // Close report/rating selection if open
+              setSelectionMode(null);
+            }}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md border ${
+              directionsOpen
+                ? 'bg-indigo-500/30 border-indigo-400/50 text-indigo-200'
+                : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-300/50'
+            }`}
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            {directionsOpen ? 'Close Directions' : 'Directions'}
+          </button>
+
           <button
             onClick={() => setSelectionMode(selectionMode === 'report' ? null : 'report')}
-            className={`w-full ${selectionMode === 'report' ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
+            disabled={directionsOpen}
+            title={directionsOpen ? 'Close Directions panel first' : undefined}
+            className={`w-full ${selectionMode === 'report' ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
           >
             {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
           </button>
           <button
             onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border`}
+            disabled={directionsOpen}
+            title={directionsOpen ? 'Close Directions panel first' : undefined}
+            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
           >
             {selectionMode === 'rating' ? 'Cancel Selection' : 'Rate Safety'}
           </button>
@@ -880,6 +1062,28 @@ const MapDashboard: React.FC = () => {
       </div>
 
 
+
+      {/* Directions Panel */}
+      {directionsOpen && (
+        <DirectionsPanel
+          onMapSelectStart={(target) => {
+            setDirectionsSelectionTarget(target);
+          }}
+          onCancelMapSelect={() => {
+            setDirectionsSelectionTarget(null);
+          }}
+          onRoutesFetched={(routes, selectedIdx) => {
+            drawRoutesOnMap(routes, selectedIdx);
+          }}
+          onRouteSelected={(idx) => {
+            drawRoutesOnMap(directionRoutes, idx);
+          }}
+          onClose={() => {
+            setDirectionsOpen(false);
+            clearRoutesFromMap();
+          }}
+        />
+      )}
 
       {showReportForm && selectedLocation && (
         <div className="absolute inset-0 z-[2000] bg-theme-bg-start/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">

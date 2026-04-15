@@ -13,6 +13,7 @@ import { ReportController } from './controllers/reports.js';
 import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
 import { VoteController } from './controllers/votes.js';
+import { RoutesController } from './controllers/routes.js';
 import { authMiddleware, roleMiddleware } from './middleware/auth.js';
 
 
@@ -69,6 +70,9 @@ app.get(`${apiRoot}/heatmap/data`, (req, res) => HeatmapController.getHeatmapDat
 app.post(`${apiRoot}/streets/ratings`, authMiddleware, (req, res) => StreetRatingController.createRating(req, res));
 app.get(`${apiRoot}/streets/ratings`, (req, res) => StreetRatingController.listRatings(req, res));
 app.delete(`${apiRoot}/streets/ratings/:id`, authMiddleware, (req, res) => StreetRatingController.deleteRating(req, res));
+
+// Routes / Safety Scoring
+app.post(`${apiRoot}/routes/safety`, (req, res) => RoutesController.scoreSafetyForRoutes(req, res));
 
 // Admin
 app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.listUsers(req, res));
