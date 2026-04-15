@@ -6,7 +6,7 @@ import { useAuth } from '../components/AuthContext';
 
 const MapDashboard = dynamic(() => import('../components/MapDashboard'), {
   ssr: false,
-  loading: () => <div className="h-[750px] w-full flex items-center justify-center bg-theme-panel rounded-xl">Loading Map...</div>
+  loading: () => <div className="h-[68vh] md:h-[72vh] min-h-[520px] w-full flex items-center justify-center bg-theme-panel rounded-xl">Loading Map...</div>
 });
 
 

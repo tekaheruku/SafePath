@@ -597,8 +597,8 @@ const MapDashboard: React.FC = () => {
         }));
         axios.post('/api/v1/routes/safety', { routes: routesToRescore })
           .then(res => {
-            const newRoutes: ScoredRoute[] = res.data.data.routes;
-            storeState.setRoutes(newRoutes);
+            const { routes: newRoutes, safestRecommendedIndex, balancedRecommendedIndex } = res.data.data;
+            storeState.setRoutes(newRoutes, safestRecommendedIndex ?? 0, balancedRecommendedIndex ?? 0);
             // Redraw polylines with updated colors
             drawRoutesOnMap(newRoutes, storeState.selectedRouteIndex);
           })
@@ -607,15 +607,26 @@ const MapDashboard: React.FC = () => {
     });
 
     // Force size recalculation to ensure the map fills the container.
-    // Store the timer so we can cancel it in cleanup — during HMR the cleanup
-    // runs before the 100ms fires, which would call invalidateSize() on a
-    // destroyed map and crash with "_leaflet_pos of undefined".
-    const sizeTimer = setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
+    // We fire three times: immediately, mid-paint, and after CSS fully settles.
+    // HMR-safe: all timers + the ResizeObserver are cancelled in cleanup.
+    const t1 = setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 100);
+    const t2 = setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 400);
+    const t3 = setTimeout(() => { if (mapRef.current) map.invalidateSize({ pan: false }); }, 800);
+
+    // ResizeObserver: catch any container-size changes (flex/grid settling, etc.)
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapContainerRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapRef.current) map.invalidateSize({ pan: false });
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
 
     return () => {
-      clearTimeout(sizeTimer);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      resizeObserver?.disconnect();
       cleanupFog();
       socket.off(SOCKET_EVENTS.REPORT_NEW);
       socket.off(SOCKET_EVENTS.HEATMAP_UPDATED);
@@ -861,7 +872,7 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[62vh] md:h-[68vh] min-h-[480px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-theme-panel">
+    <div className="relative w-full h-[68vh] md:h-[72vh] min-h-[520px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-theme-panel">
 
       <div ref={mapContainerRef} className="w-full h-full" />
 

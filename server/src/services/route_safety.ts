@@ -21,7 +21,17 @@ export interface ScoredRoute {
   distance: number;       // metres
   duration: number;       // seconds
   safetyScore: number;    // 0-5 composite
+  hasRatings: boolean;    // whether community ratings exist near this route
   breakdown: RouteSafetyBreakdown;
+}
+
+export interface ScoredRoutesResult {
+  /** Routes sorted by the active mode's priority */
+  routes: ScoredRoute[];
+  /** Index in `routes[]` of the auto-recommended route for 'safest' mode */
+  safestRecommendedIndex: number;
+  /** Index in `routes[]` of the auto-recommended route for 'balanced' mode */
+  balancedRecommendedIndex: number;
 }
 
 /**
@@ -43,28 +53,99 @@ function sampleWaypoints(coords: [number, number][], maxSamples = 60): RouteWayp
   return sampled;
 }
 
+/**
+ * Determine the best "safest" route index.
+ *
+ * Priority:
+ *  1. If any rated route has a score >= 4.0 (confirmed very safe), pick the
+ *     one with the HIGHEST safety score, even if it is longer.
+ *  2. Otherwise, prefer unrated routes (unknown area = not confirmed dangerous).
+ *     Among unrated candidates, pick the shortest.
+ *  3. Fallback: pick the highest-rated route among all rated options.
+ */
+function pickSafestIndex(routes: ScoredRoute[]): number {
+  if (routes.length === 0) return 0;
+  if (routes.length === 1) return 0;
+
+  const HIGHLY_SAFE_THRESHOLD = 4.0;
+
+  // Step 1: Is there any confirmed highly-safe rated route?
+  const highlySafe = routes
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.hasRatings && r.safetyScore >= HIGHLY_SAFE_THRESHOLD);
+
+  if (highlySafe.length > 0) {
+    // Pick the one with the highest safety score (longest if tie — safety wins)
+    highlySafe.sort((a, b) => b.r.safetyScore - a.r.safetyScore ||
+                               a.r.distance   - b.r.distance);
+    return highlySafe[0].i;
+  }
+
+  // Step 2: No confirmed-safe route — prefer unrated (neutral) routes
+  const unrated = routes
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !r.hasRatings);
+
+  if (unrated.length > 0) {
+    // Among unrated routes, pick the shortest
+    unrated.sort((a, b) => a.r.distance - b.r.distance);
+    return unrated[0].i;
+  }
+
+  // Step 3: All routes are rated but none reach 4.0 — pick the highest-rated
+  let bestIdx = 0;
+  let bestScore = -1;
+  routes.forEach((r, i) => {
+    if (r.safetyScore > bestScore ||
+        (r.safetyScore === bestScore && r.distance < routes[bestIdx].distance)) {
+      bestScore = r.safetyScore;
+      bestIdx = i;
+    }
+  });
+  return bestIdx;
+}
+
+/**
+ * Determine the best "shortest" route index.
+ *
+ * Simply picks the route with the smallest distance, regardless of safety.
+ * The user has explicitly opted for speed/convenience over safety.
+ */
+function pickShortestIndex(routes: ScoredRoute[]): number {
+  if (routes.length === 0) return 0;
+  let shortestIdx = 0;
+  routes.forEach((r, i) => {
+    if (r.distance < routes[shortestIdx].distance) shortestIdx = i;
+  });
+  return shortestIdx;
+}
+
 export class RouteSafetyService {
   /**
    * Score an array of OSRM routes (geometry in [lng,lat] pairs) by querying
    * nearby street_ratings from PostGIS and averaging the four safety scores.
    *
-   * @param routes  Array of { index, geometry, distance, duration }
-   * @param radiusMeters  Search radius around each sampled waypoint (env-configurable)
+   * Returns routes sorted by safety score descending, plus recommended
+   * indexes for 'safest' and 'balanced' modes.
+   *
+   * @param routes        Array of { index, geometry, distance, duration }
+   * @param radiusMeters  Search radius around each sampled waypoint
    */
   static async scoreRoutes(
     routes: { index: number; geometry: [number, number][]; distance: number; duration: number }[],
     radiusMeters: number = parseInt(process.env.ROUTE_SAFETY_RADIUS_METERS || '150')
-  ): Promise<ScoredRoute[]> {
-    const results: ScoredRoute[] = [];
+  ): Promise<ScoredRoutesResult> {
+    const scored: ScoredRoute[] = [];
 
     for (const route of routes) {
       const waypoints = sampleWaypoints(route.geometry);
       const totalSegments = waypoints.length;
 
       if (totalSegments === 0) {
-        results.push({
+        scored.push({
           ...route,
           safetyScore: 3.0,
+          hasRatings: false,
           breakdown: {
             lighting: 3.0,
             pedestrian: 3.0,
@@ -79,7 +160,6 @@ export class RouteSafetyService {
       }
 
       // Build a VALUES list for a single efficient query instead of N round-trips
-      // e.g.  (VALUES ($1,$2), ($3,$4), ...) AS pts(lng, lat)
       const valuePlaceholders: string[] = [];
       const queryParams: number[] = [radiusMeters];
       let paramIdx = 2;
@@ -111,6 +191,7 @@ export class RouteSafetyService {
       let avgDriver = 3.0;
       let avgOverall = 3.0;
       let ratedSegmentCount = 0;
+      let hasRatings = false;
 
       try {
         const result = await pool.query(query, queryParams);
@@ -118,6 +199,7 @@ export class RouteSafetyService {
 
         if (row && row.rating_count && parseInt(row.rating_count) > 0) {
           ratedSegmentCount = parseInt(row.rating_count);
+          hasRatings = true;
           avgLighting    = parseFloat(row.avg_lighting)    || 3.0;
           avgPedestrian  = parseFloat(row.avg_pedestrian)  || 3.0;
           avgDriver      = parseFloat(row.avg_driver)      || 3.0;
@@ -136,12 +218,13 @@ export class RouteSafetyService {
         avgOverall    * 0.20
       );
 
-      results.push({
+      scored.push({
         index: route.index,
         geometry: route.geometry,
         distance: route.distance,
         duration: route.duration,
         safetyScore: Math.round(composite * 100) / 100,
+        hasRatings,
         breakdown: {
           lighting:           Math.round(avgLighting   * 100) / 100,
           pedestrian:         Math.round(avgPedestrian * 100) / 100,
@@ -155,8 +238,15 @@ export class RouteSafetyService {
     }
 
     // Sort by safety score descending (safest first)
-    results.sort((a, b) => b.safetyScore - a.safetyScore);
+    scored.sort((a, b) => b.safetyScore - a.safetyScore);
 
-    return results;
+    const safestRecommendedIndex   = pickSafestIndex(scored);
+    const balancedRecommendedIndex = pickShortestIndex(scored);
+
+    return {
+      routes: scored,
+      safestRecommendedIndex,
+      balancedRecommendedIndex,
+    };
   }
 }

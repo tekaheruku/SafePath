@@ -14,7 +14,7 @@ export class RoutesController {
    *   }>
    * }
    *
-   * Returns ranked, scored routes.
+   * Returns ranked, scored routes with recommended indexes for each mode.
    */
   static async scoreSafetyForRoutes(req: Request, res: Response): Promise<void> {
     try {
@@ -41,11 +41,15 @@ export class RoutesController {
         }
       }
 
-      const scoredRoutes = await RouteSafetyService.scoreRoutes(routes);
+      const result = await RouteSafetyService.scoreRoutes(routes);
 
       res.json({
         success: true,
-        data: { routes: scoredRoutes },
+        data: {
+          routes: result.routes,
+          safestRecommendedIndex: result.safestRecommendedIndex,
+          balancedRecommendedIndex: result.balancedRecommendedIndex,
+        },
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {

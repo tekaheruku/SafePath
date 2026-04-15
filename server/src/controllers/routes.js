@@ -1,4 +1,5 @@
 import { RouteSafetyService } from '../services/route_safety.js';
+
 export class RoutesController {
     static async scoreSafetyForRoutes(req, res) {
         try {
@@ -21,14 +22,17 @@ export class RoutesController {
                     return;
                 }
             }
-            const scoredRoutes = await RouteSafetyService.scoreRoutes(routes);
+            const result = await RouteSafetyService.scoreRoutes(routes);
             res.json({
                 success: true,
-                data: { routes: scoredRoutes },
+                data: {
+                    routes: result.routes,
+                    safestRecommendedIndex: result.safestRecommendedIndex,
+                    balancedRecommendedIndex: result.balancedRecommendedIndex,
+                },
                 timestamp: new Date().toISOString(),
             });
-        }
-        catch (error) {
+        } catch (error) {
             console.error('[RoutesController] Error scoring routes:', error);
             res.status(500).json({
                 success: false,
