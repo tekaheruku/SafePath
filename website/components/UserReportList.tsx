@@ -38,6 +38,12 @@ const UserReportList: React.FC<UserReportListProps> = ({ reports, onDelete, onVi
               </span>
             </div>
             
+            {r.photo_url && (
+              <div className="mb-3">
+                <img src={r.photo_url} alt="Report Photo" className="w-full h-32 object-cover rounded-lg border border-theme-border opacity-90 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
+
             <p className="text-sm text-theme-fg-muted mb-4 line-clamp-2 leading-relaxed">
               {r.description}
             </p>

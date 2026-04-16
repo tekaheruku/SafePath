@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthContext';
 import axios from 'axios';
 
+type VerificationMethod = 'link' | 'otp';
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>('link');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -60,9 +63,10 @@ export default function RegisterPage() {
         email,
         password,
         name: trimmedName,
+        verificationMethod,
       });
-      // Redirect to check-email page (Option B: hard gate — must verify before login)
-      router.push(`/check-email?email=${encodeURIComponent(email)}`);
+      // Redirect to check-email page; pass both email and method so the page knows what to show
+      router.push(`/check-email?email=${encodeURIComponent(email)}&method=${verificationMethod}`);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Registration failed');
     } finally {
@@ -117,8 +121,98 @@ export default function RegisterPage() {
             />
           </div>
 
+          {/* Verification Method Selector */}
+          <div>
+            <label className="block text-sm font-medium text-theme-fg-muted mb-3">
+              Email Verification Method
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Magic Link */}
+              <button
+                type="button"
+                id="verify-method-link"
+                onClick={() => setVerificationMethod('link')}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer text-left
+                  ${verificationMethod === 'link'
+                    ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10'
+                    : 'border-slate-700 bg-theme-panel hover:border-slate-600'
+                  }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  verificationMethod === 'link' ? 'bg-indigo-500/20' : 'bg-slate-700/50'
+                }`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke={verificationMethod === 'link' ? '#818cf8' : '#64748b'}
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${verificationMethod === 'link' ? 'text-indigo-300' : 'text-theme-fg'}`}>
+                    Magic Link
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Click a link in your email
+                  </p>
+                </div>
+                {verificationMethod === 'link' && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+
+              {/* OTP Code */}
+              <button
+                type="button"
+                id="verify-method-otp"
+                onClick={() => setVerificationMethod('otp')}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer text-left
+                  ${verificationMethod === 'otp'
+                    ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+                    : 'border-slate-700 bg-theme-panel hover:border-slate-600'
+                  }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  verificationMethod === 'otp' ? 'bg-violet-500/20' : 'bg-slate-700/50'
+                }`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke={verificationMethod === 'otp' ? '#a78bfa' : '#64748b'}
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${verificationMethod === 'otp' ? 'text-violet-300' : 'text-theme-fg'}`}>
+                    OTP Code
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    Enter a 6-digit code
+                  </p>
+                </div>
+                {verificationMethod === 'otp' && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              {verificationMethod === 'link'
+                ? 'You\'ll receive a secure link valid for 24 hours.'
+                : 'You\'ll receive a 6-digit code valid for 15 minutes.'}
+            </p>
+          </div>
+
           <button
             type="submit"
+            id="register-submit-btn"
             disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >

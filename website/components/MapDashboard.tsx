@@ -403,6 +403,7 @@ const MapDashboard: React.FC = () => {
               }">${r.severity_level}</span>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
+            ${r.photo_url ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` : ''}
             <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
             ${voteHtml}
           </div>
@@ -473,6 +474,7 @@ const MapDashboard: React.FC = () => {
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
+            ${r.photo_url ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` : ''}
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
           <div class="mt-2 text-[10px] space-y-0.5 text-theme-fg-muted font-medium bg-theme-panel/40 p-2 rounded-lg border border-theme-border">
             <div>Lighting: ${r.lighting_score}/5</div>
@@ -595,7 +597,7 @@ const MapDashboard: React.FC = () => {
           distance: r.distance,
           duration: r.duration,
         }));
-        axios.post('/api/v1/routes/safety', { routes: routesToRescore })
+        apiClient.post('/routes/safety', { routes: routesToRescore })
           .then(res => {
             const { routes: newRoutes, safestRecommendedIndex, balancedRecommendedIndex } = res.data.data;
             storeState.setRoutes(newRoutes, safestRecommendedIndex ?? 0, balancedRecommendedIndex ?? 0);
@@ -614,10 +616,18 @@ const MapDashboard: React.FC = () => {
     const t3 = setTimeout(() => { if (mapRef.current) map.invalidateSize({ pan: false }); }, 800);
 
     // ResizeObserver: catch any container-size changes (flex/grid settling, etc.)
+    // Guard: only call invalidateSize when the container has non-zero dimensions.
+    // A zero-width container causes the heatmap canvas to throw IndexSizeError
+    // when it tries to call getImageData({ width: 0 }).
     let resizeObserver: ResizeObserver | null = null;
     if (mapContainerRef.current && typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        if (mapRef.current) map.invalidateSize({ pan: false });
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0 && mapRef.current) {
+            map.invalidateSize({ pan: false });
+          }
+        }
       });
       resizeObserver.observe(mapContainerRef.current);
     }
@@ -1097,7 +1107,7 @@ const MapDashboard: React.FC = () => {
       )}
 
       {showReportForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 
           <div className="max-w-md w-full">
             <ReportForm
@@ -1116,7 +1126,7 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
       {showRatingForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 
           <div className="max-w-md w-full">
             <StreetRatingForm

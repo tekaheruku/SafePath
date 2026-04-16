@@ -94,8 +94,13 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-theme-bg-start/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-theme-panel border border-theme-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        className="w-full max-w-lg border border-theme-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        style={{ backgroundColor: 'rgb(var(--theme-panel-bg))' }}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-theme-border flex justify-between items-center">
           <h2 className="text-xl font-bold text-theme-fg">Account Details</h2>

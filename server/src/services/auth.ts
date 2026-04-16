@@ -22,21 +22,26 @@ export class AuthService {
       await pool.query('UPDATE users SET failed_login_attempts = $1 WHERE id = $2', [newAttempts, user.id]);
 
       if (newAttempts === 3) {
-        let token = user.verification_token;
-        if (!token) {
-           token = crypto.randomBytes(32).toString('hex');
-           const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-           await pool.query('UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3', [token, verificationExpires, user.id]);
-        }
-        EmailService.sendVerificationEmail(email, token).catch((err) => {
-          console.error('Failed to send verification email:', err.message);
+        // Bug 3 fix: send a password-reset OTP, not a verification link.
+        // The user most likely forgot their password. Fire-and-forget so timing
+        // doesn't reveal whether the account exists.
+        AuthService.requestPasswordReset(email).catch((err) => {
+          console.error('[AuthService] Failed to send password reset on repeated failed logins:', err.message);
         });
-        throw new Error('Invalid email or password. You have failed to login 3 times. A verification link has been sent to your email.');
+        throw new Error('Too many failed login attempts. A password reset code has been sent to your email — check your inbox.');
       } else if (newAttempts > 3) {
-        throw new Error('Too many failed attempts. Please check your email for the verification link.');
+        throw new Error('Too many failed attempts. Please check your email for the password reset code sent earlier.');
       }
 
       throw new Error('Invalid email or password');
+    }
+
+    // Bug 2 fix: enforce email verification gate before issuing a JWT.
+    // Admin roles (superadmin, lgu_admin, admin) are created manually and bypass
+    // the email gate — they also pre-date migration 011 (is_verified defaults false).
+    const ADMIN_ROLES = (process.env.ADMIN_ROLES || 'superadmin,lgu_admin,admin').split(',');
+    if (!user.is_verified && !ADMIN_ROLES.includes(user.role)) {
+      throw new Error('Please verify your email address before signing in. Check your inbox or resend the verification email.');
     }
 
     if (user.failed_login_attempts > 0) {
@@ -74,7 +79,7 @@ export class AuthService {
   }
 
   static async register(data: any) {
-    const { email, password, name } = data;
+    const { email, password, name, verificationMethod = 'link' } = data;
     const trimmedName = name.trim();
 
     if (!trimmedName || trimmedName.length < 3) {
@@ -119,20 +124,42 @@ export class AuthService {
       throw new Error('An account with this email already exists.');
     }
 
+    const method: 'link' | 'otp' = verificationMethod === 'otp' ? 'otp' : 'link';
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    
+
+    let verificationToken: string | null = null;
+    let verificationOtp: string | null = null;
+    let verificationExpires: Date;
+
+    if (method === 'otp') {
+      verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      verificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    } else {
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    }
+
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, name, role, is_verified, verification_token, verification_token_expires)
-       VALUES ($1, $2, $3, $4, false, $5, $6)
+      `INSERT INTO users (email, password_hash, name, role, is_verified, verification_token, verification_token_expires, verification_otp, verification_method)
+       VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8)
        RETURNING id, email, name, role`,
-      [email, hashedPassword, trimmedName, 'user', verificationToken, verificationExpires]
+      [email, hashedPassword, trimmedName, 'user', verificationToken, verificationExpires, verificationOtp, method]
     );
-    
+
     const user = result.rows[0];
 
-    return { pending: true, email: user.email };
+    // Fire-and-forget so a transient SMTP error never blocks registration.
+    if (method === 'otp') {
+      EmailService.sendVerificationOtpEmail(email, verificationOtp!).catch((err) => {
+        console.error('[AuthService] Failed to send OTP verification email on register:', err.message);
+      });
+    } else {
+      EmailService.sendVerificationEmail(email, verificationToken!).catch((err) => {
+        console.error('[AuthService] Failed to send verification email on register:', err.message);
+      });
+    }
+
+    return { pending: true, email: user.email, method };
   }
 
   static async verifyEmail(token: string) {
@@ -175,28 +202,102 @@ export class AuthService {
     return { user: updatedUser, token: jwtToken };
   }
 
-  static async resendVerification(email: string) {
+  static async resendVerification(email: string, verificationMethod?: string) {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     // Always return success to prevent email enumeration
     if (!user || user.is_verified) return { sent: true };
 
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // Server-side rate limit — derive issue time from the stored expiry.
+    if (user.verification_token_expires) {
+      // OTP expires in 15 min, link expires in 24 h
+      const expiryMs = new Date(user.verification_token_expires).getTime();
+      const durationMs = user.verification_method === 'otp' ? 15 * 60 * 1_000 : 24 * 60 * 60 * 1_000;
+      const tokenIssuedAt = expiryMs - durationMs;
+      const secondsSinceIssue = (Date.now() - tokenIssuedAt) / 1_000;
+      const cooldownSecs = parseInt(process.env.VERIFICATION_RESEND_COOLDOWN || '60');
+      if (secondsSinceIssue < cooldownSecs) {
+        throw new Error(`Please wait ${Math.ceil(cooldownSecs - secondsSinceIssue)} seconds before requesting another verification email.`);
+      }
+    }
+
+    // Allow switching method on resend, or default to existing method.
+    const method: 'link' | 'otp' = (verificationMethod === 'otp' || (!verificationMethod && user.verification_method === 'otp')) ? 'otp' : 'link';
+
+    let verificationToken: string | null = null;
+    let verificationOtp: string | null = null;
+    let verificationExpires: Date;
+
+    if (method === 'otp') {
+      verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      verificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+    } else {
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
 
     await pool.query(
       `UPDATE users
-       SET verification_token = $1, verification_token_expires = $2
-       WHERE id = $3`,
-      [verificationToken, verificationExpires, user.id]
+       SET verification_token = $1, verification_token_expires = $2,
+           verification_otp = $3, verification_method = $4
+       WHERE id = $5`,
+      [verificationToken, verificationExpires, verificationOtp, method, user.id]
     );
 
-    EmailService.sendVerificationEmail(email, verificationToken).catch((err) => {
-      console.error('Failed to resend verification email:', err.message);
-    });
+    if (method === 'otp') {
+      EmailService.sendVerificationOtpEmail(email, verificationOtp!).catch((err) => {
+        console.error('Failed to resend OTP verification email:', err.message);
+      });
+    } else {
+      EmailService.sendVerificationEmail(email, verificationToken!).catch((err) => {
+        console.error('Failed to resend verification email:', err.message);
+      });
+    }
 
-    return { sent: true };
+    return { sent: true, method };
+  }
+
+  static async verifyEmailOtp(email: string, otp: string) {
+    if (!email || !otp) throw new Error('Email and OTP code are required.');
+
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    if (!user) throw new Error('No account found with this email address.');
+    if (user.is_verified) {
+      // Already verified — just log them in
+      const jwtToken = this.generateToken(user);
+      const { password_hash: _, ...userWithoutPassword } = user;
+      return { user: userWithoutPassword, token: jwtToken };
+    }
+
+    if (user.verification_method !== 'otp') {
+      throw new Error('This account uses link-based verification. Please click the link in your email.');
+    }
+
+    if (!user.verification_otp || user.verification_otp !== otp.trim()) {
+      throw new Error('Invalid verification code.');
+    }
+
+    if (new Date(user.verification_token_expires) < new Date()) {
+      throw new Error('This code has expired. Please request a new one.');
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET is_verified = true, verification_otp = NULL, verification_token = NULL, verification_token_expires = NULL
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    const updatedResult = await pool.query(
+      'SELECT id, email, name, role, is_verified FROM users WHERE id = $1',
+      [user.id]
+    );
+    const updatedUser = updatedResult.rows[0];
+    const jwtToken = this.generateToken(updatedUser);
+    return { user: updatedUser, token: jwtToken };
   }
 
   static async requestPasswordReset(email: string) {

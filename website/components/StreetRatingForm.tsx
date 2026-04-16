@@ -72,6 +72,8 @@ function ScoreSlider({ label, fieldName, register, watch }: {
 const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess, onCancel }) => {
   const [rateLighting, setRateLighting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const { token } = useAuth();
 
   const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm<RatingFormValues>({
@@ -99,12 +101,26 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
     }
 
     try {
+      setIsUploading(true);
+      let photo_url = null;
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (uploadRes.data.success) {
+          photo_url = uploadRes.data.url;
+        }
+      }
+
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/streets/ratings`, {
         pedestrian_safety_score: data.pedestrian_safety_score,
         driver_safety_score: data.driver_safety_score,
         overall_safety_score: data.overall_safety_score,
         lighting_score: rateLighting ? data.lighting_score : null,
         comment: data.comment,
+        photo_url: photo_url,
         location: { latitude: data.latitude, longitude: data.longitude }
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -117,6 +133,8 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
       } else {
         alert('Failed to submit rating. Please try again.');
       }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -178,6 +196,24 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
           />
         </div>
 
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            Photo <span className="normal-case text-theme-fg-muted font-normal text-xs">(optional)</span>
+          </label>
+          <input 
+            type="file" 
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                setPhotoFile(e.target.files[0]);
+              } else {
+                setPhotoFile(null);
+              }
+            }}
+            className="w-full text-sm text-theme-fg-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-600/20 file:text-emerald-400 hover:file:bg-emerald-600/30 transition-all outline-none"
+          />
+        </div>
+
         <div className="flex space-x-3 pt-1">
           <button
             type="button" onClick={onCancel}
@@ -186,10 +222,10 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
             Cancel
           </button>
           <button
-            type="submit" disabled={isSubmitting}
+            type="submit" disabled={isSubmitting || isUploading}
             className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-semibold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 text-theme-fg text-sm"
           >
-            {isSubmitting ? 'Submitting…' : 'Save Rating'}
+            {isSubmitting || isUploading ? 'Submitting…' : 'Save Rating'}
           </button>
         </div>
       </form>

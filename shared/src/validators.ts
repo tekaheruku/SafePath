@@ -8,6 +8,7 @@ export const createReportSchema = Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
   }).required(),
+  photo_url: Joi.string().uri().allow('', null).optional(),
 });
 
 export const updateReportSchema = Joi.object({
@@ -50,6 +51,7 @@ export const createStreetRatingSchema = Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
   }).required(),
+  photo_url: Joi.string().uri().allow('', null).optional(),
 });
 
 export const registerSchema = Joi.object({

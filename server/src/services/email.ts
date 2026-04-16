@@ -145,6 +145,68 @@ export class EmailService {
     });
   }
 
+  static async sendVerificationOtpEmail(to: string, otp: string): Promise<void> {
+    await transporter.sendMail({
+      from: FROM,
+      to,
+      subject: 'Your SafePath verification code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+          </head>
+          <body style="margin:0;padding:0;background:#0f172a;font-family:'Segoe UI',system-ui,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="560" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;border:1px solid #334155;overflow:hidden;">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background:linear-gradient(135deg,#3b82f6,#6366f1);padding:32px;text-align:center;">
+                        <h1 style="margin:0;color:#fff;font-size:24px;font-weight:800;letter-spacing:-0.5px;">🛡️ SafePath</h1>
+                        <p style="margin:8px 0 0;color:rgba(255,255,255,0.75);font-size:14px;">Community Safety Platform</p>
+                      </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding:40px 36px;">
+                        <h2 style="margin:0 0 12px;color:#f1f5f9;font-size:20px;font-weight:700;">Your verification code</h2>
+                        <p style="margin:0 0 28px;color:#94a3b8;font-size:15px;line-height:1.6;">
+                          Enter the code below to verify your email and activate your SafePath account. This code expires in <strong style="color:#e2e8f0;">15 minutes</strong>.
+                        </p>
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td align="center">
+                              <div style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-weight:800;font-size:36px;letter-spacing:10px;padding:18px 40px;border-radius:12px;font-family:monospace;">
+                                ${otp}
+                              </div>
+                            </td>
+                          </tr>
+                        </table>
+                        <hr style="border:none;border-top:1px solid #334155;margin:28px 0;" />
+                        <p style="margin:0;color:#475569;font-size:12px;">
+                          If you didn't create a SafePath account, you can safely ignore this email.
+                        </p>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding:20px 36px;background:#0f172a;text-align:center;">
+                        <p style="margin:0;color:#334155;font-size:12px;">© ${new Date().getFullYear()} SafePath · Iba, Zambales</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+    });
+  }
+
   static async sendVerificationReminderEmail(to: string, token: string): Promise<void> {
     return this.sendVerificationEmail(to, token);
   }

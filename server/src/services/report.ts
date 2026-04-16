@@ -6,15 +6,15 @@ export class ReportService {
    * Create a new incident report
    */
   static async createReport(userId: string, data: any): Promise<Report> {
-    const { type, severity_level, description, location } = data;
+    const { type, severity_level, description, location, photo_url } = data;
     
     const query = `
-      INSERT INTO reports (user_id, title, severity_level, description, location, upvotes_count, downvotes_count)
-      VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), 0, 0)
+      INSERT INTO reports (user_id, title, severity_level, description, location, upvotes_count, downvotes_count, photo_url)
+      VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), 0, 0, $7)
       RETURNING id, user_id, title as type, severity_level, description, 
-                ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, created_at, updated_at
+                ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, created_at, updated_at
     `;
-    const params = [userId, type, severity_level, description, location.longitude, location.latitude];
+    const params = [userId, type, severity_level, description, location.longitude, location.latitude, photo_url || null];
     const result = await pool.query(query, params);
     return result.rows[0];
 
@@ -58,7 +58,7 @@ export class ReportService {
     const query = `
       SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
-             r.upvotes_count, r.downvotes_count,
+             r.upvotes_count, r.downvotes_count, r.photo_url,
              u.name as author_name
              ${filters?.currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $${paramIndex}) as user_vote` : ''}
       FROM reports r
@@ -95,7 +95,7 @@ export class ReportService {
     const query = `
       SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
-             r.upvotes_count, r.downvotes_count,
+             r.upvotes_count, r.downvotes_count, r.photo_url,
              u.name as author_name
              ${currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $2) as user_vote` : ''}
       FROM reports r

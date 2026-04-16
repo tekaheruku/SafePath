@@ -36,6 +36,8 @@ const SEVERITY_LABELS: Record<number, string> = {
 const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }) => {
   const { token } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
     defaultValues: {
@@ -61,6 +63,19 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
     }
 
     try {
+      setIsUploading(true);
+      let photo_url = null;
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (uploadRes.data.success) {
+          photo_url = uploadRes.data.url;
+        }
+      }
+
       const mapSeverity = (val: number): string => {
         if (val <= 2) return 'low';
         if (val === 3) return 'medium';
@@ -72,7 +87,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
         {
           ...data,
           severity_level: mapSeverity(data.severity_level),
-          location: { latitude: data.latitude, longitude: data.longitude }
+          location: { latitude: data.latitude, longitude: data.longitude },
+          photo_url
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -84,6 +100,8 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
       } else {
         alert('Failed to submit report. Please try again.');
       }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -140,6 +158,22 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
           {errors.description && <p className="text-xs text-red-400">{errors.description.message}</p>}
         </div>
 
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Photo (Optional)</label>
+          <input 
+            type="file" 
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                setPhotoFile(e.target.files[0]);
+              } else {
+                setPhotoFile(null);
+              }
+            }}
+            className="w-full text-sm text-theme-fg-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30 transition-all outline-none"
+          />
+        </div>
+
         <div className="flex space-x-3 pt-2">
           <button 
             type="button" onClick={onCancel}
@@ -148,10 +182,10 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
             Cancel
           </button>
           <button 
-            type="submit" disabled={isSubmitting}
+            type="submit" disabled={isSubmitting || isUploading}
             className="flex-2 px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 font-semibold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Report'}
+            {isSubmitting || isUploading ? 'Submitting...' : 'Submit Report'}
           </button>
         </div>
       </form>

@@ -2,6 +2,12 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+
+// Matches the apiClient in MapDashboard / AuthContext — always goes through
+// NEXT_PUBLIC_API_URL so production deployments point to the right host.
+const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+});
 import {
   Navigation, Footprints, Bike, Car, X, RotateCcw, ArrowUpDown,
   MapPin, Clock, Ruler, Shield, ChevronRight, Loader2, AlertCircle,
@@ -421,7 +427,7 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
       }));
 
       // 3. Score routes via SafePath backend
-      const scoreRes = await axios.post('/api/v1/routes/safety', { routes: routesToScore });
+      const scoreRes = await apiClient.post('/routes/safety', { routes: routesToScore });
       const { routes: scoredRoutes, safestRecommendedIndex: safestIdx, balancedRecommendedIndex: balancedIdx } = scoreRes.data.data;
 
       // 4. Choose initial selected route based on current mode

@@ -27,6 +27,7 @@ export default {
     migrations: {
       tableName: 'knex_migrations',
       directory: './migrations',
+      loadExtensions: ['.ts'],
     },
     seeds: {
       directory: './seeds',
