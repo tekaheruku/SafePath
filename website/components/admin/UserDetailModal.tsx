@@ -32,7 +32,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
   const [showBanForm, setShowBanForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
   const isBanned = targetUser.banned_until && new Date(targetUser.banned_until) > new Date();
 

@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 
 // Import controllers
 import { AuthController } from './controllers/auth.js';
-import { AdminController } from './controllers/admin.js';
+import { AdminController, AdminRequestsController } from './controllers/admin.js';
 import { ReportController } from './controllers/reports.js';
 import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
@@ -87,6 +87,12 @@ app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 
 app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.banUser(req, res));
 app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.unbanUser(req, res));
 app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
+
+// Admin Requests
+app.post(`${apiRoot}/admin-requests`, upload.single('document'), (req, res) => AdminRequestsController.submitRequest(req, res));
+app.get(`${apiRoot}/admin/requests`, authMiddleware, roleMiddleware(['superadmin']), (req, res) => AdminRequestsController.listRequests(req, res));
+app.post(`${apiRoot}/admin/requests/:requestId/approve`, authMiddleware, roleMiddleware(['superadmin']), (req, res) => AdminRequestsController.approveRequest(req, res));
+app.post(`${apiRoot}/admin/requests/:requestId/reject`, authMiddleware, roleMiddleware(['superadmin']), (req, res) => AdminRequestsController.rejectRequest(req, res));
 
 // Uploads
 app.post(`${apiRoot}/upload`, authMiddleware, upload.single('photo'), (req, res) => UploadController.uploadFile(req, res));

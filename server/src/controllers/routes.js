@@ -1,6 +1,19 @@
 import { RouteSafetyService } from '../services/route_safety.js';
-
 export class RoutesController {
+    /**
+     * POST /api/v1/routes/safety
+     *
+     * Body: {
+     *   routes: Array<{
+     *     index: number,
+     *     geometry: [number, number][],   // [lng, lat] pairs (GeoJSON order)
+     *     distance: number,
+     *     duration: number
+     *   }>
+     * }
+     *
+     * Returns ranked, scored routes with recommended indexes for each mode.
+     */
     static async scoreSafetyForRoutes(req, res) {
         try {
             const { routes } = req.body;
@@ -12,6 +25,7 @@ export class RoutesController {
                 });
                 return;
             }
+            // Validate each route has geometry
             for (const r of routes) {
                 if (!Array.isArray(r.geometry) || r.geometry.length === 0) {
                     res.status(400).json({
@@ -32,7 +46,8 @@ export class RoutesController {
                 },
                 timestamp: new Date().toISOString(),
             });
-        } catch (error) {
+        }
+        catch (error) {
             console.error('[RoutesController] Error scoring routes:', error);
             res.status(500).json({
                 success: false,

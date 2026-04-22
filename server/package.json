@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "SafePath Backend API",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/app.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node dist/app.js",
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "migrate:latest": "tsx ./node_modules/knex/bin/cli.js --knexfile knexfile.ts migrate:latest",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@safepath/shared": "file:../shared",
+    "@supabase/supabase-js": "^2.104.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

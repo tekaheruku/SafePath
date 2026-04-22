@@ -5,7 +5,7 @@ export class StreetRatingService {
      * Create a new street rating
      */
     static async createRating(userId, data) {
-        const { lighting_score, pedestrian_safety_score, driver_safety_score, overall_safety_score, comment, location } = data;
+        const { lighting_score, pedestrian_safety_score, driver_safety_score, overall_safety_score, comment, photo_url, location } = data;
         const query = `
       INSERT INTO street_ratings (
         user_id, 
@@ -14,11 +14,12 @@ export class StreetRatingService {
         driver_safety_score, 
         overall_safety_score, 
         comment, 
+        photo_url,
         location
       )
-      VALUES ($1, $2, $3, $4, $5, $6, ST_SetSRID(ST_MakePoint($7, $8), 4326))
+      VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_MakePoint($8, $9), 4326))
       RETURNING id, user_id, lighting_score, pedestrian_safety_score, driver_safety_score, 
-                overall_safety_score, comment, ST_AsGeoJSON(location)::json as location, 
+                overall_safety_score, comment, photo_url, ST_AsGeoJSON(location)::json as location, 
                 created_at, updated_at
     `;
         const params = [
@@ -28,6 +29,7 @@ export class StreetRatingService {
             driver_safety_score,
             overall_safety_score,
             comment || null,
+            photo_url || null,
             location.longitude,
             location.latitude
         ];
@@ -61,7 +63,7 @@ export class StreetRatingService {
         }
         const query = `
       SELECT id, user_id, lighting_score, pedestrian_safety_score, driver_safety_score,
-             overall_safety_score, comment, ST_AsGeoJSON(location)::json as location,
+             overall_safety_score, comment, photo_url, ST_AsGeoJSON(location)::json as location,
              created_at, updated_at
       FROM street_ratings
       ${whereClause}

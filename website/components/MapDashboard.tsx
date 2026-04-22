@@ -34,10 +34,10 @@ const DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
 });
 
-const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001');
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin.replace(/:\d+$/, ':3001') : 'http://localhost:3001'));
 
 // ── Iba, Zambales boundary polygon ───────────────────────────────────────────
 // Real boundary from geoBoundaries (PSA ADM3), simplified to ~200 points

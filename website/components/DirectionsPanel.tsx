@@ -6,7 +6,7 @@ import axios from 'axios';
 // Matches the apiClient in MapDashboard / AuthContext — always goes through
 // NEXT_PUBLIC_API_URL so production deployments point to the right host.
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
 });
 import {
   Navigation, Footprints, Bike, Car, X, RotateCcw, ArrowUpDown,

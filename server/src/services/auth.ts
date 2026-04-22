@@ -4,8 +4,11 @@ import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import { EmailService } from './email.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'safepath-secret-key-change-it';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
 export class AuthService {
   static async login(email: string, password: string) {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);

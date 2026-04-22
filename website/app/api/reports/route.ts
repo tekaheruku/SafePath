@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND = process.env.BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin.replace(/:\d+$/, ':3001') : 'http://localhost:3001');
 
 /**
  * Convert a bare date string (YYYY-MM-DD) to a full ISO timestamp.

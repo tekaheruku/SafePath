@@ -1,22 +1,13 @@
-/**
- * @param {import('knex').Knex} knex
- */
 export async function up(knex) {
-  await knex.schema.alterTable('users', (table) => {
-    // Stores the 6-digit OTP when the user picks OTP verification.
-    // NULL when using magic-link mode.
-    table.string('verification_otp', 6).nullable();
-    // 'link' (default/existing) or 'otp'
-    table.string('verification_method', 10).notNullable().defaultTo('link');
-  });
+    await knex.raw(`
+    ALTER TABLE users 
+    ADD COLUMN IF NOT EXISTS verification_otp varchar(6),
+    ADD COLUMN IF NOT EXISTS verification_method varchar(10) DEFAULT 'link' NOT NULL
+  `);
 }
-
-/**
- * @param {import('knex').Knex} knex
- */
 export async function down(knex) {
-  await knex.schema.alterTable('users', (table) => {
-    table.dropColumn('verification_otp');
-    table.dropColumn('verification_method');
-  });
+    await knex.schema.alterTable('users', (table) => {
+        table.dropColumn('verification_otp');
+        table.dropColumn('verification_method');
+    });
 }

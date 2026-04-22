@@ -18,7 +18,7 @@ export default function MyReportsPage() {
         return;
       }
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/reports?limit=100`);
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports?limit=100`);
         // Filter by user ID since the backend doesn't have a direct /users/me/reports yet
         const myReports = (res.data.data.reports || []).filter((r: any) => r.user_id === user.id);
         setReports(myReports);
@@ -41,7 +41,7 @@ export default function MyReportsPage() {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this report?')) return;
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/reports/${id}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReports(prev => prev.filter(r => r.id !== id));

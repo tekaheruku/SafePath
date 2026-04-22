@@ -31,7 +31,7 @@ export default function AccountListPage() {
     direction: 'desc'
   });
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
   useEffect(() => {
     if (authLoading) return;

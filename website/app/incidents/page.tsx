@@ -14,7 +14,7 @@ export default function IncidentsPage() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/reports?limit=100`);
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports?limit=100`);
         setReports(res.data.data.reports || []);
       } catch (err) {
         console.error('Failed to load incidents:', err);
@@ -35,7 +35,7 @@ export default function IncidentsPage() {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this report?')) return;
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/reports/${id}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReports(prev => prev.filter(r => r.id !== id));

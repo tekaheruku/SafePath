@@ -106,7 +106,7 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
       if (photoFile) {
         const formData = new FormData();
         formData.append('photo', photoFile);
-        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/upload`, formData, {
+        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/upload`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (uploadRes.data.success) {
@@ -114,7 +114,7 @@ const StreetRatingForm: React.FC<StreetRatingFormProps> = ({ location, onSuccess
         }
       }
 
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/streets/ratings`, {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/streets/ratings`, {
         pedestrian_safety_score: data.pedestrian_safety_score,
         driver_safety_score: data.driver_safety_score,
         overall_safety_score: data.overall_safety_score,

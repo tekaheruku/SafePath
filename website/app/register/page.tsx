@@ -59,7 +59,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/register`, {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/register`, {
         email,
         password,
         name: trimmedName,
@@ -217,6 +217,20 @@ export default function RegisterPage() {
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-95 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create Account'}
+          </button>
+
+          <div className="relative flex items-center py-2">
+            <div className="flex-grow border-t border-slate-700/50"></div>
+            <span className="flex-shrink-0 mx-4 text-xs font-semibold text-slate-500 bg-theme-panel px-2">OR</span>
+            <div className="flex-grow border-t border-slate-700/50"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push('/request-admin')}
+            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition-all duration-200 shadow-md shadow-slate-900/20 active:scale-95 border border-slate-600/50 hover:border-slate-500/50"
+          >
+            Request Admin Account
           </button>
         </form>
 

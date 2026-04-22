@@ -27,7 +27,7 @@ export class AdminController {
   static async banUser(req: any, res: Response) {
     try {
       const { userId } = req.params;
-      const { duration, reason } = req.body; 
+      const { duration, reason } = req.body;
       const adminRole = req.user.role;
 
       // Check if target user is not 'user' role
@@ -38,7 +38,7 @@ export class AdminController {
       if (adminRole === 'lgu_admin' && targetRole !== 'user') {
         return res.status(403).json({ success: false, error: { message: 'LGU Admins can only ban regular users' } });
       }
-      
+
       let bannedUntil = null;
       if (duration > 0) {
         bannedUntil = new Date();
@@ -97,6 +97,118 @@ export class AdminController {
       await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
       res.json({ success: true, message: 'User deleted successfully' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
+}
+
+export class AdminRequestsController {
+  static async submitRequest(req: any, res: Response) {
+    try {
+      const { email, name, requestedRole, reason } = req.body;
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email) || !name || !requestedRole) {
+        return res.status(400).json({ success: false, message: 'Invalid data submitted' });
+      }
+
+      if (requestedRole !== 'lgu_admin' && requestedRole !== 'superadmin') {
+        return res.status(400).json({ success: false, message: 'Invalid role requested' });
+      }
+
+      let document_url = null;
+
+      if (req.file) {
+        const { supabase } = require('./upload.js');
+        const path = require('path');
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const filename = 'admin-docs/' + uniqueSuffix + path.extname(req.file.originalname);
+
+        const { error } = await supabase.storage
+          .from('uploads')
+          .upload(filename, req.file.buffer, {
+            contentType: req.file.mimetype,
+            upsert: false
+          });
+
+        if (error) {
+          console.error('Supabase doc upload error:', error);
+          return res.status(500).json({ success: false, message: 'Failed to upload verification document' });
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('uploads')
+          .getPublicUrl(filename);
+
+        document_url = publicUrlData.publicUrl;
+      }
+
+      await pool.query(
+        'INSERT INTO admin_requests (email, name, requested_role, reason, status, document_url) VALUES ($1, $2, $3, $4, $5, $6)',
+        [email, name, requestedRole, reason || null, 'pending', document_url]
+      );
+
+      res.json({ success: true, message: 'Request submitted successfully' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async listRequests(req: any, res: Response) {
+    try {
+      const result = await pool.query('SELECT * FROM admin_requests ORDER BY created_at DESC');
+      res.json({ success: true, data: result.rows });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async approveRequest(req: any, res: Response) {
+    try {
+      const { requestId } = req.params;
+      const requestResult = await pool.query('SELECT * FROM admin_requests WHERE id = $1 AND status = $2', [requestId, 'pending']);
+
+      if (requestResult.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'Pending request not found' });
+      }
+
+      const adminReq = requestResult.rows[0];
+
+      // Auto-generate a dummy user account, skip email verification.
+      const tempPass = Math.floor(10000000 + Math.random() * 90000000).toString();
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash(tempPass, 10);
+
+      // Check if user already exists
+      const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [adminReq.email]);
+
+      if (existingUser.rowCount > 0) {
+        await pool.query('UPDATE users SET role = $1 WHERE email = $2', [adminReq.requested_role, adminReq.email]);
+      } else {
+        await pool.query(
+          'INSERT INTO users (email, password_hash, name, role, is_verified) VALUES ($1, $2, $3, $4, true)',
+          [adminReq.email, hash, adminReq.name, adminReq.requested_role]
+        );
+      }
+
+      await pool.query('UPDATE admin_requests SET status = $1 WHERE id = $2', ['approved', requestId]);
+
+      // Fire a password reset so they can set their own password immediately
+      const { AuthService } = require('../services/auth.js');
+      await AuthService.requestPasswordReset(adminReq.email);
+
+      res.json({ success: true, message: 'Request approved successfully. A password reset email was sent to the user.' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async rejectRequest(req: any, res: Response) {
+    try {
+      const { requestId } = req.params;
+      await pool.query('UPDATE admin_requests SET status = $1 WHERE id = $2', ['rejected', requestId]);
+      res.json({ success: true, message: 'Request rejected' });
     } catch (err: any) {
       res.status(500).json({ success: false, error: { message: err.message } });
     }

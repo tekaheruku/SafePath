@@ -40,6 +40,18 @@ const AppNav: React.FC = () => {
               Accounts
             </Link>
           )}
+          {user?.role === 'superadmin' && (
+            <Link
+              href="/admin/requests"
+              className={`px-4 py-2 rounded-lg transition-all duration-150 ${
+                isActive('/admin/requests')
+                  ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+              }`}
+            >
+              Requests
+            </Link>
+          )}
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}

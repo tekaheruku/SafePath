@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
 

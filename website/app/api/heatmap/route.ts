@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND = process.env.BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin.replace(/:\d+$/, ':3001') : 'http://localhost:3001');
 
 function toStartOfDayPHT(date: string): string {
   if (date.includes('T')) return date;

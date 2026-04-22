@@ -68,7 +68,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
       if (photoFile) {
         const formData = new FormData();
         formData.append('photo', photoFile);
-        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/upload`, formData, {
+        const uploadRes = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/upload`, formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (uploadRes.data.success) {
@@ -83,7 +83,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
       };
 
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/reports`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports`,
         {
           ...data,
           severity_level: mapSeverity(data.severity_level),

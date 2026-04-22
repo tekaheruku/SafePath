@@ -9,9 +9,15 @@ const registerSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
     name: Joi.string().trim().min(3).pattern(/^[a-zA-Z\s]+$/).required(),
+    verificationMethod: Joi.string().valid('link', 'otp').default('link'),
 });
 const emailSchema = Joi.object({
     email: Joi.string().email().required(),
+    verificationMethod: Joi.string().valid('link', 'otp').optional(),
+});
+const verifyOtpSchema = Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).pattern(/^\d+$/).required(),
 });
 const resetPasswordSchema = Joi.object({
     token: Joi.string().required(),
@@ -20,7 +26,7 @@ const resetPasswordSchema = Joi.object({
 export class AuthController {
     static async login(req, res) {
         try {
-            console.log('Login request body:', req.body);
+            // NOTE: Never log req.body on auth endpoints — it contains plaintext passwords.
             const { email, password } = validateSync(loginSchema, req.body);
             const result = await AuthService.login(email, password);
             if (result.banned) {
@@ -33,11 +39,11 @@ export class AuthController {
                     }
                 });
             }
-            console.log('Login successful for:', email);
             res.json({ success: true, data: result });
         }
         catch (err) {
-            console.error('Login controller error:', err.message);
+            // Only log the error message, never the credentials.
+            console.error('[AuthController] login failed:', err.message);
             res.status(401).json({ success: false, error: { message: err.message } });
         }
     }
@@ -66,9 +72,19 @@ export class AuthController {
     }
     static async resendVerification(req, res) {
         try {
-            const { email } = validateSync(emailSchema, req.body);
-            await AuthService.resendVerification(email);
-            res.json({ success: true, data: { sent: true } });
+            const { email, verificationMethod } = validateSync(emailSchema, req.body);
+            const result = await AuthService.resendVerification(email, verificationMethod);
+            res.json({ success: true, data: result });
+        }
+        catch (err) {
+            res.status(400).json({ success: false, error: { message: err.message } });
+        }
+    }
+    static async verifyEmailOtp(req, res) {
+        try {
+            const { email, otp } = validateSync(verifyOtpSchema, req.body);
+            const result = await AuthService.verifyEmailOtp(email, otp);
+            res.json({ success: true, data: result });
         }
         catch (err) {
             res.status(400).json({ success: false, error: { message: err.message } });

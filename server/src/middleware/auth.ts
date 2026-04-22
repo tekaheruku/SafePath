@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'safepath-secret-key-change-it';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
 export const authMiddleware = (req: any, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
 

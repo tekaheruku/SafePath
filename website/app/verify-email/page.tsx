@@ -26,7 +26,7 @@ function VerifyEmailContent() {
 
     try {
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/verify-email?token=${token}`
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/verify-email?token=${token}`
       );
       const { user, token: jwtToken } = res.data.data;
       login(jwtToken, user);

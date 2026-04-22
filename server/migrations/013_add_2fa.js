@@ -1,7 +1,8 @@
 export async function up(knex) {
-    await knex.schema.alterTable('users', (table) => {
-        table.boolean('two_factor_enabled').notNullable().defaultTo(false);
-    });
+    await knex.raw(`
+    ALTER TABLE users 
+    ADD COLUMN IF NOT EXISTS two_factor_enabled boolean DEFAULT false NOT NULL 
+  `);
 }
 export async function down(knex) {
     await knex.schema.alterTable('users', (table) => {

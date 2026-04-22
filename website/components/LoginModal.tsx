@@ -40,7 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setError('');
     
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/login`, {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/login`, {
         email,
         password,
       });
