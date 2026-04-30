@@ -16,6 +16,7 @@ export default {
             database: process.env.DB_NAME || 'safepath',
             user: process.env.DB_USER || 'postgres',
             password: process.env.DB_PASSWORD || 'postgres',
+            ...(process.env.DB_SSL === 'true' && { ssl: { rejectUnauthorized: false } })
         },
         pool: {
             min: 2,
