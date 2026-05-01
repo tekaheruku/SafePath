@@ -26,15 +26,20 @@ const UserReportList: React.FC<UserReportListProps> = ({ reports, onDelete, onVi
           >
             <div className="flex justify-between items-start mb-3">
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">{r.type}</span>
+                <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">
+                  {r.incident_type_name ?? r.type ?? 'Incident'}
+                </span>
                 <span className="text-xs text-theme-fg-muted">{new Date(r.created_at).toLocaleDateString()}</span>
               </div>
               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                r.severity_level === 'high' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
-                r.severity_level === 'medium' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                (r.severity_level_name ?? r.severity_level) === 'Critical' ? 'bg-red-500/10 border-red-500/30 text-red-500' :
+                (r.severity_level_name ?? r.severity_level) === 'Serious'  ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                (r.severity_level_name ?? r.severity_level) === 'Moderate' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
+                (r.severity_level_name ?? r.severity_level) === 'high'     ? 'bg-red-500/10 border-red-500/30 text-red-500' :
+                (r.severity_level_name ?? r.severity_level) === 'medium'   ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
                 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
               }`}>
-                {r.severity_level.toUpperCase()}
+                {(r.severity_level_name ?? r.severity_level ?? 'Minor').toUpperCase()}
               </span>
             </div>
             

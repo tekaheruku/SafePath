@@ -17,8 +17,8 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <div className="space-y-4 pb-4">
-      <header className="space-y-1">
+    <div className="pb-4">
+      <header className="space-y-1 px-0 mb-4">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
           SafePath Interactive Map
         </h1>
@@ -29,12 +29,13 @@ export default function Home() {
         )}
       </header>
 
-      <section className="bg-theme-panel/50 rounded-2xl border border-theme-border p-0.5 shadow-2xl backdrop-blur-sm">
+      {/* Full-width map — breaks out of the layout's px-4 container */}
+      <section className="-mx-4 md:-mx-6 lg:-mx-8 xl:-mx-10 2xl:-mx-12 bg-theme-panel/50 shadow-2xl backdrop-blur-sm">
         <MapDashboard />
       </section>
 
       {!user && (
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 mt-8">
           <div className="p-6 rounded-2xl bg-theme-panel/30 border border-theme-border space-y-4">
             <h2 className="text-2xl font-bold">Community Reports</h2>
             <p className="text-theme-fg-muted text-sm">

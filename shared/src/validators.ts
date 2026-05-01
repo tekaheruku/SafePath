@@ -1,9 +1,9 @@
 import Joi from 'joi';
 
 export const createReportSchema = Joi.object({
-  type: Joi.string().required(),
-  severity_level: Joi.string().valid('low', 'medium', 'high').required(),
-  description: Joi.string().pattern(/[a-zA-Z0-9]/).message('Description must contain at least one alphanumeric character').required(),
+  incident_type_id: Joi.string().uuid().required(),
+  severity_level_id: Joi.string().uuid().required(),
+  description: Joi.string().pattern(/[a-zA-Z0-9]/).message('Description must contain at least one alphanumeric character').optional().allow('', null),
   location: Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
@@ -12,9 +12,9 @@ export const createReportSchema = Joi.object({
 });
 
 export const updateReportSchema = Joi.object({
-  type: Joi.string(),
-  severity_level: Joi.string().valid('low', 'medium', 'high'),
-  description: Joi.string(),
+  incident_type_id: Joi.string().uuid(),
+  severity_level_id: Joi.string().uuid(),
+  description: Joi.string().allow('', null),
 });
 
 export const createCommentSchema = Joi.object({

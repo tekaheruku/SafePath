@@ -14,6 +14,7 @@ import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
 import { VoteController } from './controllers/votes.js';
 import { RoutesController } from './controllers/routes.js';
+import { IncidentConfigController } from './controllers/incident_config.js';
 import { UploadController, upload } from './controllers/upload.js';
 import { authMiddleware, roleMiddleware } from './middleware/auth.js';
 import path from 'path';
@@ -62,13 +63,18 @@ app.post(`${apiRoot}/auth/reset-password`, (req, res) => AuthController.resetPas
 app.post(`${apiRoot}/auth/toggle-2fa`, authMiddleware, (req, res) => AuthController.toggle2fa(req, res));
 app.post(`${apiRoot}/auth/change-password`, authMiddleware, (req, res) => AuthController.changePassword(req, res));
 
-// Reports
+// Reports — /stats/:userId must be declared before /:id to avoid route collision
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
 app.get(`${apiRoot}/reports`, (req, res) => ReportController.listReports(req, res));
+app.get(`${apiRoot}/reports/stats/:userId`, (req, res) => ReportController.getUserStats(req, res));
 app.get(`${apiRoot}/reports/:id`, (req, res) => ReportController.getReport(req, res));
 app.put(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.updateReport(req, res));
 app.delete(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.deleteReport(req, res));
 app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
+
+// Configs
+app.get(`${apiRoot}/incident-types`, (req, res) => IncidentConfigController.getIncidentTypes(req, res));
+app.get(`${apiRoot}/severity-levels`, (req, res) => IncidentConfigController.getSeverityLevels(req, res));
 
 
 // Heatmap

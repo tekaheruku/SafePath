@@ -44,7 +44,25 @@ export interface TokenPayload {
     exp: number;
 }
 
-export type SeverityLevel = 'low' | 'medium' | 'high';
+export interface IncidentType {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface SeverityLevel {
+    id: string;
+    name: string;
+    description: string;
+    color_code: string;
+    level: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export type VoteType = 'up' | 'down';
 
 
@@ -56,10 +74,14 @@ export interface Location {
 export interface Report {
     id: string;
     user_id: string;
-    title: string;
+    incident_type_id: string;
+    incident_type_name?: string;
+    incident_type_icon?: string;
+    severity_level_id: string;
+    severity_level_name?: string;
+    severity_level_color?: string;
     description: string;
     location: Location;
-    severity_level: SeverityLevel;
     sentiment_score: number;
     upvotes_count: number;
     downvotes_count: number;
@@ -70,15 +92,16 @@ export interface Report {
 
 
 export interface CreateReportRequest {
-    title: string;
+    incident_type_id: string;
+    severity_level_id: string;
     description: string;
     location: Location;
 }
 
 export interface UpdateReportRequest {
-    title?: string;
+    incident_type_id?: string;
+    severity_level_id?: string;
     description?: string;
-    severity_level?: SeverityLevel;
 }
 
 export interface ReportWithUser extends Report {
@@ -175,7 +198,7 @@ export interface HeatmapFilter {
     max_latitude: number;
     min_longitude: number;
     max_longitude: number;
-    severity_level?: SeverityLevel;
+    severity_level_id?: string;
     days_back?: number;
     start_date?: string;
     end_date?: string;

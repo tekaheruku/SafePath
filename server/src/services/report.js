@@ -5,14 +5,14 @@ export class ReportService {
      * Create a new incident report
      */
     static async createReport(userId, data) {
-        const { type, severity_level, description, location, photo_url } = data;
+        const { incident_type_id, severity_level_id, description, location, photo_url } = data;
         const query = `
-      INSERT INTO reports (user_id, title, severity_level, description, location, upvotes_count, downvotes_count, photo_url)
+      INSERT INTO reports (user_id, incident_type_id, severity_level_id, description, location, upvotes_count, downvotes_count, photo_url)
       VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), 0, 0, $7)
-      RETURNING id, user_id, title as type, severity_level, description, 
+      RETURNING id, user_id, incident_type_id, severity_level_id, description, 
                 ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, created_at, updated_at
     `;
-        const params = [userId, type, severity_level, description, location.longitude, location.latitude, photo_url || null];
+        const params = [userId, incident_type_id, severity_level_id, description, location.longitude, location.latitude, photo_url || null];
         const result = await pool.query(query, params);
         return result.rows[0];
     }
@@ -32,9 +32,9 @@ export class ReportService {
             paramIndex += 4;
         }
         // Severity filter
-        if (filters?.severity) {
-            whereClause += ` AND r.severity_level = $${paramIndex}`;
-            params.push(filters.severity);
+        if (filters?.severity_level_id) {
+            whereClause += ` AND r.severity_level_id = $${paramIndex}`;
+            params.push(filters.severity_level_id);
             paramIndex++;
         }
         // Time filter
@@ -49,13 +49,17 @@ export class ReportService {
             paramIndex++;
         }
         const query = `
-      SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
+      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url,
-             u.name as author_name
+             u.name as author_name,
+             it.name as incident_type_name, it.icon as incident_type_icon,
+             sl.name as severity_level_name, sl.color_code as severity_level_color
              ${filters?.currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $${paramIndex}) as user_vote` : ''}
       FROM reports r
       LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN incident_types it ON r.incident_type_id = it.id
+      LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
       ${whereClause}
       ORDER BY r.created_at DESC
       LIMIT $${filters?.currentUserId ? paramIndex + 1 : paramIndex} OFFSET $${filters?.currentUserId ? paramIndex + 2 : paramIndex + 1}
@@ -82,13 +86,17 @@ export class ReportService {
      */
     static async getReportById(id, currentUserId) {
         const query = `
-      SELECT r.id, r.user_id, r.title as type, r.severity_level, r.description,
+      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url,
-             u.name as author_name
+             u.name as author_name,
+             it.name as incident_type_name, it.icon as incident_type_icon,
+             sl.name as severity_level_name, sl.color_code as severity_level_color
              ${currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $2) as user_vote` : ''}
       FROM reports r
       LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN incident_types it ON r.incident_type_id = it.id
+      LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
       WHERE r.id = $1
     `;
         const params = currentUserId ? [id, currentUserId] : [id];
@@ -96,18 +104,18 @@ export class ReportService {
         return result.rows[0] || null;
     }
     static async updateReport(id, userId, data) {
-        const { type, severity_level, description } = data;
+        const { incident_type_id, severity_level_id, description } = data;
         let updateClause = 'updated_at = NOW()';
         const params = [id, userId];
         let paramIndex = 3;
-        if (type) {
-            updateClause += `, title = $${paramIndex}`;
-            params.push(type);
+        if (incident_type_id) {
+            updateClause += `, incident_type_id = $${paramIndex}`;
+            params.push(incident_type_id);
             paramIndex++;
         }
-        if (severity_level !== undefined) {
-            updateClause += `, severity_level = $${paramIndex}`;
-            params.push(severity_level);
+        if (severity_level_id !== undefined) {
+            updateClause += `, severity_level_id = $${paramIndex}`;
+            params.push(severity_level_id);
             paramIndex++;
         }
         if (description) {
@@ -119,7 +127,7 @@ export class ReportService {
       UPDATE reports 
       SET ${updateClause}
       WHERE id = $1 AND user_id = $2
-      RETURNING id, user_id, title as type, severity_level, description, 
+      RETURNING id, user_id, incident_type_id, severity_level_id, description, 
                 ST_AsGeoJSON(location)::json as location, created_at, updated_at
     `;
         const result = await pool.query(query, params);

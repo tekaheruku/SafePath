@@ -26,12 +26,17 @@ export class HeatmapService {
       filter.max_latitude,
     ];
 
+    // Qualified with table alias for queries that JOIN severity_levels (avoids ambiguous 'created_at')
+    let timeFilterR = '';
+    // Unqualified for standalone tables (street_ratings has no alias)
     let timeFilter = '';
     if (start_date && end_date) {
-      timeFilter = `AND created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
+      timeFilterR = `AND r.created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
+      timeFilter  = `AND created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
       params.push(start_date, end_date);
     } else {
-      timeFilter = `AND created_at >= NOW() - ($5::text || ' days')::interval`;
+      timeFilterR = `AND r.created_at >= NOW() - ($5::text || ' days')::interval`;
+      timeFilter  = `AND created_at >= NOW() - ($5::text || ' days')::interval`;
       params.push(days_back);
     }
 
@@ -51,24 +56,18 @@ export class HeatmapService {
           SELECT 
             ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
             ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-            AVG(
-              CASE severity_level 
-                WHEN 'low' THEN 1 
-                WHEN 'medium' THEN 3 
-                WHEN 'high' THEN 5 
-                ELSE 1 
-              END
-            ) as avg_severity,
+            AVG(COALESCE(sl.level, 1)) as avg_severity,
             COUNT(*) as report_count,
             AVG(
               1.0 - LEAST(1.0, GREATEST(0.0, 
-                EXTRACT(EPOCH FROM (${refTime} - created_at)) /
+                EXTRACT(EPOCH FROM (${refTime} - r.created_at)) /
                 NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
               ))
             ) as recency_weight
-          FROM reports
-          WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-            ${timeFilter}
+          FROM reports r
+          LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
+          WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            ${timeFilterR}
           GROUP BY lng, lat
         )
         SELECT 
@@ -96,24 +95,18 @@ export class HeatmapService {
           SELECT 
             ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
             ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-            AVG(
-              CASE severity_level 
-                WHEN 'low' THEN 1 
-                WHEN 'medium' THEN 3 
-                WHEN 'high' THEN 5 
-                ELSE 1 
-              END
-            ) as avg_severity,
+            AVG(COALESCE(sl.level, 1)) as avg_severity,
             COUNT(*) as report_count,
             AVG(
               1.0 - LEAST(1.0, GREATEST(0.0, 
-                EXTRACT(EPOCH FROM (${refTime} - created_at)) /
+                EXTRACT(EPOCH FROM (${refTime} - r.created_at)) /
                 NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
               ))
             ) as recency_weight
-          FROM reports
-          WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-            ${timeFilter}
+          FROM reports r
+          LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
+          WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            ${timeFilterR}
           GROUP BY lng, lat
         ),
         StreetStats AS (

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { MAP_CONFIG } from '@safepath/shared';
 
 interface MapState {
   // Map View
@@ -17,9 +18,9 @@ interface MapState {
 }
 
 export const useMapStore = create<MapState>((set) => ({
-  lat: 15.390,
-  lng: 120.060,
-  zoom: 13,
+  lat: MAP_CONFIG.CENTER_LAT,
+  lng: MAP_CONFIG.CENTER_LNG,
+  zoom: MAP_CONFIG.DEFAULT_ZOOM,
   showIncidentsHeat: true,
   showRatingsHeat: true,
 

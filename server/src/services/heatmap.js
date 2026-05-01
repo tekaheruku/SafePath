@@ -42,14 +42,7 @@ export class HeatmapService {
           SELECT 
             ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
             ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-            AVG(
-              CASE severity_level 
-                WHEN 'low' THEN 1 
-                WHEN 'medium' THEN 3 
-                WHEN 'high' THEN 5 
-                ELSE 1 
-              END
-            ) as avg_severity,
+            AVG(COALESCE(sl.level, 1)) as avg_severity,
             COUNT(*) as report_count,
             AVG(
               1.0 - LEAST(1.0, GREATEST(0.0, 
@@ -57,8 +50,9 @@ export class HeatmapService {
                 NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
               ))
             ) as recency_weight
-          FROM reports
-          WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+          FROM reports r
+          LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
+          WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
             ${timeFilter}
           GROUP BY lng, lat
         )
@@ -89,14 +83,7 @@ export class HeatmapService {
           SELECT 
             ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
             ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-            AVG(
-              CASE severity_level 
-                WHEN 'low' THEN 1 
-                WHEN 'medium' THEN 3 
-                WHEN 'high' THEN 5 
-                ELSE 1 
-              END
-            ) as avg_severity,
+            AVG(COALESCE(sl.level, 1)) as avg_severity,
             COUNT(*) as report_count,
             AVG(
               1.0 - LEAST(1.0, GREATEST(0.0, 
@@ -104,8 +91,9 @@ export class HeatmapService {
                 NULLIF(EXTRACT(EPOCH FROM ${intervalExpr}), 0)
               ))
             ) as recency_weight
-          FROM reports
-          WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+          FROM reports r
+          LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
+          WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
             ${timeFilter}
           GROUP BY lng, lat
         ),

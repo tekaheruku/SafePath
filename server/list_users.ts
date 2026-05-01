@@ -1,4 +1,5 @@
-import { db } from './src/config/knex.ts';
+
+import { db } from './src/config/knex.js';
 
 async function listUsers() {
   try {
@@ -7,7 +8,7 @@ async function listUsers() {
     console.table(users);
     process.exit(0);
   } catch (err) {
-    console.error('Error fetching users:', err.message);
+    console.error('Error fetching users:', (err as Error).message);
     process.exit(1);
   }
 }

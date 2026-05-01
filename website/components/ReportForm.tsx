@@ -9,10 +9,12 @@ import { useAuth } from './AuthContext';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import LoginModal from './LoginModal';
 
+import { IncidentType, SeverityLevel } from '@safepath/shared';
+
 const reportSchema = z.object({
-  type: z.string().min(1, 'Type is required'),
-  severity_level: z.coerce.number(),
-  description: z.string().min(5, 'Description must be at least 5 characters'),
+  incident_type_id: z.string().min(1, 'Type is required'),
+  severity_level_id: z.string().min(1, 'Severity is required'),
+  description: z.string().optional(),
   latitude: z.number(),
   longitude: z.number(),
 });
@@ -21,6 +23,9 @@ type ReportFormValues = z.infer<typeof reportSchema>;
 
 interface ReportFormProps {
   location: { lat: number; lng: number };
+  incidentTypes: IncidentType[];
+  severityLevels: SeverityLevel[];
+  preselectedIncidentTypeId: string | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -33,21 +38,31 @@ const SEVERITY_LABELS: Record<number, string> = {
   5: 'High',
 };
 
-const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }) => {
+const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severityLevels, preselectedIncidentTypeId, onSuccess, onCancel }) => {
   const { token } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<ReportFormValues>({
+
+  // Auto-select the first severity level if available, or just the middle one if possible
+  const sortedSeverityLevels = [...severityLevels].sort((a, b) => a.level - b.level);
+  const defaultSeverity = sortedSeverityLevels.length > 0 
+    ? (sortedSeverityLevels.length >= 3 ? sortedSeverityLevels[2].id : sortedSeverityLevels[0].id) 
+    : '';
+
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting }, setValue } = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
     defaultValues: {
       latitude: location.lat,
       longitude: location.lng,
-      severity_level: 3,
+      incident_type_id: preselectedIncidentTypeId || '',
+      severity_level_id: defaultSeverity,
     }
   });
 
-  const severityValue = Number(watch('severity_level')) || 3;
+  const selectedSeverityId = watch('severity_level_id');
+  const selectedSeverity = sortedSeverityLevels.find(s => s.id === selectedSeverityId);
+  const selectedIncidentType = incidentTypes.find(t => t.id === watch('incident_type_id'));
 
   const onSubmit = async (data: ReportFormValues) => {
     // Authentication Check
@@ -76,17 +91,10 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
         }
       }
 
-      const mapSeverity = (val: number): string => {
-        if (val <= 2) return 'low';
-        if (val === 3) return 'medium';
-        return 'high';
-      };
-
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports`,
         {
           ...data,
-          severity_level: mapSeverity(data.severity_level),
           location: { latitude: data.latitude, longitude: data.longitude },
           photo_url
         },
@@ -117,35 +125,58 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, onSuccess, onCancel }
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1">
           <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Type</label>
-          <select 
-            {...register('type')}
-            className="w-full bg-theme-panel border border-slate-700 rounded-lg p-2 text-theme-fg focus:ring-2 focus:ring-blue-500 outline-none"
-          >
-            <option value="Theft">Theft</option>
-            <option value="Assault">Assault</option>
-            <option value="Vandalism">Vandalism</option>
-            <option value="Harassment">Harassment</option>
-            <option value="Car crash">Car crash</option>
-            <option value="Other">Other</option>
-          </select>
-          {errors.type && <p className="text-xs text-red-400">{errors.type.message}</p>}
+          {selectedIncidentType ? (
+            <div className="flex items-center gap-2 p-2.5 bg-theme-panel/50 border border-slate-700 rounded-lg text-theme-fg font-medium">
+              <span>{selectedIncidentType.name}</span>
+            </div>
+          ) : (
+            <select 
+              {...register('incident_type_id')}
+              className="w-full bg-theme-panel border border-slate-700 rounded-lg p-2 text-theme-fg focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">Select Type</option>
+              {incidentTypes.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
+          <input type="hidden" {...register('incident_type_id')} />
+          {errors.incident_type_id && <p className="text-xs text-red-400">{errors.incident_type_id.message}</p>}
         </div>
 
         <div className="space-y-1">
           <div className="flex justify-between items-baseline">
             <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Severity</label>
-            <span className="text-sm font-bold text-blue-400">{severityValue} — {SEVERITY_LABELS[severityValue] || 'Medium'}</span>
+            {selectedSeverity && (
+               <span className="text-sm font-bold" style={{ color: selectedSeverity.color_code }}>
+                 {selectedSeverity.name}
+               </span>
+            )}
           </div>
-          <input 
-            type="range" min="1" max="5" step="1"
-            {...register('severity_level')}
-            className="w-full accent-blue-500"
-          />
-          <div className="flex justify-between text-[11px] text-theme-fg-muted select-none font-medium px-0.5">
-            <span>1 · Low</span>
-            <span>3 · Medium</span>
-            <span>5 · High</span>
+          
+          <div className="flex gap-2">
+            {sortedSeverityLevels.map(level => {
+              const isActive = selectedSeverityId === level.id;
+              return (
+                <button
+                  key={level.id}
+                  type="button"
+                  onClick={() => setValue('severity_level_id', level.id)}
+                  className="flex-1 py-2 text-xs font-bold rounded-lg border transition-all"
+                  style={{
+                    backgroundColor: isActive ? `${level.color_code}30` : 'rgba(30, 41, 59, 0.5)',
+                    borderColor: isActive ? level.color_code : 'rgba(51, 65, 85, 1)',
+                    color: isActive ? level.color_code : '#94a3b8'
+                  }}
+                  title={level.description}
+                >
+                  {level.name}
+                </button>
+              );
+            })}
           </div>
+          <input type="hidden" {...register('severity_level_id')} />
+          {errors.severity_level_id && <p className="text-xs text-red-400">{errors.severity_level_id.message}</p>}
         </div>
 
         <div className="space-y-1">

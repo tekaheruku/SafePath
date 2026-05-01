@@ -19,6 +19,7 @@ import SearchBar from './SearchBar';
 import DirectionsPanel from './DirectionsPanel';
 import { Calendar, FilterX, AlertCircle, Search, X, MapPin, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
+import { IncidentType, SeverityLevel, MAP_CONFIG } from '@safepath/shared';
 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -184,8 +185,11 @@ const MapDashboard: React.FC = () => {
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
+  const [selectedIncidentTypeId, setSelectedIncidentTypeId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
   const [dateLabel, setDateLabel] = useState<string | null>(null);
+  const [incidentTypes, setIncidentTypes] = useState<IncidentType[]>([]);
+  const [severityLevels, setSeverityLevels] = useState<SeverityLevel[]>([]);
   // Ref that always holds the latest dateRange so stale closures (socket handlers,
   // window.deleteReport, etc.) always read the current filter value.
   const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
@@ -291,10 +295,10 @@ const MapDashboard: React.FC = () => {
 
     try {
       const b = {
-        minLat: 15.30,
-        maxLat: 15.41,
-        minLng: 119.92,
-        maxLng: 120.18,
+        minLat: MAP_CONFIG.BOUNDS.MIN_LAT,
+        maxLat: MAP_CONFIG.BOUNDS.MAX_LAT,
+        minLng: MAP_CONFIG.BOUNDS.MIN_LNG,
+        maxLng: MAP_CONFIG.BOUNDS.MAX_LNG,
       };
 
 
@@ -396,11 +400,12 @@ const MapDashboard: React.FC = () => {
         .bindPopup(`
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <strong class="text-indigo-400 font-bold capitalize text-sm">${r.type}</strong>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-theme-panel border border-theme-border ${
-                r.severity_level === 'high' ? 'text-red-400 border-red-900/50' : 
-                r.severity_level === 'medium' ? 'text-orange-400 border-orange-900/50' : 'text-emerald-400 border-emerald-900/50'
-              }">${r.severity_level}</span>
+              <strong class="text-indigo-400 font-bold capitalize text-sm">
+                ${r.incident_type_name || 'Incident'}
+              </strong>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border" style="color: ${r.severity_level_color}; border-color: ${r.severity_level_color}50; background-color: rgba(30, 41, 59, 0.5);">
+                ${r.severity_level_name || 'Unknown'}
+              </span>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             ${r.photo_url ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` : ''}
@@ -522,8 +527,8 @@ const MapDashboard: React.FC = () => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const IBA_BOUNDS = L.latLngBounds(
-      [15.30, 119.92],  // SW
-      [15.41, 120.18]   // NE — covers Santa Barbara far east
+      [MAP_CONFIG.BOUNDS.MIN_LAT, MAP_CONFIG.BOUNDS.MIN_LNG],  // SW
+      [MAP_CONFIG.BOUNDS.MAX_LAT, MAP_CONFIG.BOUNDS.MAX_LNG]   // NE — covers Santa Barbara far east
     );
 
     const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat') as string) : storeLat;
@@ -544,7 +549,18 @@ const MapDashboard: React.FC = () => {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
+      // Pre-load extra tile rows outside the viewport so panning/zooming
+      // doesn't reveal blank areas.
+      keepBuffer: 4,
+      // Do NOT re-request tiles during the zoom animation — wait until
+      // the zoom level settles. This is the primary fix for blank squares
+      // that appear mid-zoom and then fail to recover.
+      updateWhenZooming: false,
+      // Still update tiles while panning (the default false causes lag on slow
+      // connections; true means tiles load progressively as the user pans).
       updateWhenIdle: false,
+      // Leaflet default is true but be explicit to avoid any SSR stripping.
+      crossOrigin: true,
     }).addTo(map);
 
 
@@ -580,6 +596,10 @@ const MapDashboard: React.FC = () => {
     map.on('zoomend', () => {
       const center = map.getCenter();
       setView(center.lat, center.lng, map.getZoom());
+      // Re-validate the container size after every zoom so Leaflet issues
+      // tile requests for the full visible area. This fixes blank squares
+      // that appear when the container dimensions were stale at zoom time.
+      if (mapRef.current) map.invalidateSize({ pan: false });
     });
 
 
@@ -650,6 +670,11 @@ const MapDashboard: React.FC = () => {
       fetchMapData();
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    apiClient.get('/incident-types').then(res => setIncidentTypes(res.data)).catch(console.error);
+    apiClient.get('/severity-levels').then(res => setSeverityLevels(res.data)).catch(console.error);
+  }, []);
 
   useEffect(() => {
     (window as any).deleteReport = async (id: string) => {
@@ -882,7 +907,7 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[68vh] md:h-[72vh] min-h-[520px] rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-theme-panel">
+    <div className="relative w-full h-[68vh] md:h-[72vh] min-h-[520px] overflow-hidden bg-theme-panel">
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
@@ -933,7 +958,7 @@ const MapDashboard: React.FC = () => {
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1600] pointer-events-none">
           <div className="px-5 py-2 rounded-full text-xs font-bold text-white shadow-2xl border border-indigo-400/40 animate-pulse"
                style={{ background: 'rgba(79,70,229,0.85)', backdropFilter: 'blur(12px)' }}>
-            📍 Click map to set {directionsSelectionTarget === 'start' ? 'starting point' : 'destination'}
+            Click map to set {directionsSelectionTarget === 'start' ? 'starting point' : 'destination'}
           </div>
         </div>
       )}
@@ -1063,14 +1088,31 @@ const MapDashboard: React.FC = () => {
             {directionsOpen ? 'Close Directions' : 'Directions'}
           </button>
 
-          <button
-            onClick={() => setSelectionMode(selectionMode === 'report' ? null : 'report')}
-            disabled={directionsOpen}
-            title={directionsOpen ? 'Close Directions panel first' : undefined}
-            className={`w-full ${selectionMode === 'report' ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
-          >
-            {selectionMode === 'report' ? 'Cancel Selection' : 'Report Incident'}
-          </button>
+          {/* Dynamic Incident Type Buttons */}
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            {incidentTypes.map(type => {
+              const isSelected = selectionMode === 'report' && selectedIncidentTypeId === type.id;
+              return (
+                <button
+                  key={type.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectionMode(null);
+                      setSelectedIncidentTypeId(null);
+                    } else {
+                      setSelectionMode('report');
+                      setSelectedIncidentTypeId(type.id);
+                    }
+                  }}
+                  disabled={directionsOpen}
+                  title={directionsOpen ? 'Close Directions panel first' : undefined}
+                  className={`w-full ${isSelected ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-2 py-2 rounded-lg text-[11px] font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 leading-tight text-center`}
+                >
+                  {isSelected ? 'Cancel' : type.name}
+                </button>
+              );
+            })}
+          </div>
           <button
             onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
             disabled={directionsOpen}
@@ -1112,14 +1154,19 @@ const MapDashboard: React.FC = () => {
           <div className="max-w-md w-full">
             <ReportForm
               location={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
+              incidentTypes={incidentTypes}
+              severityLevels={severityLevels}
+              preselectedIncidentTypeId={selectedIncidentTypeId}
               onSuccess={() => {
                 setShowReportForm(false);
                 setSelectedLocation(null);
+                setSelectedIncidentTypeId(null);
                 fetchMapData();
               }}
               onCancel={() => {
                 setShowReportForm(false);
                 setSelectedLocation(null);
+                setSelectedIncidentTypeId(null);
               }}
             />
           </div>

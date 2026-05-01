@@ -69,6 +69,30 @@ export class ReportController {
   }
 
   /**
+   * GET /api/v1/reports/stats/:userId
+   * Get aggregate report stats for a specific user (dashboard use)
+   */
+  static async getUserStats(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const stats = await ReportService.getStatsByUserId(userId);
+      res.json({
+        success: true,
+        data: stats,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
    * GET /api/v1/reports
    * List reports with optional filters
    */
@@ -88,6 +112,7 @@ export class ReportController {
         daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
+        userId: req.query.userId as string | undefined,
       };
 
       const currentUserId = (req as any).user?.id;

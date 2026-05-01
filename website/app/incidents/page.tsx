@@ -66,13 +66,16 @@ export default function IncidentsPage() {
               className="bg-theme-panel border border-theme-border p-5 rounded-2xl cursor-pointer hover:bg-theme-panel hover:border-slate-600 transition-all shadow-lg active:scale-[0.98]"
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg text-theme-fg">{r.type}</h3>
+                <h3 className="font-bold text-lg text-theme-fg">{r.incident_type_name ?? r.type ?? 'Incident'}</h3>
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  r.severity_level === 'high' ? 'bg-red-500/20 text-red-400' :
-                  r.severity_level === 'medium' ? 'bg-orange-500/20 text-orange-400' :
+                  (r.severity_level_name ?? r.severity_level) === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                  (r.severity_level_name ?? r.severity_level) === 'Serious'  ? 'bg-orange-500/20 text-orange-400' :
+                  (r.severity_level_name ?? r.severity_level) === 'Moderate' ? 'bg-yellow-500/20 text-yellow-400' :
+                  (r.severity_level_name ?? r.severity_level) === 'high'     ? 'bg-red-500/20 text-red-400' :
+                  (r.severity_level_name ?? r.severity_level) === 'medium'   ? 'bg-orange-500/20 text-orange-400' :
                   'bg-yellow-500/20 text-yellow-400'
                 }`}>
-                  {typeof r.severity_level === 'string' ? r.severity_level.toUpperCase() : r.severity_level}
+                  {(r.severity_level_name ?? r.severity_level ?? 'Minor').toUpperCase()}
                 </span>
               </div>
               <p className="text-sm text-theme-fg-muted mb-4 line-clamp-2">{r.description}</p>
