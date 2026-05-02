@@ -101,6 +101,46 @@ export class AdminController {
       res.status(500).json({ success: false, error: { message: err.message } });
     }
   }
+
+  static async listIDVerificationRequests(req: Request, res: Response) {
+    try {
+      const query = `
+        SELECT id, email, name, role, id_verification_status, id_front_url, id_back_url, updated_at
+        FROM users
+        WHERE id_verification_status = 'pending'
+        ORDER BY updated_at ASC
+      `;
+      const result = await pool.query(query);
+      res.json({ success: true, data: result.rows });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
+
+  static async handleIDVerification(req: any, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { status } = req.body; // 'verified' or 'not_verified'
+      const adminRole = req.user.role;
+
+      if (adminRole !== 'lgu_admin') {
+        return res.status(403).json({ success: false, error: { message: 'Only LGU Admins can verify IDs' } });
+      }
+
+      if (status !== 'verified' && status !== 'not_verified') {
+        return res.status(400).json({ success: false, message: 'Invalid status' });
+      }
+
+      await pool.query(
+        'UPDATE users SET id_verification_status = $1, updated_at = NOW() WHERE id = $2',
+        [status, userId]
+      );
+
+      res.json({ success: true, message: `User ID ${status} successfully` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
 }
 
 export class AdminRequestsController {

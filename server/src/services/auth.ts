@@ -416,8 +416,51 @@ export class AuthService {
   }
 
   static async getUserById(id: string) {
-    const result = await pool.query('SELECT id, email, name, role, two_factor_enabled FROM users WHERE id = $1', [id]);
+    const result = await pool.query(
+      'SELECT id, email, name, role, two_factor_enabled, address, birthday, phone_number, id_verification_status, account_status, id_front_url, id_back_url FROM users WHERE id = $1',
+      [id]
+    );
     if (result.rowCount === 0) throw new Error('User not found');
+    return result.rows[0];
+  }
+
+  static async updateProfile(userId: string, data: any) {
+    const { name, address, birthday, phone_number } = data;
+    
+    // Validate name if provided
+    if (name) {
+      const trimmedName = name.trim();
+      if (trimmedName.length < 3) throw new Error('Name must be at least 3 characters long.');
+      if (!/^[a-zA-Z\s]+$/.test(trimmedName)) throw new Error('Name can only contain letters and spaces.');
+    }
+
+    const query = `
+      UPDATE users 
+      SET name = COALESCE($1, name),
+          address = COALESCE($2, address),
+          birthday = COALESCE($3, birthday),
+          phone_number = COALESCE($4, phone_number),
+          updated_at = NOW()
+      WHERE id = $5
+      RETURNING id, email, name, role, address, birthday, phone_number, id_verification_status, account_status
+    `;
+    const params = [name || null, address || null, birthday || null, phone_number || null, userId];
+    const result = await pool.query(query, params);
+    return result.rows[0];
+  }
+
+  static async submitIdVerification(userId: string, frontUrl: string, backUrl: string) {
+    const query = `
+      UPDATE users 
+      SET id_front_url = $1,
+          id_back_url = $2,
+          id_verification_status = 'pending',
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING id, id_verification_status
+    `;
+    const params = [frontUrl, backUrl, userId];
+    const result = await pool.query(query, params);
     return result.rows[0];
   }
 

@@ -21,4 +21,14 @@ export class IncidentConfigController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  static async getRatingCategories(req: Request, res: Response) {
+    try {
+      const categories = await db('rating_categories').orderBy('created_at', 'asc');
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching rating categories:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }

@@ -28,6 +28,18 @@ const AppNav: React.FC = () => {
         </Link>
 
         <div className="hidden md:flex items-center space-x-1 text-sm font-medium">
+          {user?.role === 'lgu_admin' && (
+            <Link
+              href="/admin/id-verifications"
+              className={`px-4 py-2 rounded-lg transition-all duration-150 ${
+                isActive('/admin/id-verifications')
+                  ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+              }`}
+            >
+              Verification Requests
+            </Link>
+          )}
           {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (
             <Link
               href="/admin/accounts"
@@ -49,7 +61,7 @@ const AppNav: React.FC = () => {
                   : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
               }`}
             >
-              Requests
+              Admin Requests
             </Link>
           )}
           {NAV_LINKS.map(({ href, label }) => (
@@ -79,7 +91,9 @@ const AppNav: React.FC = () => {
 
           {user ? (
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-theme-fg-muted">Hi, <span className="text-theme-fg font-semibold">{user.name}</span></span>
+              <Link href="/settings#profile" className="text-sm text-theme-fg-muted hover:text-theme-fg transition-colors">
+                Hi, <span className="text-theme-fg font-semibold">{user.name}</span>
+              </Link>
               
               <button
                 onClick={() => {

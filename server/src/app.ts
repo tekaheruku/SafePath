@@ -62,6 +62,8 @@ app.post(`${apiRoot}/auth/request-password-reset`, (req, res) => AuthController.
 app.post(`${apiRoot}/auth/reset-password`, (req, res) => AuthController.resetPassword(req, res));
 app.post(`${apiRoot}/auth/toggle-2fa`, authMiddleware, (req, res) => AuthController.toggle2fa(req, res));
 app.post(`${apiRoot}/auth/change-password`, authMiddleware, (req, res) => AuthController.changePassword(req, res));
+app.patch(`${apiRoot}/auth/profile`, authMiddleware, (req, res) => AuthController.updateProfile(req, res));
+app.post(`${apiRoot}/auth/verify-id`, authMiddleware, (req, res) => AuthController.submitIdVerification(req, res));
 
 // Reports — /stats/:userId must be declared before /:id to avoid route collision
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
@@ -75,6 +77,7 @@ app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteContro
 // Configs
 app.get(`${apiRoot}/incident-types`, (req, res) => IncidentConfigController.getIncidentTypes(req, res));
 app.get(`${apiRoot}/severity-levels`, (req, res) => IncidentConfigController.getSeverityLevels(req, res));
+app.get(`${apiRoot}/rating-categories`, (req, res) => IncidentConfigController.getRatingCategories(req, res));
 
 
 // Heatmap
@@ -93,6 +96,8 @@ app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 
 app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.banUser(req, res));
 app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.unbanUser(req, res));
 app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
+app.get(`${apiRoot}/admin/id-verifications`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.listIDVerificationRequests(req, res));
+app.post(`${apiRoot}/admin/id-verifications/:userId/handle`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.handleIDVerification(req, res));
 
 // Admin Requests
 app.post(`${apiRoot}/admin-requests`, upload.single('document'), (req, res) => AdminRequestsController.submitRequest(req, res));

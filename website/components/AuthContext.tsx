@@ -10,6 +10,13 @@ interface User {
   name: string;
   role: string;
   two_factor_enabled: boolean;
+  address?: string;
+  birthday?: string;
+  phone_number?: string;
+  id_verification_status: 'verified' | 'not_verified' | 'pending';
+  account_status: 'active' | 'inactive' | 'banned' | 'suspended';
+  id_front_url?: string;
+  id_back_url?: string;
 }
 
 interface AuthContextType {
