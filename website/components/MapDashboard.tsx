@@ -15,9 +15,9 @@ import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
 import { DateFilterModal } from './DateFilterModal';
-import SearchBar from './SearchBar';
+
 import DirectionsPanel from './DirectionsPanel';
-import { Calendar, FilterX, AlertCircle, Search, X, MapPin, Navigation } from 'lucide-react';
+import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
 import { IncidentType, SeverityLevel, MAP_CONFIG } from '@safepath/shared';
 
@@ -168,7 +168,7 @@ const MapDashboard: React.FC = () => {
   useEffect(() => {
     showRatingsHeatRef.current = showRatingsHeat;
   }, [showRatingsHeat]);
-  const [isSearching, setIsSearching] = useState(false);
+
 
   const [reports, setReports] = useState<any[]>([]);
   const [ratings, setRatings] = useState<any[]>([]);
@@ -408,7 +408,10 @@ const MapDashboard: React.FC = () => {
               </span>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
-            ${r.photo_url ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` : ''}
+            ${r.photo_url 
+              ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` 
+              : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
+            }
             <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
             ${voteHtml}
           </div>
@@ -479,7 +482,10 @@ const MapDashboard: React.FC = () => {
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
-            ${r.photo_url ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` : ''}
+            ${r.photo_url 
+              ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` 
+              : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
+            }
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
           <div class="mt-2 text-[10px] space-y-0.5 text-theme-fg-muted font-medium bg-theme-panel/40 p-2 rounded-lg border border-theme-border">
             <div>Lighting: ${r.lighting_score}/5</div>
@@ -526,14 +532,19 @@ const MapDashboard: React.FC = () => {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
+    let t3: ReturnType<typeof setTimeout>;
+
     const IBA_BOUNDS = L.latLngBounds(
       [MAP_CONFIG.BOUNDS.MIN_LAT, MAP_CONFIG.BOUNDS.MIN_LNG],  // SW
       [MAP_CONFIG.BOUNDS.MAX_LAT, MAP_CONFIG.BOUNDS.MAX_LNG]   // NE — covers Santa Barbara far east
     );
 
-    const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat') as string) : storeLat;
-    const initialLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng') as string) : storeLng;
-    const initialZoom = searchParams.get('zoom') ? parseInt(searchParams.get('zoom') as string) : storeZoom;
+    // Enforce Iba center on fresh load, ignoring stale store values unless in search params
+    const initialLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat') as string) : MAP_CONFIG.CENTER_LAT;
+    const initialLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng') as string) : MAP_CONFIG.CENTER_LNG;
+    const initialZoom = searchParams.get('zoom') ? parseInt(searchParams.get('zoom') as string) : MAP_CONFIG.DEFAULT_ZOOM;
 
     const map = L.map(mapContainerRef.current, {
       center: [initialLat, initialLng],
@@ -545,7 +556,7 @@ const MapDashboard: React.FC = () => {
       zoomControl: false,
     });
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -628,12 +639,21 @@ const MapDashboard: React.FC = () => {
       }
     });
 
-    // Force size recalculation to ensure the map fills the container.
-    // We fire three times: immediately, mid-paint, and after CSS fully settles.
-    // HMR-safe: all timers + the ResizeObserver are cancelled in cleanup.
-    const t1 = setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 100);
-    const t2 = setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 400);
-    const t3 = setTimeout(() => { if (mapRef.current) map.invalidateSize({ pan: false }); }, 800);
+    // FORCED CENTER FIX: Aggressively snap to Iba after 300ms to correct responsive shifts
+    t1 = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+        if (!searchParams.get('lat')) {
+          mapRef.current.setView([15.348781, 119.997669], 13);
+        }
+      }
+    }, 300);
+
+    t2 = setTimeout(() => { 
+      if (mapRef.current) {
+        mapRef.current.invalidateSize({ pan: false });
+      }
+    }, 800);
 
     // ResizeObserver: catch any container-size changes (flex/grid settling, etc.)
     // Guard: only call invalidateSize when the container has non-zero dimensions.
@@ -724,66 +744,7 @@ const MapDashboard: React.FC = () => {
 
   }, [token]);
   
-  const handleSuggestionSelect = (suggestion: any) => {
-    const { lat, lon } = suggestion;
 
-    if (mapRef.current) {
-      mapRef.current.flyTo([lat, lon], 17, {
-        duration: 1.5,
-        easeLinearity: 0.25
-      });
-
-      const highlight = L.circle([lat, lon], {
-        radius: 40,
-        color: '#4f46e5',
-        fillColor: '#818cf8',
-        fillOpacity: 0.4,
-        weight: 2
-      }).addTo(mapRef.current);
-      
-      setTimeout(() => highlight.remove(), 4000);
-    }
-  };
-  
-  const handleSearch = async (query: string) => {
-    if (!query.trim()) return;
-  
-    setIsSearching(true);
-    try {
-      // Step 1: Use Photon with strict bbox for full-submission search
-      const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lat=15.35&lon=119.98&bbox=119.92,15.30,120.18,15.41`);
-      const data = await response.json();
-  
-      if (data && data.features && data.features.length > 0) {
-        const bestMatch = data.features[0];
-        const [lon, lat] = bestMatch.geometry.coordinates;
-  
-        if (mapRef.current) {
-          mapRef.current.flyTo([lat, lon], 17, {
-            duration: 1.5,
-            easeLinearity: 0.25
-          });
-  
-          const highlight = L.circle([lat, lon], {
-            radius: 40,
-            color: '#4f46e5',
-            fillColor: '#818cf8',
-            fillOpacity: 0.4,
-            weight: 2
-          }).addTo(mapRef.current);
-          
-          setTimeout(() => highlight.remove(), 4000);
-        }
-      } else {
-        alert(`Location "${query}" not found within Iba boundaries. Please try a more specific name or street.`);
-      }
-    } catch (err) {
-      console.error('Search failed:', err);
-      alert('Search service currently unavailable. Please try again later.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
 
   // ── Route drawing helpers ────────────────────────────────────────────────
@@ -910,17 +871,6 @@ const MapDashboard: React.FC = () => {
     <div className="relative w-full h-[68vh] md:h-[72vh] min-h-[520px] overflow-hidden bg-theme-panel">
 
       <div ref={mapContainerRef} className="w-full h-full" />
-
-
-
-      {/* Top Center: Search Bar & Selection Banner */}
-      <SearchBar 
-        onSuggestionSelect={handleSuggestionSelect} 
-        onSearch={handleSearch} 
-        isSearching={isSearching}
-        selectionMode={selectionMode}
-        boundaryPolygon={IBA_POLYGON}
-      />
 
 
       {/* Top Left: Title & Stats (Glassmorphic) */}

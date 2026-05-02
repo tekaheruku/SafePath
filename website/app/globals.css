@@ -94,6 +94,7 @@ body.theme-white {
 }
 
 body {
+  overflow-x: hidden;
   color: rgb(var(--theme-fg));
   background: linear-gradient(
       to bottom,

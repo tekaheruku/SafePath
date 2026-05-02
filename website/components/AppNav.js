@@ -1,19 +1,26 @@
 'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
+
 const NAV_LINKS = [
-    { href: '/', label: 'Map' },
-    { href: '/incidents', label: 'Incidents' },
-    { href: '/report', label: 'Report' },
-    { href: '/my-reports', label: 'My Reports' },
+  { href: '/',           label: 'Map' },
+  { href: '/incidents',  label: 'Incidents' },
+  { href: '/report',     label: 'Report' },
+  { href: '/my-reports', label: 'My Reports' },
 ];
+
 const AppNav = () => {
-    const { user, logout } = useAuth();
-    const pathname = usePathname();
-    const isActive = (href) => href === '/' ? pathname === '/' : pathname.startsWith(href);
-    return (<nav className="border-b border-theme-border bg-theme-bg-start/50 backdrop-blur-md sticky top-0 z-[9999]">
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+
+  const isActive = (href) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  return (
+    <nav className="border-b border-theme-border bg-theme-bg-start/50 backdrop-blur-md sticky top-0 z-[9999]">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg">S</div>
@@ -21,48 +28,90 @@ const AppNav = () => {
         </Link>
 
         <div className="hidden md:flex items-center space-x-1 text-sm font-medium">
-          {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (<Link href="/admin/accounts" className={`px-4 py-2 rounded-lg transition-all duration-150 ${isActive('/admin/accounts')
-                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
+          {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (
+            <Link
+              href="/admin/accounts"
+              className={`px-4 py-2 rounded-lg transition-all duration-150 ${
+                isActive('/admin/accounts')
+                  ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+              }`}
+            >
               Accounts
-            </Link>)}
-          {user?.role === 'superadmin' && (<Link href="/admin/requests" className={`px-4 py-2 rounded-lg transition-all duration-150 ${isActive('/admin/requests')
-                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
+            </Link>
+          )}
+          {user?.role === 'superadmin' && (
+            <Link
+              href="/admin/requests"
+              className={`px-4 py-2 rounded-lg transition-all duration-150 ${
+                isActive('/admin/requests')
+                  ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+              }`}
+            >
               Requests
-            </Link>)}
-          {NAV_LINKS.map(({ href, label }) => (<Link key={href} href={href} className={`px-4 py-2 rounded-lg transition-all duration-150 ${isActive(href)
-                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
+            </Link>
+          )}
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`px-4 py-2 rounded-lg transition-all duration-150 ${
+                isActive(href)
+                  ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+              }`}
+            >
               {label}
-            </Link>))}
+            </Link>
+          ))}
         </div>
 
         <div className="flex items-center space-x-4">
-          <Link href="/settings" className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all" title="Settings" aria-label="Settings">
+          <Link
+            href="/settings"
+            className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all"
+            title="Settings"
+            aria-label="Settings"
+          >
             ⚙️
           </Link>
 
-          {user ? (<div className="flex items-center space-x-4">
+          {user ? (
+            <div className="flex items-center space-x-4">
               <span className="text-sm text-theme-fg-muted">Hi, <span className="text-theme-fg font-semibold">{user.name}</span></span>
               
-              <button onClick={() => {
-                if (window.confirm('Are you sure you want to logout?')) {
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to logout?')) {
                     logout();
-                }
-            }} className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all">
+                  }
+                }}
+                className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all"
+              >
                 Logout
               </button>
-            </div>) : (<>
-              <Link href="/login" className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95">
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95"
+              >
                 Sign In
               </Link>
-              <Link href="/register" className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-500/20">
+              <Link
+                href="/register"
+                className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-500/20"
+              >
                 Get Started
               </Link>
-            </>)}
+            </>
+          )}
         </div>
       </div>
-    </nav>);
+    </nav>
+  );
 };
+
 export default AppNav;

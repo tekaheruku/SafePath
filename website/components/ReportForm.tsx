@@ -42,6 +42,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
   const { token } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   // Auto-select the first severity level if available, or just the middle one if possible
@@ -70,6 +71,13 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
       setShowLoginModal(true);
       return;
     }
+
+    // Photo Check
+    if (!photoFile) {
+      setPhotoError('A photo is required to submit a report.');
+      return;
+    }
+    setPhotoError(null);
 
     // Boundary Check
     if (!isPointInPolygon([data.latitude, data.longitude], IBA_POLYGON)) {
@@ -190,19 +198,21 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Photo (Optional)</label>
+          <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Photo (Required)</label>
           <input 
             type="file" 
             accept="image/*"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
                 setPhotoFile(e.target.files[0]);
+                setPhotoError(null);
               } else {
                 setPhotoFile(null);
               }
             }}
             className="w-full text-sm text-theme-fg-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600/20 file:text-blue-400 hover:file:bg-blue-600/30 transition-all outline-none"
           />
+          {photoError && <p className="text-xs text-red-400">{photoError}</p>}
         </div>
 
         <div className="flex space-x-3 pt-2">

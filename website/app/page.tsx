@@ -17,7 +17,7 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <div className="pb-4">
+    <div>
       <header className="space-y-1 px-0 mb-4">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
           SafePath Interactive Map
@@ -30,7 +30,7 @@ export default function Home() {
       </header>
 
       {/* Full-width map — breaks out of the layout's px-4 container */}
-      <section className="-mx-4 md:-mx-6 lg:-mx-8 xl:-mx-10 2xl:-mx-12 bg-theme-panel/50 shadow-2xl backdrop-blur-sm">
+      <section className="w-screen relative left-1/2 -translate-x-1/2 bg-theme-panel/50 shadow-2xl backdrop-blur-sm">
         <MapDashboard />
       </section>
 

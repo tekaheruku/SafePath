@@ -110,9 +110,9 @@ export const SOCKET_EVENTS = {
 };
 
 export const MAP_CONFIG = {
-    CENTER_LAT: 15.31997,
-    CENTER_LNG: 119.99002,
-    DEFAULT_ZOOM: 13,
+    CENTER_LAT: 15.348781,
+    CENTER_LNG: 119.997669,
+    DEFAULT_ZOOM: 14,
     MIN_ZOOM: 10,
     MAX_ZOOM: 20,
     BOUNDS: {

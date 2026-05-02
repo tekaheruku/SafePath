@@ -8,7 +8,10 @@ export const createReportSchema = Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
   }).required(),
-  photo_url: Joi.string().uri().allow('', null).optional(),
+  photo_url: Joi.string().uri().required().messages({
+    'any.required': 'A photo is required to submit a report',
+    'string.empty': 'A photo is required to submit a report'
+  }),
 });
 
 export const updateReportSchema = Joi.object({

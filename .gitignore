@@ -46,3 +46,8 @@ Thumbs.db
 
 # Docker
 .docker/
+
+# Uploaded files (local dev only — replaced by cloud storage on deployment)
+server/uploads/*
+!server/uploads/.gitkeep
+uploads/
