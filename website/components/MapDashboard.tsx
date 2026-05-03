@@ -190,6 +190,7 @@ const MapDashboard: React.FC = () => {
   const [dateLabel, setDateLabel] = useState<string | null>(null);
   const [incidentTypes, setIncidentTypes] = useState<IncidentType[]>([]);
   const [severityLevels, setSeverityLevels] = useState<SeverityLevel[]>([]);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   // Ref that always holds the latest dateRange so stale closures (socket handlers,
   // window.deleteReport, etc.) always read the current filter value.
   const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
@@ -409,7 +410,7 @@ const MapDashboard: React.FC = () => {
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             ${r.photo_url 
-              ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` 
+              ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${r.photo_url}')" />` 
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
             <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
@@ -483,7 +484,7 @@ const MapDashboard: React.FC = () => {
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
             ${r.photo_url 
-              ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50" />` 
+              ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${r.photo_url}')" />` 
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
@@ -736,10 +737,14 @@ const MapDashboard: React.FC = () => {
         alert('Failed to delete rating.');
       }
     };
+    (window as any).openLightbox = (url: string) => {
+      setLightboxImage(url);
+    };
     return () => {
       delete (window as any).deleteReport;
       delete (window as any).deleteRating;
       delete (window as any).voteReport;
+      delete (window as any).openLightbox;
     };
 
   }, [token]);
@@ -1139,6 +1144,26 @@ const MapDashboard: React.FC = () => {
               }}
             />
           </div>
+        </div>
+      )}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 transition-opacity duration-300 animate-in fade-in"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button 
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 w-10 h-10 flex items-center justify-center transition-colors shadow-lg z-[10000]"
+            aria-label="Close lightbox"
+          >
+            <X size={24} />
+          </button>
+          <img 
+            src={lightboxImage} 
+            alt="Full screen preview" 
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-md shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
       
