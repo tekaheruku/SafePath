@@ -141,6 +141,76 @@ export class AdminController {
       res.status(500).json({ success: false, error: { message: err.message } });
     }
   }
+
+  static async getReportSummary(req: Request, res: Response) {
+    try {
+      const { from, to, verified } = req.query;
+      
+      const fromDate = from ? new Date(from as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const toDate = to ? new Date(to as string) : new Date();
+      const verifiedFilter = verified || 'all';
+
+      // Determine grouping interval
+      const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
+      let interval = 'day';
+      if (diffDays > 14 && diffDays <= 60) interval = 'week';
+      if (diffDays > 60) interval = 'month';
+
+      const query = `
+        WITH combined_data AS (
+          SELECT 
+            r.created_at,
+            it.slug as type_slug,
+            u.id_verification_status
+          FROM reports r
+          LEFT JOIN incident_types it ON r.incident_type_id = it.id
+          JOIN users u ON r.user_id = u.id
+          UNION ALL
+          SELECT 
+            sr.created_at,
+            'road-safety' as type_slug,
+            COALESCE(u.id_verification_status, 'not_verified') as id_verification_status
+          FROM street_ratings sr
+          LEFT JOIN users u ON sr.user_id = u.id
+        )
+        SELECT 
+          DATE_TRUNC($1, created_at) as period,
+          COUNT(*) FILTER (WHERE type_slug = 'car-crash') as car_crash,
+          COUNT(*) FILTER (WHERE type_slug = 'traffic-congestion') as traffic_congestion,
+          COUNT(*) FILTER (WHERE type_slug = 'road-hazard') as road_hazard,
+          COUNT(*) FILTER (WHERE type_slug = 'road-blockage') as road_blockage,
+          COUNT(*) FILTER (WHERE type_slug = 'road-safety') as road_safety,
+          COUNT(*) as total
+        FROM combined_data
+        WHERE created_at BETWEEN $2 AND $3
+          AND (
+            $4 = 'all' OR 
+            ($4 = 'verified' AND id_verification_status = 'verified') OR 
+            ($4 = 'unverified' AND id_verification_status != 'verified')
+          )
+        GROUP BY period
+        ORDER BY period ASC
+      `;
+
+      const result = await pool.query(query, [interval, fromDate, toDate, verifiedFilter]);
+      
+      // Format response
+      const data = result.rows.map(row => ({
+        period: row.period,
+        car_crash: parseInt(row.car_crash),
+        traffic_congestion: parseInt(row.traffic_congestion),
+        road_hazard: parseInt(row.road_hazard),
+        road_blockage: parseInt(row.road_blockage),
+        road_safety: parseInt(row.road_safety),
+        total: parseInt(row.total)
+      }));
+
+      res.json({ success: true, data });
+    } catch (err: any) {
+      console.error('Report summary error:', err.message);
+      res.status(500).json({ success: false, error: { message: err.message } });
+    }
+  }
 }
 
 export class AdminRequestsController {

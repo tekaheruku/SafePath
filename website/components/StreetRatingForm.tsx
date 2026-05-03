@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import Link from 'next/link';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import LoginModal from './LoginModal';
 
@@ -73,7 +74,7 @@ const StreetRatingForm: React.FC<{
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,6 +174,16 @@ const StreetRatingForm: React.FC<{
           <span className="text-2xl">✕</span>
         </button>
       </div>
+
+      {user && user.id_verification_status !== 'verified' && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+          <span className="text-amber-500 mt-0.5">⚠️</span>
+          <div className="text-xs text-amber-200/80 leading-relaxed">
+            Your account is unverified. Reports from unverified accounts may be given lower priority. 
+            <Link href="/settings" className="text-amber-400 hover:underline ml-1 font-semibold">Verify now</Link>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">

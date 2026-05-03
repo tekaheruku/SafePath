@@ -8,7 +8,6 @@ import { useAuth } from './AuthContext';
 const NAV_LINKS = [
   { href: '/',           label: 'Map' },
   { href: '/incidents',  label: 'Incidents' },
-  { href: '/report',     label: 'Report' },
   { href: '/my-reports', label: 'My Reports' },
 ];
 
@@ -29,7 +28,7 @@ const AppNav = () => {
         <Link
           href="/admin/id-verifications"
           onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 ${
+          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
             isActive('/admin/id-verifications')
               ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
               : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
@@ -39,23 +38,36 @@ const AppNav = () => {
         </Link>
       )}
       {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (
-        <Link
-          href="/admin/accounts"
-          onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 ${
-            isActive('/admin/accounts')
-              ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-              : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-          }`}
-        >
-          Accounts
-        </Link>
+        <>
+          <Link
+            href="/admin/reports"
+            onClick={closeSidebar}
+            className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
+              isActive('/admin/reports')
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+            }`}
+          >
+            Reports
+          </Link>
+          <Link
+            href="/admin/accounts"
+            onClick={closeSidebar}
+            className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
+              isActive('/admin/accounts')
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+            }`}
+          >
+            Accounts
+          </Link>
+        </>
       )}
       {user?.role === 'superadmin' && (
         <Link
           href="/admin/requests"
           onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 ${
+          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
             isActive('/admin/requests')
               ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
               : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
@@ -69,7 +81,7 @@ const AppNav = () => {
           key={href}
           href={href}
           onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 ${
+          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
             isActive(href)
               ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
               : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
@@ -85,35 +97,41 @@ const AppNav = () => {
     <>
       <nav className="border-b border-theme-border bg-theme-bg-start/50 backdrop-blur-md sticky top-0 z-[9999]">
         <div className="container mx-auto px-4 h-16 flex items-center">
-          {/* Hamburger Menu - Visible on mobile only, positioned top-left */}
-          <button
-            onClick={toggleSidebar}
-            className="md:hidden p-2 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
-            aria-label="Toggle Menu"
-          >
-            <span className="text-2xl">☰</span>
-          </button>
+          {/* Left Section: Logo */}
+          <div className="flex-1 flex items-center">
+            <button
+              onClick={toggleSidebar}
+              className="md:hidden p-2 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
+              aria-label="Toggle Menu"
+            >
+              <span className="text-2xl">☰</span>
+            </button>
+            <Link href="/" className="hidden md:flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg">S</div>
+              <span className="font-bold text-xl tracking-tight">SafePath</span>
+            </Link>
+          </div>
 
-          {/* Logo - Left side on desktop, hidden on mobile */}
-          <Link href="/" className="hidden md:flex items-center space-x-2 mr-auto">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg">S</div>
-            <span className="font-bold text-xl tracking-tight">SafePath</span>
-          </Link>
-
-          {/* Desktop Functional Buttons (Links + Actions) - Right side on desktop */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-1 text-sm font-medium border-r border-theme-border pr-6 mr-2">
+          {/* Center Section: Main Nav Links */}
+          <div className="hidden md:flex flex-1 justify-center overflow-visible">
+            <div className="flex items-center space-x-1 text-sm font-medium flex-nowrap">
               <NavLinks />
             </div>
+          </div>
 
-            <div className="flex items-center space-x-4">
+          {/* Right Section: User Info & Actions */}
+          <div className="flex-1 flex justify-end items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-4">
               <Link
                 href="/settings"
-                className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all"
+                className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all relative"
                 title="Settings"
                 aria-label="Settings"
               >
                 ⚙️
+                {user && user.id_verification_status !== 'verified' && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
+                )}
               </Link>
 
               {user ? (
@@ -216,13 +234,18 @@ const AppNav = () => {
             <Link 
               href="/settings" 
               onClick={closeSidebar}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-150 ${
+              className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-150 relative ${
                 isActive('/settings')
                   ? 'bg-indigo-600 text-theme-fg font-semibold'
                   : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
               }`}
             >
-              <span className="text-lg">⚙️</span>
+              <span className="text-lg relative">
+                ⚙️
+                {user && user.id_verification_status !== 'verified' && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-950" />
+                )}
+              </span>
               <span className="font-medium">Settings</span>
             </Link>
 

@@ -98,6 +98,7 @@ app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(
 app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
 app.get(`${apiRoot}/admin/id-verifications`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.listIDVerificationRequests(req, res));
 app.post(`${apiRoot}/admin/id-verifications/:userId/handle`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.handleIDVerification(req, res));
+app.get(`${apiRoot}/admin/reports/summary`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.getReportSummary(req, res));
 
 // Admin Requests
 app.post(`${apiRoot}/admin-requests`, upload.single('document'), (req, res) => AdminRequestsController.submitRequest(req, res));

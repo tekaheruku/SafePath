@@ -109,6 +109,7 @@ export class ReportController {
         minLng: req.query.minLng ? parseFloat(req.query.minLng as string) : undefined,
         maxLng: req.query.maxLng ? parseFloat(req.query.maxLng as string) : undefined,
         severity: req.query.severity as string,
+        incident_type_id: req.query.type as string,
         daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,

@@ -51,6 +51,13 @@ export class ReportService {
       paramIndex++;
     }
 
+    // Incident Type filter
+    if (filters?.incident_type_id) {
+      whereClause += ` AND r.incident_type_id = $${paramIndex}`;
+      params.push(filters.incident_type_id);
+      paramIndex++;
+    }
+
     // Time filter
     if (filters?.startDate && filters?.endDate) {
       whereClause += ` AND r.created_at BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
