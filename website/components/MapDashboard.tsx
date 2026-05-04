@@ -873,15 +873,15 @@ const MapDashboard: React.FC = () => {
   }, [selectionMode]);
 
   return (
-    <div className="relative w-full h-[68vh] md:h-[72vh] min-h-[520px] overflow-hidden bg-theme-panel">
+    <div className="relative w-full h-full min-h-[400px] overflow-hidden bg-theme-panel">
 
       <div ref={mapContainerRef} className="w-full h-full" />
 
 
       {/* Top Left: Title & Stats (Glassmorphic) */}
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-        <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl min-w-[180px]">
-          <h3 className="font-extrabold text-base mb-1 bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent text-outline">SafePath Iba</h3>
+      <div className="absolute top-3 left-3 md:top-4 md:left-4 z-[1000] flex flex-col gap-2 pointer-events-none">
+        <div className="glass-panel p-3 md:p-4 rounded-xl text-theme-fg shadow-xl min-w-[140px] md:min-w-[180px] pointer-events-auto">
+          <h3 className="font-extrabold text-xs md:text-base mb-1 bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent text-outline">SafePath Iba</h3>
             <div className="flex flex-col gap-1 mt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-medium text-outline">Reports</span>
@@ -904,9 +904,23 @@ const MapDashboard: React.FC = () => {
       </div>
 
       {/* Bottom Left: Heatmap Legend (Static Scale) */}
-      <div className="absolute bottom-6 left-6 z-[1000] hidden md:block">
+      <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[1000]">
         <HeatmapLegend />
       </div>
+
+      {/* Bottom Right: Guest Info Overlays */}
+      {!user && (
+        <div className="absolute bottom-6 right-6 md:bottom-12 md:right-12 z-[1000] flex flex-col gap-4 md:gap-6 max-w-[260px] md:max-w-[480px] pointer-events-none">
+          <div className="glass-panel p-5 md:p-8 rounded-2xl border border-theme-border/40 animate-in slide-in-from-right duration-500 backdrop-blur-xl shadow-2xl">
+            <h4 className="text-sm md:text-2xl font-black text-indigo-300 mb-2 md:mb-3 text-outline tracking-tight">Community Reports</h4>
+            <p className="text-[11px] md:text-base text-theme-fg font-medium leading-relaxed text-outline opacity-90">Submit incident reports to alert others about potential hazards or safety concerns in your area.</p>
+          </div>
+          <div className="glass-panel p-5 md:p-8 rounded-2xl border border-theme-border/40 animate-in slide-in-from-right duration-700 backdrop-blur-xl shadow-2xl">
+            <h4 className="text-sm md:text-2xl font-black text-emerald-300 mb-2 md:mb-3 text-outline tracking-tight">Street Ratings</h4>
+            <p className="text-[11px] md:text-base text-theme-fg font-medium leading-relaxed text-outline opacity-90">Rate the safety and accessibility of streets based on lighting, pedestrian facilities, and overall security.</p>
+          </div>
+        </div>
+      )}
 
       {/* Directions map-click mode banner */}
       {directionsSelectionTarget && (
@@ -919,10 +933,10 @@ const MapDashboard: React.FC = () => {
       )}
 
       {/* Top Right: Layer Toggles & Action Buttons */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-4 w-[220px]">
+      <div className="absolute top-3 right-3 md:top-4 md:right-4 z-[1000] flex flex-col gap-2 md:gap-4 w-[160px] md:w-[220px]">
         {/* Heatmap Layer Toggles (Glassmorphic) */}
-        <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-xl flex flex-col gap-3">
-          <h3 className="text-[10px] font-bold text-indigo-100 uppercase tracking-wider text-outline">Heatmap Layers</h3>
+        <div className="glass-panel p-3 md:p-4 rounded-xl text-theme-fg shadow-xl flex flex-col gap-2 md:gap-3">
+          <h3 className="text-[9px] md:text-[10px] font-bold text-indigo-100 uppercase tracking-wider text-outline">Layers</h3>
           <div className="flex flex-col gap-2">
             <button
               onClick={() => {
@@ -1033,14 +1047,14 @@ const MapDashboard: React.FC = () => {
               // Close report/rating selection if open
               setSelectionMode(null);
             }}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md border ${
+            className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md border ${
               directionsOpen
                 ? 'bg-indigo-500/30 border-indigo-400/50 text-indigo-200'
                 : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-300/50'
             }`}
           >
-            <Navigation className="w-3.5 h-3.5" />
-            {directionsOpen ? 'Close Directions' : 'Directions'}
+            <Navigation className="w-3 md:w-3.5 h-3 md:h-3.5" />
+            {directionsOpen ? 'Close' : 'Directions'}
           </button>
 
           {/* Dynamic Incident Type Buttons */}
@@ -1072,9 +1086,9 @@ const MapDashboard: React.FC = () => {
             onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
             disabled={directionsOpen}
             title={directionsOpen ? 'Close Directions panel first' : undefined}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-4 py-2.5 rounded-lg text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
+            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
           >
-            {selectionMode === 'rating' ? 'Cancel Selection' : 'Road Safety'}
+            {selectionMode === 'rating' ? 'Cancel' : 'Road Safety'}
           </button>
         </div>
       </div>
@@ -1104,9 +1118,8 @@ const MapDashboard: React.FC = () => {
       )}
 
       {showReportForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-theme-bg-start backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-
-          <div className="max-w-md w-full">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+          <div className="max-w-md w-full animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
             <ReportForm
               location={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
               incidentTypes={incidentTypes}
@@ -1128,9 +1141,8 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
       {showRatingForm && selectedLocation && (
-        <div className="absolute inset-0 z-[2000] bg-theme-bg-start backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-
-          <div className="max-w-md w-full">
+        <div className="absolute inset-0 z-[2000] bg-theme-bg-start/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+          <div className="max-w-md w-full animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
             <StreetRatingForm
               location={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
               onSuccess={() => {

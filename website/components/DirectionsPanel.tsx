@@ -494,10 +494,10 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
   const currentModeConfig = ROUTE_MODES.find(m => m.id === routeMode)!;
 
   return (
-    <div className="absolute top-4 left-4 z-[1500] w-[360px] flex flex-col gap-2 max-h-[calc(100vh-6rem)] pointer-events-none">
+    <div className="absolute top-0 md:top-4 left-0 md:left-4 z-[1500] w-full md:w-[360px] flex flex-col gap-2 max-h-full md:max-h-[calc(100vh-6rem)] pointer-events-none">
       {/* Panel */}
       <div
-        className="pointer-events-auto rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+        className="pointer-events-auto rounded-none md:rounded-2xl border-b md:border border-white/10 shadow-2xl overflow-hidden flex flex-col h-full md:h-auto"
         style={{
           background: 'linear-gradient(180deg, rgba(15,23,42,0.97) 0%, rgba(2,6,23,0.98) 100%)',
           backdropFilter: 'blur(24px)',

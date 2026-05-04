@@ -96,7 +96,7 @@ const AppNav = () => {
   return (
     <>
       <nav className="border-b border-theme-border bg-theme-bg-start/50 backdrop-blur-md sticky top-0 z-[9999]">
-        <div className="container mx-auto px-4 h-16 flex items-center">
+        <div className="w-full px-6 md:px-12 h-16 flex items-center">
           {/* Left Section: Logo */}
           <div className="flex-1 flex items-center">
             <button

@@ -123,7 +123,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
   };
 
   return (
-    <div className="p-6 glass-panel rounded-xl space-y-4 shadow-2xl min-w-[320px]">
+    <div className="p-5 md:p-6 glass-panel rounded-t-2xl rounded-b-none sm:rounded-xl space-y-4 shadow-2xl w-full sm:min-w-[320px]">
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)}

@@ -149,15 +149,15 @@ export default function ReportSummaryPage() {
                </Link>
                <span className="text-xs font-bold text-theme-fg-muted uppercase tracking-widest">Admin Dashboard</span>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+            <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
               Incident Report Summary
             </h1>
-            <p className="text-theme-fg-muted mt-1">Statistical overview of community-reported safety data</p>
+            <p className="text-xs md:text-sm text-theme-fg-muted mt-1">Statistical overview of community-reported safety data</p>
           </div>
 
           <button 
             onClick={exportToExcel}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-900/20"
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-900/20"
           >
             <Download className="w-4 h-4" />
             Export as Excel
@@ -234,11 +234,11 @@ export default function ReportSummaryPage() {
               <label className="text-xs font-black text-theme-fg-muted uppercase tracking-widest flex items-center gap-2">
                 <BarChart3 className="w-3.5 h-3.5" /> Visualization
               </label>
-              <div className="flex bg-slate-900/50 p-1 rounded-xl border border-slate-700">
+              <div className="flex bg-slate-900/50 p-1 rounded-xl border border-slate-700 w-full">
                 <button
                   onClick={() => setChartType('bar')}
                   className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    chartType === 'bar' ? 'bg-slate-700 text-indigo-400' : 'text-slate-500'
+                    chartType === 'bar' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" /> Bar
@@ -246,7 +246,7 @@ export default function ReportSummaryPage() {
                 <button
                   onClick={() => setChartType('line')}
                   className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    chartType === 'line' ? 'bg-slate-700 text-indigo-400' : 'text-slate-500'
+                    chartType === 'line' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   <TrendingUp className="w-3.5 h-3.5" /> Line
@@ -263,7 +263,7 @@ export default function ReportSummaryPage() {
               Incident Reports — {PRESETS.find(p => p.value === preset)?.label} ({verificationFilter === 'all' ? 'All Users' : verificationFilter + ' only'})
             </h3>
           </div>
-          <div className="h-80 w-full">
+          <div className="h-64 md:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
                 <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>

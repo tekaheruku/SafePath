@@ -158,7 +158,7 @@ const StreetRatingForm: React.FC<{
   };
 
   return (
-    <div className="p-6 glass-panel rounded-2xl space-y-6 shadow-2xl max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
+    <div className="p-5 md:p-6 glass-panel rounded-t-2xl rounded-b-none sm:rounded-2xl space-y-4 md:space-y-6 shadow-2xl w-full sm:max-w-md animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
       <LoginModal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)}

@@ -24,7 +24,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <AppNav />
-            <main className="flex-grow max-w-screen-2xl mx-auto w-full px-4 py-6">
+            <main className="flex-grow w-full py-6">
               {children}
             </main>
             <footer className="border-t border-theme-border py-6 text-center text-theme-fg-muted text-sm">

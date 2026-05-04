@@ -8,7 +8,7 @@ interface HeatmapLegendProps {
 
 const HeatmapLegend: React.FC<HeatmapLegendProps> = () => {
   return (
-    <div className="glass-panel p-4 rounded-xl text-theme-fg shadow-2xl flex flex-col gap-4 pointer-events-none select-none w-[200px] border border-theme-border">
+    <div className="glass-panel p-2.5 md:p-4 rounded-xl text-theme-fg shadow-2xl flex flex-col gap-2 md:gap-4 pointer-events-none select-none w-[130px] md:w-[180px] border border-theme-border">
       <h3 className="text-[11px] font-extrabold uppercase tracking-widest mb-1 border-b border-theme-border pb-2 text-outline">Heatmap Scale</h3>
       
       <div className="space-y-4">
