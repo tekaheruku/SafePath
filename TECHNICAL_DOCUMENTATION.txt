@@ -1,0 +1,241 @@
+# SafePath: Comprehensive Technical Documentation
+
+## 1. PROJECT OVERVIEW
+
+**SafePath** is a GIS-based crowdsourcing platform designed for urban safety mapping and incident reporting, with a specific geographic focus on the municipality of **Iba, Zambales, Philippines**. 
+
+### Purpose and Goals
+The primary goal of SafePath is to empower communities to visualize, report, and navigate around safety hazards in real-time. By leveraging crowdsourced data (incident reports and street safety ratings), the platform provides an interactive heatmap and safety-scored route recommendations, enabling safer navigation for pedestrians and drivers.
+
+### Target Users and Use Cases
+- **General Public (Users):** View the safety map, report incidents (e.g., accidents, hazards), rate street safety, and calculate safe routes from point A to B.
+- **LGU Administrators:** Verify user identities, monitor incident trends, and manage local reports.
+- **Superadmins:** Oversee the entire system, manage LGU admin requests, and enforce user bans.
+
+### Geographic Focus
+The map is strictly bounded to **Iba, Zambales**. A visual "fog-of-war" effect using SVG filters masks areas outside the official municipal boundary, ensuring reports and navigation are strictly localized.
+
+---
+
+## 2. SYSTEM ARCHITECTURE
+
+### High-Level Architecture
+```text
+[ Mobile App / Web Browser (Next.js) ]
+         |       |
+      (HTTP API) (Socket.io WebSocket)
+         |       |
+[ Node.js + Express Backend ]
+         |
+    (Knex.js + SQL)
+         |
+[ PostgreSQL Database + PostGIS ]
+```
+
+### Monorepo Structure (pnpm)
+The project utilizes `pnpm` workspaces to manage dependencies across interconnected packages:
+- `website/`: The frontend web application built with Next.js 14 (App Router) and Tailwind CSS.
+- `server/`: The backend REST API and WebSocket server built with Node.js and Express.
+- `shared/`: Shared TypeScript types, utility functions (e.g., geospatial helpers), constants, and Zod validators used by both frontend and backend.
+- `app/`: (Placeholder) Native mobile application integration.
+
+### Environment Variables and Configuration
+- **Frontend (`website/.env.local`):** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SOCKET_URL`
+- **Backend (`server/.env`):** `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SUPABASE_URL`, `SUPABASE_KEY`
+- Configuration values (like map bounds and center coordinates) are extracted into `@safepath/shared` (`MAP_CONFIG`).
+
+---
+
+## 3. DATABASE SCHEMA
+
+The PostgreSQL database leverages the **PostGIS** extension for spatial data operations.
+
+### Tables
+
+#### `users`
+- `id` (UUID, Primary Key)
+- `email` (String, Unique)
+- `username` (String, Unique)
+- `password_hash` (String)
+- `role` (Enum: `user`, `lgu_admin`, `superadmin`)
+- `is_verified`, `is_banned`, `two_factor_enabled` (Boolean)
+
+#### `reports` (Incident Reports)
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> `users.id`)
+- `incident_type_id` (UUID, FK -> `incident_types.id`)
+- `severity_level_id` (UUID, FK -> `severity_levels.id`)
+- `description` (Text)
+- `location` (**geography(Point, 4326)**) - PostGIS spatial column for exact coordinates.
+- `photo_url` (String)
+- `upvotes_count`, `downvotes_count` (Integer)
+
+#### `street_ratings`
+- `id` (UUID, PK)
+- `user_id` (UUID, FK -> `users.id`)
+- `path_type` (Enum: `road`, `dirt`)
+- `location` (**geography(Point, 4326)**)
+- `lighting_score`, `pedestrian_safety_score`, `driver_safety_score`, `overall_safety_score` (Float)
+- `comment` (Text)
+
+#### `report_votes`
+- `id` (UUID, PK)
+- `report_id` (UUID, FK -> `reports.id`)
+- `user_id` (UUID, FK -> `users.id`)
+- `vote_type` (Enum: `up`, `down`)
+
+#### Supporting Tables
+- `incident_types` (Categories of incidents)
+- `severity_levels` (1 to 4 scaling)
+- `admin_requests` (For users applying for LGU Admin roles)
+
+### Relationships and Indexes
+- **Foreign Keys:** `reports.user_id`, `street_ratings.user_id`, `report_votes.report_id` all cascade on delete.
+- **Spatial Indexes:** GIST indexes are applied to `reports.location` and `street_ratings.location` to optimize PostGIS spatial queries (e.g., bounds checking, heatmaps).
+
+---
+
+## 4. BACKEND DOCUMENTATION (`server/`)
+
+### Core Routes / Endpoints
+
+#### Authentication (`/api/v1/auth`)
+- `POST /login` - Authenticate user, returns JWT and Refresh Token.
+- `POST /register` - Create new user account.
+- `GET /me` - Retrieve current logged-in user profile (requires Auth).
+- `POST /verify-email-otp` - Verify email using OTP.
+- `POST /reset-password` - Process password reset requests.
+
+#### Incident Reports (`/api/v1/reports`)
+- `POST /` - Create a new report (Requires Auth). Validates if the location is inside Iba polygon.
+- `GET /` - List reports. Accepts query params (`minLat`, `maxLat`, `startDate`, `endDate`, `type`, `severity`).
+- `GET /:id` - Get specific report by ID.
+- `PUT /:id` - Update report details.
+- `DELETE /:id` - Delete report (User owner or Admin).
+- `POST /:id/vote` - Upvote or downvote a report.
+- `GET /stats/:userId` - Get aggregated stats for a specific user.
+
+#### Map & Geolocation
+- `GET /api/v1/heatmap/data` - Returns aggregated PostGIS spatial density for heatmaps (`incident` or `rating`).
+- `POST /api/v1/routes/safety` - Accepts multiple route geometries (from OSRM/Mapbox) and scores them based on nearby incident density and street ratings.
+
+#### Street Ratings (`/api/v1/streets/ratings`)
+- `POST /` - Submit a new street safety rating (Lighting, Pedestrian, Driver).
+- `GET /` - List all ratings within bounding box.
+- `DELETE /:id` - Remove rating.
+
+#### Admin (`/api/v1/admin`)
+- `GET /users` - List all users (Role: `superadmin`, `lgu_admin`).
+- `POST /users/:userId/ban` - Ban a malicious user.
+- `GET /id-verifications` - Fetch pending ID verifications.
+- `POST /requests/:requestId/approve` - Approve an LGU Admin request.
+
+### Core Functions & Utilities
+- `ReportService.createReport(userId, data)` (`server/src/services/report.ts`): Inserts report into DB, triggers socket broadcast, and clears cached heatmap.
+- `SocketEventBroadcaster.broadcastNewReport(report)` (`server/src/utils/socket-broadcaster.ts`): Emits a Socket.io event to all connected clients to update their map in real-time.
+- `HeatmapService.generateHeatmapData(bounds)`: Executes a PostGIS query to cluster nearby points and calculate density/intensity.
+
+---
+
+## 5. FRONTEND DOCUMENTATION (`website/`)
+
+### Application Pages (`app/` directory)
+
+- `/`: Landing page featuring the full-viewport `MapDashboard`.
+- `/login`, `/register`, `/forgot-password`, `/reset-password`: Authentication flows.
+- `/dashboard`: User-specific dashboard showing their reporting stats and recent activity.
+- `/incidents`: A tabular or list-based view of all active incidents with advanced filtering.
+- `/admin/reports`, `/admin/users`: Protected routes for LGU Admins and Superadmins to moderate content and manage users.
+- `/settings`: User profile configuration and ID verification uploads.
+- `/request-admin`: Application form for LGU personnel to request administrative access.
+
+### Key Components
+
+#### `MapDashboard.tsx` (`website/components/MapDashboard.tsx`)
+- **Purpose:** The core interactive map interface.
+- **Props:** None (uses global Zustand stores and URL Search Params).
+- **Behavior:**
+  - Initializes Leaflet.js map.
+  - Implements a Canvas-based fog-of-war layer masking everything outside the Iba boundary polygon.
+  - Fetches map data concurrently (`reports`, `ratings`, `heatmaps`).
+  - Listens to Socket.io events to trigger real-time re-renders.
+  - Renders `ReportForm`, `StreetRatingForm`, and `DirectionsPanel` overlays.
+
+#### `DirectionsPanel.tsx`
+- **Purpose:** UI for the A-to-B routing feature.
+- **Behavior:** Allows users to select Start and End points. Communicates with routing APIs, then submits the geometries to the backend `/routes/safety` to determine the safest path.
+
+#### `DateFilterModal.tsx`
+- **Purpose:** Allows users to select specific date ranges or preset windows (e.g., "Last 7 Days") to filter map data.
+
+### Custom Hooks & State Management
+- `useMapStore` (Zustand): Stores current map viewport (lat, lng, zoom) and toggle states for Heatmaps vs Pins.
+- `useDirectionsStore` (Zustand): Manages routing state (start point, end point, generated routes, selected route index).
+- `useAuth`: React Context providing the current user object, JWT token, and login/logout methods.
+
+---
+
+## 6. CORE FEATURES
+
+### a. Safety Rating System
+Users can drop a pin and rate a street based on four metrics:
+1. **Lighting** (1-5)
+2. **Road Safety for Pedestrians** (1-5)
+3. **Road Safety for Drivers** (1-5)
+4. **Overall Road Safety** (1-5)
+Stored in the `street_ratings` table, these values are averaged spatially and fed into the Routing Algorithm to boost or penalize street segments.
+
+### b. Incident/Report Crowdsourcing
+Users report hazards (e.g., Flood, Accident, Roadblock) with a severity level (1-4). Reports require mandatory photo uploads (stored via Supabase storage). The frontend validates coordinates against the Iba Polygon before submission.
+
+### c. GIS Map (Leaflet.js)
+- **Fog of War:** Implemented using a Leaflet Polygon with an inverted boundary array (World Bounds minus Iba Bounds) and an SVG blur filter (`backdrop-filter: grayscale(1) brightness(0.35)`).
+- **Heatmaps:** Uses `leaflet.heat` to render canvas heatmaps for incidents and ratings, bypassing marker clutter.
+
+### d. Safety-Rated A-to-B Routing Algorithm
+When a user requests a route:
+1. Frontend fetches multiple path options (e.g., via OSRM).
+2. Geometries are sent to `POST /routes/safety`.
+3. Backend PostGIS queries check for intersections with high-severity incident buffers and calculate average street ratings along the polyline.
+4. Returns a `safetyScore` (0.0 to 5.0) for each route. Frontend color-codes polylines (Green = Safe, Orange = Moderate, Red = Dangerous).
+
+### e. Date/Time Filter
+A calendar UI updates `dateRange` state. This triggers `fetchMapData()` appending `?startDate=` and `?endDate=` to API requests. The Express backend converts these to UTC+8 (PHT) day boundaries to filter the database appropriately.
+
+### f. Authentication & Authorization
+- **JWT tokens:** Stored locally, sent via `Authorization: Bearer <token>` header.
+- **Roles:** Middleware `roleMiddleware(['superadmin', 'lgu_admin'])` protects admin endpoints.
+
+---
+
+## 7. SHARED PACKAGE (`shared/`)
+
+Located in `shared/src/`, this package guarantees consistency across the monorepo.
+- `types.ts`: Defines core interfaces (`User`, `Report`, `StreetRating`, `HeatmapPoint`, `ApiResponse`).
+- `constants.ts`: Exports `MAP_CONFIG` (Bounds, Center Lat/Lng), `SOCKET_EVENTS` (e.g., `REPORT_NEW`), and `IBA_POLYGON` coordinate arrays.
+- `validators.ts`: Zod schemas for validating request bodies (e.g., `createReportSchema`, `paginationSchema`).
+
+---
+
+## 8. API REFERENCE (Summary Table)
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/v1/auth/login` | Authenticate user & receive JWT | No |
+| POST | `/api/v1/reports` | Create new incident report | Yes |
+| GET | `/api/v1/reports` | Fetch reports (with filters) | No |
+| DELETE | `/api/v1/reports/:id` | Delete report | Yes (Owner/Admin) |
+| POST | `/api/v1/reports/:id/vote` | Cast up/down vote on report | Yes |
+| GET | `/api/v1/heatmap/data` | Fetch intensity map points | No |
+| POST | `/api/v1/streets/ratings` | Submit a street safety rating | Yes |
+| POST | `/api/v1/routes/safety` | Score OSRM routes based on safety | No |
+| GET | `/api/v1/admin/users` | List users for management | Yes (Admin) |
+
+---
+
+## 9. TESTING & QA NOTES
+
+- **Geofencing Testing:** Ensure the coordinate validation logic (`isPointInPolygon` in backend, Map boundary in frontend) correctly rejects points outside Iba, Zambales.
+- **WebSocket Stability:** Verify socket reconnections on mobile browsers where aggressive battery saving might sever connections.
+- **Responsive Map Redraws:** Leaflet's `invalidateSize` is aggressively triggered via `ResizeObserver` and `setTimeout` to prevent gray/empty tile rendering when switching between mobile tabs or resizing bottom sheets.
+- **Date Filter Edge Cases:** Dates must accurately reflect PHT (UTC+8) so that "today's" reports at 11 PM local time aren't split into tomorrow in UTC time.
