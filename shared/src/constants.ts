@@ -15,6 +15,10 @@ export const API_ENDPOINTS = {
     REPORTS_UPDATE: (id: string) => `/reports/${id}`,
     REPORTS_DELETE: (id: string) => `/reports/${id}`,
     REPORTS_COMMENTS: (id: string) => `/reports/${id}/comments`,
+    REPORTS_CONFIRM: (id: string) => `/reports/${id}/confirm`,
+    REPORTS_FALSIFY: (id: string) => `/reports/${id}/falsify`,
+    REPORTS_RESTORE: (id: string) => `/reports/${id}/restore`,
+    REPORTS_ARCHIVE: "/reports/archive",
     STREET_RATE: "/streets/rate",
     STREET_RATINGS: "/streets/ratings",
     STREET_STATS: (name: string) => `/streets/stats/${name}`,
@@ -26,6 +30,37 @@ export const API_ENDPOINTS = {
     ADMIN_ANALYTICS: "/admin/analytics",
     HEALTH: "/health",
 };
+
+export const REPORT_STATUS = {
+    PENDING: "pending" as const,
+    CONFIRMED: "confirmed" as const,
+    FALSIFIED: "falsified" as const,
+};
+
+export type ReportStatus = (typeof REPORT_STATUS)[keyof typeof REPORT_STATUS];
+
+export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
+    [REPORT_STATUS.PENDING]: "Pending Review",
+    [REPORT_STATUS.CONFIRMED]: "Confirmed",
+    [REPORT_STATUS.FALSIFIED]: "Falsified",
+};
+
+export const REPORT_REVIEW_ACTIONS = {
+    CONFIRM: "Confirm",
+    FALSIFY: "Falsify",
+    RESTORE: "Restore",
+} as const;
+
+export const APP_ROUTES = {
+    HOME: "/",
+    INCIDENTS: "/incidents",
+    MY_REPORTS: "/my-reports",
+    ADMIN_REPORTS: "/admin/reports",
+    ADMIN_ACCOUNTS: "/admin/accounts",
+    ADMIN_ARCHIVE: "/admin/archive",
+    ADMIN_REQUESTS: "/admin/requests",
+    ADMIN_ID_VERIFICATIONS: "/admin/id-verifications",
+} as const;
 
 export const USER_ROLES = {
     USER: "user" as const,

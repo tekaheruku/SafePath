@@ -30,3 +30,18 @@ export const roleMiddleware = (roles: string[]) => {
     next();
   };
 };
+
+export const optionalAuthMiddleware = (req: any, _res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+  } catch (_err) {
+    // Ignore invalid token on optional auth routes, proceed as unauthenticated
+  }
+  next();
+};

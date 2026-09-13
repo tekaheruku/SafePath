@@ -3,6 +3,8 @@
  * Used by both backend and frontend/mobile apps
  */
 
+import { ReportStatus } from './constants.js';
+
 export type UserRole = 'user' | 'lgu_admin' | 'superadmin';
 
 export interface User {
@@ -86,6 +88,7 @@ export interface Report {
     upvotes_count: number;
     downvotes_count: number;
     user_vote?: VoteType;
+    status: ReportStatus;
     created_at: string;
     updated_at: string;
 }

@@ -12,7 +12,7 @@ import {
   paginationSchema,
   validateSync,
 } from '@safepath/shared/validators';
-import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
+import { IBA_POLYGON, isPointInPolygon, REPORT_STATUS } from '@safepath/shared';
 import { HeatmapService } from '../services/heatmap.js';
 import { SocketEventBroadcaster } from '../utils/socket-broadcaster.js';
 
@@ -114,6 +114,8 @@ export class ReportController {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
         userId: req.query.userId as string | undefined,
+        status: req.query.status as string | undefined,
+        userRole: (req as any).user?.role,
       };
 
       const currentUserId = (req as any).user?.id;
@@ -275,4 +277,172 @@ export class ReportController {
       });
     }
   }
+
+  /**
+   * POST /api/v1/reports/:id/confirm
+   * Admin/LGU action: Confirm a pending report (publish to public map/feed)
+   */
+  static async confirmReport(req: Request, res: Response): Promise<void> {
+    try {
+      const report = await ReportService.updateReportStatus(
+        req.params.id,
+        REPORT_STATUS.CONFIRMED,
+        (req as any).user.role
+      );
+
+      // Broadcast report status update
+      SocketEventBroadcaster.broadcastReportUpdate(report);
+
+      // Regenerate heatmap now that report is confirmed
+      if (report.location?.coordinates) {
+        const [lng, lat] = report.location.coordinates;
+        const bufferDegrees = 0.05;
+        const heatmapData = await HeatmapService.generateHeatmapData({
+          min_latitude: lat - bufferDegrees,
+          max_latitude: lat + bufferDegrees,
+          min_longitude: lng - bufferDegrees,
+          max_longitude: lng + bufferDegrees,
+          days_back: 30,
+        });
+        await HeatmapService.cacheHeatmapData(heatmapData.data);
+        SocketEventBroadcaster.broadcastHeatmapUpdate(heatmapData.data);
+      }
+
+      res.json({
+        success: true,
+        data: report,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found') ? 404 : error.message.includes('Forbidden') ? 403 : 500;
+      res.status(statusCode).json({
+        success: false,
+        error: { code: 'STATUS_UPDATE_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/reports/:id/falsify
+   * Admin/LGU action: Falsify a report (moves it to the Archive)
+   */
+  static async falsifyReport(req: Request, res: Response): Promise<void> {
+    try {
+      const report = await ReportService.updateReportStatus(
+        req.params.id,
+        REPORT_STATUS.FALSIFIED,
+        (req as any).user.role
+      );
+
+      // Broadcast report update
+      SocketEventBroadcaster.broadcastReportUpdate(report);
+
+      // Regenerate heatmap in case it was previously confirmed
+      if (report.location?.coordinates) {
+        const [lng, lat] = report.location.coordinates;
+        const bufferDegrees = 0.05;
+        const heatmapData = await HeatmapService.generateHeatmapData({
+          min_latitude: lat - bufferDegrees,
+          max_latitude: lat + bufferDegrees,
+          min_longitude: lng - bufferDegrees,
+          max_longitude: lng + bufferDegrees,
+          days_back: 30,
+        });
+        await HeatmapService.cacheHeatmapData(heatmapData.data);
+        SocketEventBroadcaster.broadcastHeatmapUpdate(heatmapData.data);
+      }
+
+      res.json({
+        success: true,
+        data: report,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found') ? 404 : error.message.includes('Forbidden') ? 403 : 500;
+      res.status(statusCode).json({
+        success: false,
+        error: { code: 'STATUS_UPDATE_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/reports/:id/restore
+   * Admin/LGU action: Restore an archived/falsified report back to pending review
+   */
+  static async restoreReport(req: Request, res: Response): Promise<void> {
+    try {
+      const report = await ReportService.updateReportStatus(
+        req.params.id,
+        REPORT_STATUS.PENDING,
+        (req as any).user.role
+      );
+
+      // Broadcast report update
+      SocketEventBroadcaster.broadcastReportUpdate(report);
+
+      res.json({
+        success: true,
+        data: report,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found') ? 404 : error.message.includes('Forbidden') ? 403 : 500;
+      res.status(statusCode).json({
+        success: false,
+        error: { code: 'STATUS_UPDATE_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/reports/archive
+   * Admin/LGU action: List all falsified reports in the archive
+   */
+  static async listArchivedReports(req: Request, res: Response): Promise<void> {
+    try {
+      const paginationData = validateSync(paginationSchema, {
+        page: req.query.page,
+        limit: req.query.limit,
+      });
+
+      const filters = {
+        severity: req.query.severity as string,
+        incident_type_id: req.query.type as string,
+        daysBack: req.query.daysBack ? parseInt(req.query.daysBack as string) : undefined,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        userId: req.query.userId as string | undefined,
+        status: REPORT_STATUS.FALSIFIED,
+        userRole: (req as any).user?.role,
+      };
+
+      const currentUserId = (req as any).user?.id;
+      const reports = await ReportService.listReports({ ...filters, currentUserId }, paginationData.page, paginationData.limit);
+
+      res.json({
+        success: true,
+        data: reports,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
 }
+

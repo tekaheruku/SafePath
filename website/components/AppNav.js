@@ -1,109 +1,61 @@
 'use client';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
-
+import { ADMIN_ROLES, APP_ROUTES } from '@safepath/shared';
 const NAV_LINKS = [
-  { href: '/',           label: 'Map' },
-  { href: '/incidents',  label: 'Incidents' },
-  { href: '/my-reports', label: 'My Reports' },
+    { href: '/', label: 'Map' },
+    { href: '/incidents', label: 'Incidents' },
+    { href: '/my-reports', label: 'My Reports' },
 ];
-
 const AppNav = () => {
-  const { user, logout } = useAuth();
-  const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const isActive = (href) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  const closeSidebar = () => setIsSidebarOpen(false);
-
-  const NavLinks = ({ mobile = false }) => (
-    <>
-      {user?.role === 'lgu_admin' && (
-        <Link
-          href="/admin/id-verifications"
-          onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-            isActive('/admin/id-verifications')
-              ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-              : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-          }`}
-        >
-          Verification Requests
-        </Link>
-      )}
-      {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (
-        <>
-          <Link
-            href="/admin/reports"
-            onClick={closeSidebar}
-            className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-              isActive('/admin/reports')
+    const { user, logout } = useAuth();
+    const pathname = usePathname();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const isActive = (href) => href === '/' ? pathname === '/' : pathname.startsWith(href);
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    const closeSidebar = () => setIsSidebarOpen(false);
+    const NavLinks = ({ mobile = false }) => (<>
+      {user?.role === 'lgu_admin' && (<Link href="/admin/id-verifications" onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive('/admin/id-verifications')
                 ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-            }`}
-          >
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
+          Verification Requests
+        </Link>)}
+      {user && ADMIN_ROLES.includes(user.role) && (<>
+          <Link href={APP_ROUTES.ADMIN_REPORTS} onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive(APP_ROUTES.ADMIN_REPORTS)
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
             Reports
           </Link>
-          <Link
-            href="/admin/accounts"
-            onClick={closeSidebar}
-            className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-              isActive('/admin/accounts')
+          <Link href={APP_ROUTES.ADMIN_ACCOUNTS} onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive(APP_ROUTES.ADMIN_ACCOUNTS)
                 ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-            }`}
-          >
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
             Accounts
           </Link>
-        </>
-      )}
-      {user?.role === 'superadmin' && (
-        <Link
-          href="/admin/requests"
-          onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-            isActive('/admin/requests')
-              ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-              : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-          }`}
-        >
+          <Link href={APP_ROUTES.ADMIN_ARCHIVE} onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive(APP_ROUTES.ADMIN_ARCHIVE)
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
+            Archive
+          </Link>
+        </>)}
+      {user?.role === 'superadmin' && (<Link href="/admin/requests" onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive('/admin/requests')
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
           Admin Requests
-        </Link>
-      )}
-      {NAV_LINKS.map(({ href, label }) => (
-        <Link
-          key={href}
-          href={href}
-          onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-            isActive(href)
-              ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-              : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-          }`}
-        >
+        </Link>)}
+      {NAV_LINKS.map(({ href, label }) => (<Link key={href} href={href} onClick={closeSidebar} className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${isActive(href)
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
           {label}
-        </Link>
-      ))}
-    </>
-  );
-
-  return (
-    <>
+        </Link>))}
+    </>);
+    return (<>
       <nav className="border-b border-theme-border bg-theme-bg-start/50 backdrop-blur-md sticky top-0 z-[9999]">
-        <div className="w-full px-6 md:px-12 h-16 flex items-center">
+        <div className="container mx-auto px-4 h-16 flex items-center">
           {/* Left Section: Logo */}
           <div className="flex-1 flex items-center">
-            <button
-              onClick={toggleSidebar}
-              className="md:hidden p-2 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
-              aria-label="Toggle Menu"
-            >
+            <button onClick={toggleSidebar} className="md:hidden p-2 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors" aria-label="Toggle Menu">
               <span className="text-2xl">☰</span>
             </button>
             <Link href="/" className="hidden md:flex items-center space-x-2">
@@ -122,97 +74,60 @@ const AppNav = () => {
           {/* Right Section: User Info & Actions */}
           <div className="flex-1 flex justify-end items-center space-x-4">
             <div className="hidden md:flex items-center space-x-4">
-              <Link
-                href="/settings"
-                className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all relative"
-                title="Settings"
-                aria-label="Settings"
-              >
+              <Link href="/settings" className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all relative" title="Settings" aria-label="Settings">
                 ⚙️
-                {user && user.id_verification_status !== 'verified' && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
-                )}
+                {user && user.id_verification_status !== 'verified' && (<span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900"/>)}
               </Link>
 
-              {user ? (
-                <div className="flex items-center space-x-4">
+              {user ? (<div className="flex items-center space-x-4">
                   <Link href="/settings#profile" className="text-sm text-theme-fg-muted hover:text-theme-fg transition-colors">
                     Hi, <span className="text-theme-fg font-semibold">{user.name}</span>
                   </Link>
                   
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to logout?')) {
-                        logout();
-                      }
-                    }}
-                    className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all"
-                  >
+                  <button onClick={() => {
+                if (window.confirm('Are you sure you want to logout?')) {
+                    logout();
+                }
+            }} className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all">
                     Logout
                   </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Link
-                    href="/login"
-                    className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95"
-                  >
+                </div>) : (<div className="flex items-center space-x-2">
+                  <Link href="/login" className="px-4 py-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95">
                     Sign In
                   </Link>
-                  <Link
-                    href="/register"
-                    className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-500/20"
-                  >
+                  <Link href="/register" className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-500/20">
                     Get Started
                   </Link>
-                </div>
-              )}
+                </div>)}
             </div>
           </div>
         </div>
       </nav>
 
       {/* Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] transition-opacity duration-300"
-          onClick={closeSidebar}
-        />
-      )}
+      {isSidebarOpen && (<div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] transition-opacity duration-300" onClick={closeSidebar}/>)}
 
       {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 h-full w-72 bg-slate-950 border-r border-theme-border shadow-2xl z-[10001] transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+      <aside className={`fixed top-0 left-0 h-full w-72 bg-slate-950 border-r border-theme-border shadow-2xl z-[10001] transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Close button - Fixed to top-right */}
-        <button
-          onClick={closeSidebar}
-          className="absolute top-4 right-4 p-2 text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel rounded-lg transition-colors z-10"
-          aria-label="Close Menu"
-        >
+        <button onClick={closeSidebar} className="absolute top-4 right-4 p-2 text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel rounded-lg transition-colors z-10" aria-label="Close Menu">
           <span className="text-xl font-bold">✕</span>
         </button>
 
         <div className="flex flex-col h-full p-6">
           {/* 1. User Profile Section at the very top */}
           <div className="mb-6 pt-2">
-            {user ? (
-              <div className="flex items-center space-x-3 p-3 bg-theme-panel/50 rounded-xl border border-theme-border/50">
+            {user ? (<div className="flex items-center space-x-3 p-3 bg-theme-panel/50 rounded-xl border border-theme-border/50">
                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-theme-fg font-bold shadow-lg shadow-indigo-500/20">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
                   <div className="text-xs text-theme-fg-muted">Active Session</div>
                   <div className="font-bold text-theme-fg truncate">{user.name}</div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-theme-panel/30 rounded-xl border border-dashed border-theme-border/30 text-center">
+              </div>) : (<div className="p-3 bg-theme-panel/30 rounded-xl border border-dashed border-theme-border/30 text-center">
                 <span className="text-sm text-theme-fg-muted italic">Guest Mode</span>
-              </div>
-            )}
+              </div>)}
           </div>
 
           {/* 2. Brand/Logo Section below profile */}
@@ -226,66 +141,40 @@ const AppNav = () => {
           {/* 3. Functional buttons listed vertically in the middle */}
           <div className="flex-grow space-y-1 overflow-y-auto no-scrollbar pr-1">
             <div className="text-[10px] font-bold text-theme-fg-muted uppercase tracking-wider mb-2 px-4">Navigation</div>
-            <NavLinks mobile />
+            <NavLinks mobile/>
           </div>
 
           {/* 4 & 5. Settings and Logout at the bottom */}
           <div className="mt-auto pt-6 border-t border-theme-border space-y-2">
-            <Link 
-              href="/settings" 
-              onClick={closeSidebar}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-150 relative ${
-                isActive('/settings')
-                  ? 'bg-indigo-600 text-theme-fg font-semibold'
-                  : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-              }`}
-            >
+            <Link href="/settings" onClick={closeSidebar} className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-150 relative ${isActive('/settings')
+            ? 'bg-indigo-600 text-theme-fg font-semibold'
+            : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'}`}>
               <span className="text-lg relative">
                 ⚙️
-                {user && user.id_verification_status !== 'verified' && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-950" />
-                )}
+                {user && user.id_verification_status !== 'verified' && (<span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-950"/>)}
               </span>
               <span className="font-medium">Settings</span>
             </Link>
 
-            {user ? (
-              <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to logout?')) {
+            {user ? (<button onClick={() => {
+                if (window.confirm('Are you sure you want to logout?')) {
                     logout();
                     closeSidebar();
-                  }
-                }}
-                className="flex items-center space-x-3 w-full px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors text-left"
-              >
+                }
+            }} className="flex items-center space-x-3 w-full px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors text-left">
                 <span className="text-lg">🚪</span>
                 <span className="font-medium">Logout</span>
-              </button>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/login"
-                  onClick={closeSidebar}
-                  className="py-3 text-center rounded-xl bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all"
-                >
+              </button>) : (<div className="grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={closeSidebar} className="py-3 text-center rounded-xl bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all">
                   Sign In
                 </Link>
-                <Link
-                  href="/register"
-                  onClick={closeSidebar}
-                  className="py-3 text-center rounded-xl bg-blue-600 hover:bg-blue-500 text-theme-fg text-sm font-semibold transition-all shadow-lg shadow-blue-500/20"
-                >
+                <Link href="/register" onClick={closeSidebar} className="py-3 text-center rounded-xl bg-blue-600 hover:bg-blue-500 text-theme-fg text-sm font-semibold transition-all shadow-lg shadow-blue-500/20">
                   Join
                 </Link>
-              </div>
-            )}
+              </div>)}
           </div>
         </div>
       </aside>
-    </>
-  );
+    </>);
 };
-
 export default AppNav;
-

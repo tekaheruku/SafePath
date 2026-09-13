@@ -293,7 +293,7 @@ export class AdminRequestsController {
       // Check if user already exists
       const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [adminReq.email]);
 
-      if (existingUser.rowCount > 0) {
+      if ((existingUser.rowCount ?? 0) > 0) {
         await pool.query('UPDATE users SET role = $1 WHERE email = $2', [adminReq.requested_role, adminReq.email]);
       } else {
         await pool.query(

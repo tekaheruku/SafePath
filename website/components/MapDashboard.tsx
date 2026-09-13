@@ -19,7 +19,7 @@ import { DateFilterModal } from './DateFilterModal';
 import DirectionsPanel from './DirectionsPanel';
 import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
-import { IncidentType, SeverityLevel, MAP_CONFIG } from '@safepath/shared';
+import { IncidentType, SeverityLevel, MAP_CONFIG, ADMIN_ROLES, REPORT_STATUS } from '@safepath/shared';
 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -372,9 +372,21 @@ const MapDashboard: React.FC = () => {
       // If heatmap is on, only show the selected report
       if (showIncidentsHeatRef.current && r.id !== selectedReportId) return;
 
-      const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
+      const isAdmin = Boolean(user && ADMIN_ROLES.includes(user.role as any));
+      const canDelete = user && (user.id === r.user_id || isAdmin);
+      const isPending = r.status === REPORT_STATUS.PENDING;
+
       const deleteHtml = canDelete 
         ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
+        : '';
+
+      const reviewHtml = (isAdmin && isPending)
+        ? `
+          <div class="mt-2 pt-2 border-t border-theme-border flex gap-1.5">
+            <button onclick="window.confirmReport('${r.id}')" class="flex-1 py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-colors">Confirm</button>
+            <button onclick="window.falsifyReport('${r.id}')" class="flex-1 py-1 px-2 rounded bg-red-600/30 hover:bg-red-600/50 text-red-300 border border-red-500/30 font-bold text-[10px] transition-colors">Falsify</button>
+          </div>
+        `
         : '';
 
       const userVote = r.user_vote;
@@ -404,9 +416,12 @@ const MapDashboard: React.FC = () => {
               <strong class="text-indigo-400 font-bold capitalize text-sm">
                 ${r.incident_type_name || 'Incident'}
               </strong>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border" style="color: ${r.severity_level_color}; border-color: ${r.severity_level_color}50; background-color: rgba(30, 41, 59, 0.5);">
-                ${r.severity_level_name || 'Unknown'}
-              </span>
+              <div class="flex items-center gap-1">
+                ${isAdmin && isPending ? '<span class="px-1 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">PENDING</span>' : ''}
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border" style="color: ${r.severity_level_color}; border-color: ${r.severity_level_color}50; background-color: rgba(30, 41, 59, 0.5);">
+                  ${r.severity_level_name || 'Unknown'}
+                </span>
+              </div>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             ${r.photo_url 
@@ -415,6 +430,7 @@ const MapDashboard: React.FC = () => {
             }
             <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
             ${voteHtml}
+            ${reviewHtml}
           </div>
         `, { className: 'custom-popup-glass' })
         .addTo(mapRef.current!);
@@ -737,6 +753,28 @@ const MapDashboard: React.FC = () => {
         alert('Failed to delete rating.');
       }
     };
+    (window as any).confirmReport = async (id: string) => {
+      try {
+        await apiClient.post(`/reports/${id}/confirm`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchMapData();
+      } catch (err: any) {
+        console.error('Confirm failed:', err);
+        alert(err.response?.data?.error?.message || 'Failed to confirm report.');
+      }
+    };
+    (window as any).falsifyReport = async (id: string) => {
+      try {
+        await apiClient.post(`/reports/${id}/falsify`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        fetchMapData();
+      } catch (err: any) {
+        console.error('Falsify failed:', err);
+        alert(err.response?.data?.error?.message || 'Failed to falsify report.');
+      }
+    };
     (window as any).openLightbox = (url: string) => {
       setLightboxImage(url);
     };
@@ -744,6 +782,8 @@ const MapDashboard: React.FC = () => {
       delete (window as any).deleteReport;
       delete (window as any).deleteRating;
       delete (window as any).voteReport;
+      delete (window as any).confirmReport;
+      delete (window as any).falsifyReport;
       delete (window as any).openLightbox;
     };
 

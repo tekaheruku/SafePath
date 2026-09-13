@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
+import { ADMIN_ROLES, APP_ROUTES } from '@safepath/shared';
 
 const NAV_LINKS = [
   { href: '/',           label: 'Map' },
@@ -37,13 +38,13 @@ const AppNav: React.FC = () => {
           Verification Requests
         </Link>
       )}
-      {(user?.role === 'superadmin' || user?.role === 'lgu_admin') && (
+      {user && ADMIN_ROLES.includes(user.role as any) && (
         <>
           <Link
-            href="/admin/reports"
+            href={APP_ROUTES.ADMIN_REPORTS}
             onClick={closeSidebar}
             className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-              isActive('/admin/reports')
+              isActive(APP_ROUTES.ADMIN_REPORTS)
                 ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
                 : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
             }`}
@@ -51,15 +52,26 @@ const AppNav: React.FC = () => {
             Reports
           </Link>
           <Link
-            href="/admin/accounts"
+            href={APP_ROUTES.ADMIN_ACCOUNTS}
             onClick={closeSidebar}
             className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-              isActive('/admin/accounts')
+              isActive(APP_ROUTES.ADMIN_ACCOUNTS)
                 ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
                 : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
             }`}
           >
             Accounts
+          </Link>
+          <Link
+            href={APP_ROUTES.ADMIN_ARCHIVE}
+            onClick={closeSidebar}
+            className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
+              isActive(APP_ROUTES.ADMIN_ARCHIVE)
+                ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
+                : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
+            }`}
+          >
+            Archive
           </Link>
         </>
       )}

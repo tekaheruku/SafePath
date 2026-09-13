@@ -16,7 +16,8 @@ import { VoteController } from './controllers/votes.js';
 import { RoutesController } from './controllers/routes.js';
 import { IncidentConfigController } from './controllers/incident_config.js';
 import { UploadController, upload } from './controllers/upload.js';
-import { authMiddleware, roleMiddleware } from './middleware/auth.js';
+import { authMiddleware, roleMiddleware, optionalAuthMiddleware } from './middleware/auth.js';
+import { ADMIN_ROLES } from '@safepath/shared';
 import path from 'path';
 
 
@@ -65,13 +66,17 @@ app.post(`${apiRoot}/auth/change-password`, authMiddleware, (req, res) => AuthCo
 app.patch(`${apiRoot}/auth/profile`, authMiddleware, (req, res) => AuthController.updateProfile(req, res));
 app.post(`${apiRoot}/auth/verify-id`, authMiddleware, (req, res) => AuthController.submitIdVerification(req, res));
 
-// Reports — /stats/:userId must be declared before /:id to avoid route collision
+// Reports — /archive and /stats/:userId must be declared before /:id to avoid route collision
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
-app.get(`${apiRoot}/reports`, (req, res) => ReportController.listReports(req, res));
+app.get(`${apiRoot}/reports`, optionalAuthMiddleware, (req, res) => ReportController.listReports(req, res));
+app.get(`${apiRoot}/reports/archive`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.listArchivedReports(req, res));
 app.get(`${apiRoot}/reports/stats/:userId`, (req, res) => ReportController.getUserStats(req, res));
-app.get(`${apiRoot}/reports/:id`, (req, res) => ReportController.getReport(req, res));
+app.get(`${apiRoot}/reports/:id`, optionalAuthMiddleware, (req, res) => ReportController.getReport(req, res));
 app.put(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.updateReport(req, res));
 app.delete(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.deleteReport(req, res));
+app.post(`${apiRoot}/reports/:id/confirm`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.confirmReport(req, res));
+app.post(`${apiRoot}/reports/:id/falsify`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.falsifyReport(req, res));
+app.post(`${apiRoot}/reports/:id/restore`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.restoreReport(req, res));
 app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
 
 // Configs

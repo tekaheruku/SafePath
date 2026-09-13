@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
   const minLng   = sp.get('minLng')     || '119.92';
   const maxLng   = sp.get('maxLng')     || '120.18';
   const severity = sp.get('severity');
+  const status   = sp.get('status');
+  const type     = sp.get('type');
 
   const startDate = rawFrom ? toStartOfDayPHT(rawFrom) : null;
   const endDate   = rawTo   ? toEndOfDayPHT(rawTo)     : null;
@@ -40,6 +42,8 @@ export async function GET(request: NextRequest) {
   if (startDate) params.set('startDate', startDate);
   if (endDate)   params.set('endDate',   endDate);
   if (severity)  params.set('severity',  severity);
+  if (status)    params.set('status',    status);
+  if (type)      params.set('type',      type);
 
   try {
     // Forward the Authorization header if present (for vote/delete on the map)

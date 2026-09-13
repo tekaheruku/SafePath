@@ -5,6 +5,7 @@
 
 import { pool } from '../config/database.js';
 import { HeatmapPoint, HeatmapFilter } from '@safepath/shared';
+import { getConfirmedReportsFilter } from './report.js';
 
 export class HeatmapService {
   /**
@@ -67,6 +68,7 @@ export class HeatmapService {
           FROM reports r
           LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
           WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            AND ${getConfirmedReportsFilter('r')}
             ${timeFilterR}
           GROUP BY lng, lat
         )
@@ -106,6 +108,7 @@ export class HeatmapService {
           FROM reports r
           LEFT JOIN severity_levels sl ON r.severity_level_id = sl.id
           WHERE r.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            AND ${getConfirmedReportsFilter('r')}
             ${timeFilterR}
           GROUP BY lng, lat
         ),
