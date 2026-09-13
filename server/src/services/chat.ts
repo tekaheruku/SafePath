@@ -22,11 +22,14 @@ Boundaries — do not cross these:
 
 let client: OpenAI | null = null;
 
-function getClient(): OpenAI | null {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+// Points at a local Ollama server (OpenAI-compatible /v1 API), not OpenAI's hosted API.
+function getClient(): OpenAI {
   if (!client) {
-    client = new OpenAI({ apiKey });
+    client = new OpenAI({
+      baseURL: process.env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
+      apiKey: 'ollama', // ignored by Ollama, but the SDK requires a non-empty string
+      timeout: 30_000,
+    });
   }
   return client;
 }
@@ -76,9 +79,6 @@ export class ChatService {
 
   private static async getLlmReply(sessionId: string, message: string): Promise<string> {
     const openai = getClient();
-    if (!openai) {
-      return `I'm not able to reach the assistant service right now. Please describe the situation in simple terms (e.g. "choking", "bleeding", "burn") so I can share basic steps, and make sure officials are on the way. ${FIRST_AID_DISCLAIMER}`;
-    }
 
     try {
       const history = await ChatService.getHistory(sessionId);
@@ -88,7 +88,7 @@ export class ChatService {
       ];
 
       const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        model: process.env.LOCAL_LLM_MODEL || 'llama3.2:3b',
         messages,
         max_tokens: 250,
         temperature: 0.3,
@@ -97,7 +97,7 @@ export class ChatService {
       const text = completion.choices[0]?.message?.content?.trim();
       return text || `I want to make sure I guide you safely. Could you describe what's happening in a bit more detail? ${FIRST_AID_DISCLAIMER}`;
     } catch (error) {
-      console.error('OpenAI request failed:', error);
+      console.error('Local LLM request failed:', error);
       return `I'm having trouble reaching the assistant service right now. In the meantime, keep the person still, comfortable, and warm, and make sure officials have been notified — they'll take it from there. ${FIRST_AID_DISCLAIMER}`;
     }
   }
