@@ -38,15 +38,27 @@ function formatDuration(s: number): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}min`;
 }
 
-function safetyColor(score: number, hasRatings: boolean): { stroke: string; label: string; bg: string; ring: string } {
+/**
+ * Routes are scored on the 1-4 severity scale where HIGHER means more
+ * dangerous. Users think in terms of safety, so the panel inverts the risk
+ * score for display: 4 stars = safest, 1 star = most dangerous.
+ */
+const SAFETY_STARS = [1, 2, 3, 4];
+
+function riskToSafety(risk: number): number {
+  return 5 - risk;
+}
+
+function safetyColor(risk: number, hasRatings: boolean): { stroke: string; label: string; bg: string; ring: string } {
   if (!hasRatings) return { stroke: '#818cf8', label: 'Unrated',  bg: 'bg-indigo-500/15', ring: 'ring-indigo-500/40' };
-  if (score >= 4.0) return { stroke: '#22c55e', label: 'Safest',   bg: 'bg-emerald-500/15', ring: 'ring-emerald-500/40' };
-  if (score >= 2.5) return { stroke: '#f59e0b', label: 'Moderate', bg: 'bg-amber-500/15',   ring: 'ring-amber-500/40'   };
+  if (risk <= 1.5)  return { stroke: '#22c55e', label: 'Safest',   bg: 'bg-emerald-500/15', ring: 'ring-emerald-500/40' };
+  if (risk <= 2.5)  return { stroke: '#f59e0b', label: 'Moderate', bg: 'bg-amber-500/15',   ring: 'ring-amber-500/40'   };
   return               { stroke: '#ef4444', label: 'Caution',  bg: 'bg-red-500/15',     ring: 'ring-red-500/40'     };
 }
 
-function safetyBarWidth(score: number): string {
-  return `${Math.max(4, (score / 5) * 100)}%`;
+function safetyBarWidth(risk: number): string {
+  // Fuller bar = safer, so invert risk across the 1-4 scale.
+  return `${Math.max(4, ((4 - risk) / 3) * 100)}%`;
 }
 
 /* ── Profile config ───────────────────────────────────────────────────────── */
@@ -215,7 +227,7 @@ interface RouteCardProps {
 
 const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecommended, recommendedLabel, onClick }) => {
   const [expanded, setExpanded] = useState(false);
-  const color = safetyColor(route.safetyScore, route.hasRatings);
+  const color = safetyColor(route.riskScore, route.hasRatings);
 
   return (
     <div
@@ -262,15 +274,15 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
             {/* Unrated info icon or score stars */}
             {route.hasRatings ? (
               <div className="flex items-center gap-0.5">
-                {[1,2,3,4,5].map(n => (
+                {SAFETY_STARS.map(n => (
                   <Star
                     key={n}
                     className="w-3 h-3"
-                    style={{ color: n <= Math.round(route.safetyScore) ? color.stroke : '#ffffff20', fill: n <= Math.round(route.safetyScore) ? color.stroke : 'transparent' }}
+                    style={{ color: n <= Math.round(riskToSafety(route.riskScore)) ? color.stroke : '#ffffff20', fill: n <= Math.round(riskToSafety(route.riskScore)) ? color.stroke : 'transparent' }}
                   />
                 ))}
                 <span className="text-xs font-bold ml-1" style={{ color: color.stroke }}>
-                  {route.safetyScore.toFixed(1)}
+                  {riskToSafety(route.riskScore).toFixed(1)}
                 </span>
               </div>
             ) : (
@@ -292,7 +304,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
             <div className="mt-2 h-1 rounded-full bg-white/8 overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: safetyBarWidth(route.safetyScore), backgroundColor: color.stroke }}
+                style={{ width: safetyBarWidth(route.riskScore), backgroundColor: color.stroke }}
               />
             </div>
           )}
@@ -315,14 +327,13 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
               {[
                 { label: 'Lighting',    value: route.breakdown.lighting,   icon: '💡' },
                 { label: 'Pedestrian',  value: route.breakdown.pedestrian, icon: '🚶' },
-                { label: 'Driver',      value: route.breakdown.driver,     icon: '🚗' },
                 { label: 'Overall',     value: route.breakdown.overall,    icon: '🛡️' },
               ].map(({ label, value, icon }) => {
                 const c = safetyColor(value, true);
                 return (
                   <div key={label} className="flex items-center justify-between bg-white/4 rounded-lg px-2.5 py-2">
                     <span className="text-xs text-white/60">{icon} {label}</span>
-                    <span className="text-sm font-bold" style={{ color: c.stroke }}>{value.toFixed(1)}</span>
+                    <span className="text-sm font-bold" style={{ color: c.stroke }}>{riskToSafety(value).toFixed(1)}</span>
                   </div>
                 );
               })}

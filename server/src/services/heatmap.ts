@@ -90,7 +90,8 @@ export class HeatmapService {
         SELECT 
           ST_X(ST_SnapToGrid(location::geometry, 0.0001)) as lng,
           ST_Y(ST_SnapToGrid(location::geometry, 0.0001)) as lat,
-          (5.5 - AVG(overall_safety_score)) * 0.5 * COUNT(*) as intensity_raw,
+          -- Severity scale: 1 = Minor … 4 = Critical, so higher = more dangerous.
+          (AVG(overall_safety_score) - 0.5) * 0.5 * COUNT(*) as intensity_raw,
           COUNT(*) as rating_count
         FROM street_ratings
         WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
@@ -139,7 +140,7 @@ export class HeatmapService {
             ELSE 0
           END +
           CASE 
-            WHEN ss.avg_safety_score IS NOT NULL THEN (5.5 - ss.avg_safety_score) * 0.5 * ss.rating_count 
+            WHEN ss.avg_safety_score IS NOT NULL THEN (ss.avg_safety_score - 0.5) * 0.5 * ss.rating_count
             ELSE 0 
           END as intensity
         FROM GridStats gs

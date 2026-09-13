@@ -179,11 +179,14 @@ The PostgreSQL database leverages the **PostGIS** extension for spatial data ope
 
 ### a. Safety Rating System
 Users can drop a pin and rate a street based on four metrics:
-1. **Lighting** (1-5)
-2. **Road Safety for Pedestrians** (1-5)
-3. **Road Safety for Drivers** (1-5)
-4. **Overall Road Safety** (1-5)
-Stored in the `street_ratings` table, these values are averaged spatially and fed into the Routing Algorithm to boost or penalize street segments.
+1. **Lighting** (1-4, optional)
+2. **Pedestrian Safety** (1-4, required)
+
+Both use the same severity scale as incident reports — **1 = Minor, 2 = Moderate, 3 = Serious, 4 = Critical — so a HIGHER number always means MORE dangerous.** `overall_safety_score` is derived server-side as the rounded mean of the submitted categories.
+
+The "Driver Safety" and "Overall Safety" categories were retired; `driver_safety_score` is now nullable and left NULL, and the spatial `AVG()` aggregates skip it.
+
+Stored in the `street_ratings` table, these values are averaged spatially and fed into the Routing Algorithm to penalize street segments.
 
 ### b. Incident/Report Crowdsourcing
 Users report hazards (e.g., Flood, Accident, Roadblock) with a severity level (1-4). Reports require mandatory photo uploads (stored via Supabase storage). The frontend validates coordinates against the Iba Polygon before submission.
@@ -197,7 +200,7 @@ When a user requests a route:
 1. Frontend fetches multiple path options (e.g., via OSRM).
 2. Geometries are sent to `POST /routes/safety`.
 3. Backend PostGIS queries check for intersections with high-severity incident buffers and calculate average street ratings along the polyline.
-4. Returns a `safetyScore` (0.0 to 5.0) for each route. Frontend color-codes polylines (Green = Safe, Orange = Moderate, Red = Dangerous).
+4. Returns a `riskScore` (1.0 to 4.0) for each route, where **higher = more dangerous**. Routes are sorted by `riskScore` ascending (safest first). Frontend color-codes polylines (Green = risk <= 1.5, Orange = risk <= 2.5, Red = above that) and inverts the value for display, so users still see a safety rating out of 4 stars.
 
 ### e. Date/Time Filter
 A calendar UI updates `dateRange` state. This triggers `fetchMapData()` appending `?startDate=` and `?endDate=` to API requests. The Express backend converts these to UTC+8 (PHT) day boundaries to filter the database appropriately.

@@ -70,6 +70,10 @@ export const USER_ROLES = {
 
 export const ADMIN_ROLES = [USER_ROLES.LGU_ADMIN, USER_ROLES.SUPERADMIN];
 
+// Report moderation (confirm/falsify/restore, and the Archive view) is an
+// LGU admin responsibility only — superadmin accounts do not get this workflow.
+export const REPORT_REVIEW_ROLES = [USER_ROLES.LGU_ADMIN];
+
 export const SEVERITY_LEVELS = {
     LOW: "low" as const,
     MEDIUM: "medium" as const,

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/AuthContext';
 import { DateFilterModal } from '../../../components/DateFilterModal';
 import { Calendar, FilterX, RotateCcw, Archive, AlertTriangle, ExternalLink } from 'lucide-react';
-import { ADMIN_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, APP_ROUTES } from '@safepath/shared';
+import { REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, APP_ROUTES } from '@safepath/shared';
 import { resolvePhotoUrl } from '../../../lib/photoUrl';
 
 export default function AdminArchivePage() {
@@ -28,7 +28,7 @@ export default function AdminArchivePage() {
   // Access Control: Only admin and LGU accounts
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !ADMIN_ROLES.includes(user.role as any)) {
+    if (!user || !REPORT_REVIEW_ROLES.includes(user.role as any)) {
       router.push(APP_ROUTES.HOME);
     }
   }, [user, authLoading, router]);
@@ -61,7 +61,7 @@ export default function AdminArchivePage() {
   };
 
   useEffect(() => {
-    if (user && ADMIN_ROLES.includes(user.role as any) && token) {
+    if (user && REPORT_REVIEW_ROLES.includes(user.role as any) && token) {
       fetchArchivedReports();
     }
   }, [user, token, dateRange, selectedType]);
@@ -102,7 +102,7 @@ export default function AdminArchivePage() {
     router.push(`/?lat=${lat}&lng=${lng}&zoom=17&reportId=${r.id}`);
   };
 
-  if (authLoading || !user || !ADMIN_ROLES.includes(user.role as any)) {
+  if (authLoading || !user || !REPORT_REVIEW_ROLES.includes(user.role as any)) {
     return null;
   }
 

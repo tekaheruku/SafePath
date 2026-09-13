@@ -152,9 +152,11 @@ export interface StreetRating {
     path_type: PathType;
     street_name?: string;
     location: Location;
-    lighting_score: number;
+    /** Severity scale: 1 = Minor … 4 = Critical. Higher = more dangerous. */
+    lighting_score: number | null;
     pedestrian_safety_score: number;
-    driver_safety_score: number;
+    /** Null since the "Driver Safety" rating category was retired. */
+    driver_safety_score: number | null;
     overall_safety_score: number;
     created_at: string;
     updated_at: string;
@@ -164,10 +166,10 @@ export interface CreateStreetRatingRequest {
     path_type: PathType;
     street_name?: string;
     location: Location;
-    lighting_score: number;
+    /** Severity scale: 1 = Minor … 4 = Critical. Higher = more dangerous. */
+    lighting_score?: number | null;
     pedestrian_safety_score: number;
-    driver_safety_score: number;
-    overall_safety_score: number;
+    overall_safety_score?: number | null;
     comment?: string;
 }
 

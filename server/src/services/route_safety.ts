@@ -5,10 +5,18 @@ export interface RouteWaypoint {
   lat: number;
 }
 
+/**
+ * All street_rating scores are on the shared severity scale
+ * (1 = Minor … 4 = Critical), so a HIGHER number always means MORE dangerous.
+ */
+export const RISK_MIN = 1;
+export const RISK_MAX = 4;
+/** Midpoint of the severity scale, used when an area has no ratings. */
+export const RISK_NEUTRAL = 2.5;
+
 export interface RouteSafetyBreakdown {
   lighting: number;
   pedestrian: number;
-  driver: number;
   overall: number;
   composite: number;
   ratedSegmentCount: number;
@@ -20,7 +28,7 @@ export interface ScoredRoute {
   geometry: [number, number][];
   distance: number;       // metres
   duration: number;       // seconds
-  safetyScore: number;    // 0-5 composite
+  riskScore: number;      // 1-4 composite; higher = more dangerous
   hasRatings: boolean;    // whether community ratings exist near this route
   breakdown: RouteSafetyBreakdown;
 }
@@ -57,27 +65,28 @@ function sampleWaypoints(coords: [number, number][], maxSamples = 60): RouteWayp
  * Determine the best "safest" route index.
  *
  * Priority:
- *  1. If any rated route has a score >= 4.0 (confirmed very safe), pick the
- *     one with the HIGHEST safety score, even if it is longer.
+ *  1. If any rated route has a risk <= 1.5 (confirmed very safe), pick the
+ *     one with the LOWEST risk score, even if it is longer.
  *  2. Otherwise, prefer unrated routes (unknown area = not confirmed dangerous).
  *     Among unrated candidates, pick the shortest.
- *  3. Fallback: pick the highest-rated route among all rated options.
+ *  3. Fallback: pick the lowest-risk route among all rated options.
  */
 function pickSafestIndex(routes: ScoredRoute[]): number {
   if (routes.length === 0) return 0;
   if (routes.length === 1) return 0;
 
-  const HIGHLY_SAFE_THRESHOLD = 4.0;
+  // Mostly "Minor" ratings — the low-risk end of the severity scale.
+  const HIGHLY_SAFE_THRESHOLD = 1.5;
 
   // Step 1: Is there any confirmed highly-safe rated route?
   const highlySafe = routes
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => r.hasRatings && r.safetyScore >= HIGHLY_SAFE_THRESHOLD);
+    .filter(({ r }) => r.hasRatings && r.riskScore <= HIGHLY_SAFE_THRESHOLD);
 
   if (highlySafe.length > 0) {
-    // Pick the one with the highest safety score (longest if tie — safety wins)
-    highlySafe.sort((a, b) => b.r.safetyScore - a.r.safetyScore ||
-                               a.r.distance   - b.r.distance);
+    // Pick the one with the lowest risk score (longest if tie — safety wins)
+    highlySafe.sort((a, b) => a.r.riskScore - b.r.riskScore ||
+                               a.r.distance  - b.r.distance);
     return highlySafe[0].i;
   }
 
@@ -92,13 +101,13 @@ function pickSafestIndex(routes: ScoredRoute[]): number {
     return unrated[0].i;
   }
 
-  // Step 3: All routes are rated but none reach 4.0 — pick the highest-rated
+  // Step 3: All routes are rated but none are confirmed safe — pick the lowest-risk
   let bestIdx = 0;
-  let bestScore = -1;
+  let bestScore = Infinity;
   routes.forEach((r, i) => {
-    if (r.safetyScore > bestScore ||
-        (r.safetyScore === bestScore && r.distance < routes[bestIdx].distance)) {
-      bestScore = r.safetyScore;
+    if (r.riskScore < bestScore ||
+        (r.riskScore === bestScore && r.distance < routes[bestIdx].distance)) {
+      bestScore = r.riskScore;
       bestIdx = i;
     }
   });
@@ -123,10 +132,10 @@ function pickShortestIndex(routes: ScoredRoute[]): number {
 export class RouteSafetyService {
   /**
    * Score an array of OSRM routes (geometry in [lng,lat] pairs) by querying
-   * nearby street_ratings from PostGIS and averaging the four safety scores.
+   * nearby street_ratings from PostGIS and averaging their severity scores.
    *
-   * Returns routes sorted by safety score descending, plus recommended
-   * indexes for 'safest' and 'balanced' modes.
+   * Returns routes sorted by risk score ascending (safest first), plus
+   * recommended indexes for 'safest' and 'balanced' modes.
    *
    * @param routes        Array of { index, geometry, distance, duration }
    * @param radiusMeters  Search radius around each sampled waypoint
@@ -144,14 +153,13 @@ export class RouteSafetyService {
       if (totalSegments === 0) {
         scored.push({
           ...route,
-          safetyScore: 3.0,
+          riskScore: RISK_NEUTRAL,
           hasRatings: false,
           breakdown: {
-            lighting: 3.0,
-            pedestrian: 3.0,
-            driver: 3.0,
-            overall: 3.0,
-            composite: 3.0,
+            lighting: RISK_NEUTRAL,
+            pedestrian: RISK_NEUTRAL,
+            overall: RISK_NEUTRAL,
+            composite: RISK_NEUTRAL,
             ratedSegmentCount: 0,
             totalSegments: 0,
           },
@@ -174,7 +182,6 @@ export class RouteSafetyService {
         SELECT
           AVG(sr.lighting_score)           AS avg_lighting,
           AVG(sr.pedestrian_safety_score)  AS avg_pedestrian,
-          AVG(sr.driver_safety_score)      AS avg_driver,
           AVG(sr.overall_safety_score)     AS avg_overall,
           COUNT(DISTINCT sr.id)            AS rating_count
         FROM street_ratings sr
@@ -186,10 +193,9 @@ export class RouteSafetyService {
              )
       `;
 
-      let avgLighting = 3.0;
-      let avgPedestrian = 3.0;
-      let avgDriver = 3.0;
-      let avgOverall = 3.0;
+      let avgLighting = RISK_NEUTRAL;
+      let avgPedestrian = RISK_NEUTRAL;
+      let avgOverall = RISK_NEUTRAL;
       let ratedSegmentCount = 0;
       let hasRatings = false;
 
@@ -200,22 +206,21 @@ export class RouteSafetyService {
         if (row && row.rating_count && parseInt(row.rating_count) > 0) {
           ratedSegmentCount = parseInt(row.rating_count);
           hasRatings = true;
-          avgLighting    = parseFloat(row.avg_lighting)    || 3.0;
-          avgPedestrian  = parseFloat(row.avg_pedestrian)  || 3.0;
-          avgDriver      = parseFloat(row.avg_driver)      || 3.0;
-          avgOverall     = parseFloat(row.avg_overall)     || 3.0;
+          avgLighting    = parseFloat(row.avg_lighting)    || RISK_NEUTRAL;
+          avgPedestrian  = parseFloat(row.avg_pedestrian)  || RISK_NEUTRAL;
+          avgOverall     = parseFloat(row.avg_overall)     || RISK_NEUTRAL;
         }
       } catch (err) {
         console.error(`[RouteSafetyService] Query error for route ${route.index}:`, err);
         // Fall through with neutral defaults
       }
 
-      // Composite: weighted average (pedestrian safety weighted highest for walking)
+      // Composite risk: weighted average (pedestrian hazards weighted highest
+      // for walking). Higher = more dangerous.
       const composite = (
-        avgLighting   * 0.20 +
-        avgPedestrian * 0.45 +
-        avgDriver     * 0.15 +
-        avgOverall    * 0.20
+        avgLighting   * 0.25 +
+        avgPedestrian * 0.50 +
+        avgOverall    * 0.25
       );
 
       scored.push({
@@ -223,12 +228,11 @@ export class RouteSafetyService {
         geometry: route.geometry,
         distance: route.distance,
         duration: route.duration,
-        safetyScore: Math.round(composite * 100) / 100,
+        riskScore: Math.round(composite * 100) / 100,
         hasRatings,
         breakdown: {
           lighting:           Math.round(avgLighting   * 100) / 100,
           pedestrian:         Math.round(avgPedestrian * 100) / 100,
-          driver:             Math.round(avgDriver     * 100) / 100,
           overall:            Math.round(avgOverall    * 100) / 100,
           composite:          Math.round(composite    * 100) / 100,
           ratedSegmentCount,
@@ -237,8 +241,8 @@ export class RouteSafetyService {
       });
     }
 
-    // Sort by safety score descending (safest first)
-    scored.sort((a, b) => b.safetyScore - a.safetyScore);
+    // Sort by risk score ascending (safest first)
+    scored.sort((a, b) => a.riskScore - b.riskScore);
 
     const safestRecommendedIndex   = pickSafestIndex(scored);
     const balancedRecommendedIndex = pickShortestIndex(scored);

@@ -50,10 +50,12 @@ export const heatmapFilterSchema = Joi.object({
 });
 
 export const createStreetRatingSchema = Joi.object({
-  lighting_score: Joi.number().min(1).max(5).optional().allow(null),
-  pedestrian_safety_score: Joi.number().min(1).max(5).required(),
-  driver_safety_score: Joi.number().min(1).max(5).required(),
-  overall_safety_score: Joi.number().min(1).max(5).required(),
+  // Severity scale shared with incident reports: 1 = Minor … 4 = Critical.
+  // Higher always means MORE dangerous.
+  lighting_score: Joi.number().min(1).max(4).optional().allow(null),
+  pedestrian_safety_score: Joi.number().min(1).max(4).required(),
+  driver_safety_score: Joi.number().min(1).max(4).optional().allow(null),
+  overall_safety_score: Joi.number().min(1).max(4).optional().allow(null),
   comment: Joi.string().pattern(/[a-zA-Z0-9]/).message('Comment must contain at least one alphanumeric character').allow('', null).optional(),
   location: Joi.object({
     latitude: Joi.number().required(),

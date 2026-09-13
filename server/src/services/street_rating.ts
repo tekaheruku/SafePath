@@ -20,16 +20,23 @@ export class StreetRatingService {
    * Create a new street rating
    */
   static async createRating(userId: string | undefined, data: any): Promise<StreetRating> {
-    const { 
-      lighting_score, 
-      pedestrian_safety_score, 
-      driver_safety_score, 
-      overall_safety_score, 
-      comment, 
+    const {
+      lighting_score,
+      pedestrian_safety_score,
+      driver_safety_score,
+      comment,
       photo_url,
-      location 
+      location
     } = data;
-    
+
+    // overall_safety_score is a NOT NULL integer column, so derive it from
+    // whichever category scores were actually submitted and round — a
+    // fractional average is rejected by Postgres as invalid integer input.
+    const submittedScores = [lighting_score, pedestrian_safety_score, driver_safety_score]
+      .filter((s) => s !== undefined && s !== null);
+    const overall_safety_score = data.overall_safety_score ??
+      Math.round(submittedScores.reduce((sum: number, s: number) => sum + s, 0) / submittedScores.length);
+
     const query = `
       INSERT INTO street_ratings (
         user_id, 
@@ -48,11 +55,11 @@ export class StreetRatingService {
     `;
     
     const params = [
-      userId || null, 
-      lighting_score, 
-      pedestrian_safety_score, 
-      driver_safety_score, 
-      overall_safety_score, 
+      userId || null,
+      lighting_score ?? null,
+      pedestrian_safety_score,
+      driver_safety_score ?? null,
+      overall_safety_score,
       comment || null, 
       photo_url || null,
       location.longitude, 

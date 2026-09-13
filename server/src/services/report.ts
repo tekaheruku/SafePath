@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import { Report, ReportWithUser, ADMIN_ROLES, REPORT_STATUS, ReportStatus } from '@safepath/shared';
+import { Report, ReportWithUser, ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, ReportStatus } from '@safepath/shared';
 
 /**
  * Single reusable SQL filter for confirmed reports (public map and public feed visibility)
@@ -225,9 +225,9 @@ export class ReportService {
    * Update report status (admin/LGU action: confirm, falsify, restore)
    */
   static async updateReportStatus(id: string, status: ReportStatus, userRole: string): Promise<any> {
-    const isAdmin = ADMIN_ROLES.includes(userRole as any);
-    if (!isAdmin) {
-      throw new Error('Forbidden: Only admins and LGU officials can update report status');
+    const canReview = REPORT_REVIEW_ROLES.includes(userRole as any);
+    if (!canReview) {
+      throw new Error('Forbidden: Only LGU officials can update report status');
     }
 
     const query = `

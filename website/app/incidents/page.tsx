@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthContext';
 import { DateFilterModal } from '../../components/DateFilterModal';
 import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check } from 'lucide-react';
-import { ADMIN_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus } from '@safepath/shared';
+import { ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus } from '@safepath/shared';
 import { resolvePhotoUrl } from '../../lib/photoUrl';
 
 export default function IncidentsPage() {
@@ -18,6 +18,9 @@ export default function IncidentsPage() {
   const router = useRouter();
 
   const isAdmin = Boolean(user && ADMIN_ROLES.includes(user.role as any));
+  // Confirming/falsifying reports is an LGU admin responsibility only — superadmin
+  // accounts can still see the pending queue but cannot act on it.
+  const canReviewReports = Boolean(user && REPORT_REVIEW_ROLES.includes(user.role as any));
 
   // Admin tab filter: 'confirmed' or 'pending' (public users never see or change this)
   const [activeTab, setActiveTab] = useState<ReportStatus>(REPORT_STATUS.CONFIRMED);
@@ -73,7 +76,7 @@ export default function IncidentsPage() {
 
   const handleConfirm = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!token || !isAdmin) return;
+    if (!token || !canReviewReports) return;
 
     setActionLoading(id);
     setFeedbackMessage(null);
@@ -99,7 +102,7 @@ export default function IncidentsPage() {
 
   const handleFalsify = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!token || !isAdmin) return;
+    if (!token || !canReviewReports) return;
 
     setActionLoading(id);
     setFeedbackMessage(null);
@@ -326,17 +329,21 @@ export default function IncidentsPage() {
                   )}
                 </div>
 
-                {/* Verification Actions (admin/LGU only when status is pending) */}
-                {isAdmin && r.status === REPORT_STATUS.PENDING && (
+                {/* Verification Actions (LGU admin only). Pending reports can be
+                    confirmed or falsified; confirmed reports can still be falsified
+                    later if they turn out to be a mistake. */}
+                {canReviewReports && (r.status === REPORT_STATUS.PENDING || r.status === REPORT_STATUS.CONFIRMED) && (
                   <div className="flex items-center gap-2 pt-2 border-t border-theme-border/50">
-                    <button
-                      onClick={(e) => handleConfirm(e, r.id)}
-                      disabled={actionLoading === r.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>{REPORT_REVIEW_ACTIONS.CONFIRM}</span>
-                    </button>
+                    {r.status === REPORT_STATUS.PENDING && (
+                      <button
+                        onClick={(e) => handleConfirm(e, r.id)}
+                        disabled={actionLoading === r.id}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>{REPORT_REVIEW_ACTIONS.CONFIRM}</span>
+                      </button>
+                    )}
                     <button
                       onClick={(e) => handleFalsify(e, r.id)}
                       disabled={actionLoading === r.id}

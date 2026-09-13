@@ -20,7 +20,7 @@ import { resolvePhotoUrl } from '../lib/photoUrl';
 import DirectionsPanel from './DirectionsPanel';
 import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation, Layers, Plus, HelpCircle, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
-import { IncidentType, SeverityLevel, MAP_CONFIG, ADMIN_ROLES, REPORT_STATUS } from '@safepath/shared';
+import { IncidentType, SeverityLevel, MAP_CONFIG, ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS } from '@safepath/shared';
 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -120,9 +120,10 @@ function createFogLayer(map: L.Map): () => void {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 // ── Safety color thresholds for route polylines ────────────────────────────
-function routePolylineColor(safetyScore: number): string {
-  if (safetyScore >= 4.0) return '#22c55e';
-  if (safetyScore >= 2.5) return '#f59e0b';
+// Risk on the 1-4 severity scale: higher = more dangerous.
+function routePolylineColor(riskScore: number): string {
+  if (riskScore <= 1.5) return '#22c55e';
+  if (riskScore <= 2.5) return '#f59e0b';
   return '#ef4444';
 }
 
@@ -281,6 +282,18 @@ const MapDashboard: React.FC = () => {
     popupAnchor: [0, -40]
   });
 
+  const PendingIncidentIcon = L.divIcon({
+    className: 'custom-pin-incident-pending',
+    html: `
+      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#6b7280"/>
+        <circle cx="15" cy="15" r="5" fill="white"/>
+      </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+    popupAnchor: [0, -40]
+  });
+
   const RatingIcon = L.divIcon({
     className: 'custom-pin-rating',
     html: `
@@ -395,16 +408,20 @@ const MapDashboard: React.FC = () => {
 
       const isAdmin = Boolean(user && ADMIN_ROLES.includes(user.role as any));
       const canDelete = user && (user.id === r.user_id || isAdmin);
+      const canReviewReports = Boolean(user && REPORT_REVIEW_ROLES.includes(user.role as any));
       const isPending = r.status === REPORT_STATUS.PENDING;
+      const isConfirmed = r.status === REPORT_STATUS.CONFIRMED;
 
-      const deleteHtml = canDelete 
-        ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>` 
+      const deleteHtml = canDelete
+        ? `<br/><button onclick="window.deleteReport('${r.id}')" class="mt-2 text-[10px] text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Report</button>`
         : '';
 
-      const reviewHtml = (isAdmin && isPending)
+      // Pending reports can be confirmed or falsified; confirmed reports can still
+      // be falsified later if they turn out to be a mistake.
+      const reviewHtml = (canReviewReports && (isPending || isConfirmed))
         ? `
           <div class="mt-2 pt-2 border-t border-theme-border flex gap-1.5">
-            <button onclick="window.confirmReport('${r.id}')" class="flex-1 py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-colors">Confirm</button>
+            ${isPending ? `<button onclick="window.confirmReport('${r.id}')" class="flex-1 py-1 px-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-colors">Confirm</button>` : ''}
             <button onclick="window.falsifyReport('${r.id}')" class="flex-1 py-1 px-2 rounded bg-red-600/30 hover:bg-red-600/50 text-red-300 border border-red-500/30 font-bold text-[10px] transition-colors">Falsify</button>
           </div>
         `
@@ -430,7 +447,7 @@ const MapDashboard: React.FC = () => {
         </div>
       `;
 
-      const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: IncidentIcon })
+      const marker = L.marker([r.location.coordinates[1], r.location.coordinates[0]], { icon: isPending ? PendingIncidentIcon : IncidentIcon })
         .bindPopup(`
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
@@ -519,16 +536,15 @@ const MapDashboard: React.FC = () => {
               <strong class="text-indigo-400 font-bold text-sm">Street Safety Rating</strong>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
-            <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
+            <div class="mb-2 text-theme-fg font-medium">Risk: <span class="text-violet-400 font-bold">${r.overall_safety_score}/4</span></div>
             ${resolvePhotoUrl(r.photo_url)
               ? `<img src="${resolvePhotoUrl(r.photo_url)}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${resolvePhotoUrl(r.photo_url)}')" />`
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
           <div class="mt-2 text-[10px] space-y-0.5 text-theme-fg-muted font-medium bg-theme-panel/40 p-2 rounded-lg border border-theme-border">
-            <div>Lighting: ${r.lighting_score}/5</div>
-            <div>Pedestrian: ${r.pedestrian_safety_score}/5</div>
-            <div>Driver: ${r.driver_safety_score}/5</div>
+            <div>Lighting: ${r.lighting_score == null ? '—' : `${r.lighting_score}/4`}</div>
+            <div>Pedestrian: ${r.pedestrian_safety_score}/4</div>
           </div>
           ${deleteHtml}
           </div>
@@ -849,7 +865,7 @@ const MapDashboard: React.FC = () => {
 
     routes.forEach((route, i) => {
       const isSelected = i === selectedIdx;
-      const color = routePolylineColor(route.safetyScore);
+      const color = routePolylineColor(route.riskScore);
       // Geometry is in [lng, lat] order; Leaflet needs [lat, lng]
       const latlngs: [number, number][] = route.geometry.map(([lng, lat]) => [lat, lng]);
 

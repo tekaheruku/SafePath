@@ -13,7 +13,6 @@ export interface DirectionsPoint {
 export interface RouteSafetyBreakdown {
   lighting: number;
   pedestrian: number;
-  driver: number;
   overall: number;
   composite: number;
   ratedSegmentCount: number;
@@ -25,7 +24,8 @@ export interface ScoredRoute {
   geometry: [number, number][];  // [lng, lat] GeoJSON order
   distance: number;
   duration: number;
-  safetyScore: number;
+  /** Composite risk on the 1-4 severity scale; higher = more dangerous. */
+  riskScore: number;
   hasRatings: boolean;
   breakdown: RouteSafetyBreakdown;
 }
