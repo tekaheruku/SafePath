@@ -327,11 +327,18 @@ const MapDashboard: React.FC = () => {
       const toParam   = currentDateRange.to    ? { to:   currentDateRange.to   }  : {};
       const dateParams = { ...fromParam, ...toParam };
 
+      // Attach the auth token so admins/LGU officials also receive pending
+      // (not-yet-confirmed) reports from the backend — without this header
+      // the backend treats the request as anonymous and only returns
+      // confirmed reports, so a pending report's pin would never appear
+      // even when an admin navigates here to review it.
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
       const [reportsResult, incidentHeatResult, ratingHeatResult, ratingsResult] = await Promise.allSettled([
-        axios.get('/api/reports',  { params: { ...b, page: 1, limit: 100, ...dateParams } }),
+        axios.get('/api/reports',  { params: { ...b, page: 1, limit: 100, ...dateParams }, headers: authHeaders }),
         axios.get('/api/heatmap',  { params: { ...b, type: 'incidents', ...dateParams } }),
         axios.get('/api/heatmap',  { params: { ...b, type: 'ratings',   ...dateParams } }),
-        axios.get('/api/ratings',  { params: { ...b, page: 1, limit: 100, ...dateParams } }),
+        axios.get('/api/ratings',  { params: { ...b, page: 1, limit: 100, ...dateParams }, headers: authHeaders }),
       ]);
 
       let reports: any[] = [];
@@ -812,7 +819,19 @@ const MapDashboard: React.FC = () => {
     };
 
   }, [token]);
-  
+
+  // AuthContext restores the token from localStorage asynchronously after
+  // mount, which is after the initial fetchMapData() call above already ran
+  // (with no token, so only confirmed reports came back). Re-fetch once the
+  // token becomes available so admins/LGU officials also get pending
+  // reports — otherwise a pending report's pin never appears on the map
+  // even when an admin navigates here specifically to review it.
+  const hasFetchedWithTokenRef = useRef(false);
+  useEffect(() => {
+    if (!token || hasFetchedWithTokenRef.current || !mapRef.current) return;
+    hasFetchedWithTokenRef.current = true;
+    fetchMapData();
+  }, [token]);
 
 
 

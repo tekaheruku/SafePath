@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../components/AuthContext';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { resolvePhotoUrl } from '../../../lib/photoUrl';
 
 interface VerificationRequest {
   id: string;
@@ -120,15 +121,15 @@ export default function AdminIDVerificationsPage() {
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-theme-fg-muted uppercase tracking-wider">Front ID Image</label>
                   <div className="aspect-[16/10] bg-black/40 rounded-xl overflow-hidden border border-theme-border group relative">
-                    <img src={req.id_front_url} alt="ID Front" className="w-full h-full object-contain transition-transform group-hover:scale-105" />
-                    <a href={req.id_front_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs font-bold">View Full Size</a>
+                    <img src={resolvePhotoUrl(req.id_front_url) ?? undefined} alt="ID Front" className="w-full h-full object-contain transition-transform group-hover:scale-105" />
+                    <a href={resolvePhotoUrl(req.id_front_url) ?? undefined} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs font-bold">View Full Size</a>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-theme-fg-muted uppercase tracking-wider">Back ID Image</label>
                   <div className="aspect-[16/10] bg-black/40 rounded-xl overflow-hidden border border-theme-border group relative">
-                    <img src={req.id_back_url} alt="ID Back" className="w-full h-full object-contain transition-transform group-hover:scale-105" />
-                    <a href={req.id_back_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs font-bold">View Full Size</a>
+                    <img src={resolvePhotoUrl(req.id_back_url) ?? undefined} alt="ID Back" className="w-full h-full object-contain transition-transform group-hover:scale-105" />
+                    <a href={resolvePhotoUrl(req.id_back_url) ?? undefined} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs font-bold">View Full Size</a>
                   </div>
                 </div>
               </div>

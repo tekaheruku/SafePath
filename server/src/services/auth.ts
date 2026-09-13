@@ -3,12 +3,30 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import { EmailService } from './email.js';
+import { ADMIN_ROLES } from '@safepath/shared';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not defined in environment variables');
 }
+
+/**
+ * Superadmins and LGU admins are staff accounts, not community reporters —
+ * they show as verified in Settings the moment they hold that role, without
+ * going through the ID-document upload flow. This is purely a read-time
+ * override (the underlying id_verification_status column is untouched), so
+ * a "user" who merely has a pending admin-role request (still role='user'
+ * until approved) is unaffected and stays whatever their real ID
+ * verification status is.
+ */
+function withAdminAutoVerification<T extends { role: string; id_verification_status?: string }>(user: T): T {
+  if (ADMIN_ROLES.includes(user.role as any)) {
+    return { ...user, id_verification_status: 'verified' };
+  }
+  return user;
+}
+
 export class AuthService {
   static async login(email: string, password: string) {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -61,7 +79,7 @@ export class AuthService {
 
     const token = this.generateToken(user);
     const { password_hash: _, ...userWithoutPassword } = user;
-    return { user: userWithoutPassword, token };
+    return { user: withAdminAutoVerification(userWithoutPassword), token };
   }
 
   private static normalizeText(text: string): string {
@@ -421,7 +439,7 @@ export class AuthService {
       [id]
     );
     if (result.rowCount === 0) throw new Error('User not found');
-    return result.rows[0];
+    return withAdminAutoVerification(result.rows[0]);
   }
 
   static async updateProfile(userId: string, data: any) {
@@ -446,7 +464,7 @@ export class AuthService {
     `;
     const params = [name || null, address || null, birthday || null, phone_number || null, userId];
     const result = await pool.query(query, params);
-    return result.rows[0];
+    return withAdminAutoVerification(result.rows[0]);
   }
 
   static async submitIdVerification(userId: string, frontUrl: string, backUrl: string) {
