@@ -85,7 +85,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-theme-bg-start p-4">
-      <div className="max-w-md w-full bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
+      <div className="max-w-md w-full bg-theme-panel rounded-2xl p-6 sm:p-8 border border-theme-border shadow-2xl">
         <h1 className="text-3xl font-bold text-theme-fg mb-2">Welcome Back</h1>
         <p className="text-theme-fg-muted mb-8">Sign in to report and track incidents</p>
 
@@ -111,6 +111,8 @@ export default function LoginPage() {
             <input
               type="email"
               required
+              autoComplete="email"
+              inputMode="email"
               className="w-full bg-theme-panel/50 border border-theme-border rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="you@example.com"
               value={email}
@@ -122,6 +124,7 @@ export default function LoginPage() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               className="w-full bg-theme-panel/50 border border-theme-border rounded-lg px-4 py-3 text-theme-fg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               placeholder="••••••••"
               value={password}

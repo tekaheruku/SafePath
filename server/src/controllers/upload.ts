@@ -44,10 +44,14 @@ export class UploadController {
         return;
       }
 
-      // Build the public URL the frontend uses to display the file.
-      // The server exposes /uploads/* via express.static in app.ts.
-      const host = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
-      const publicUrl = `${host}/uploads/${req.file.filename}`;
+      // Return a path relative to this server (exposed via express.static
+      // in app.ts) instead of baking in an absolute host. The server's
+      // public hostname can change (e.g. a Cloudflare tunnel URL) without
+      // a restart of the API process, which would otherwise make any
+      // previously-uploaded photo_url permanently point at the wrong host.
+      // The frontend resolves this relative path against its configured
+      // API origin at render time.
+      const publicUrl = `/uploads/${req.file.filename}`;
 
       res.json({ success: true, url: publicUrl });
     } catch (error) {

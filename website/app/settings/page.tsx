@@ -279,6 +279,7 @@ export default function SettingsPage() {
                     <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">Full Name</label>
                     <input
                       type="text"
+                      autoComplete="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-blue-500/50 outline-none"
@@ -316,6 +317,8 @@ export default function SettingsPage() {
                       <label className="text-xs text-theme-fg-muted uppercase tracking-wider font-bold">Phone Number</label>
                       <input
                         type="tel"
+                        autoComplete="tel"
+                        inputMode="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-blue-500/50 outline-none"
@@ -475,6 +478,7 @@ export default function SettingsPage() {
                       <input
                         type="password"
                         required
+                        autoComplete="current-password"
                         value={oldPassword}
                         onChange={(e) => setOldPassword(e.target.value)}
                         className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50 outline-none"
@@ -489,6 +493,8 @@ export default function SettingsPage() {
                       <input
                         type="text"
                         required
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         maxLength={6}
                         value={otpToken}
                         onChange={(e) => setOtpToken(e.target.value)}
@@ -504,6 +510,7 @@ export default function SettingsPage() {
                     <input
                       type="password"
                       required
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50 outline-none"
@@ -516,6 +523,7 @@ export default function SettingsPage() {
                     <input
                       type="password"
                       required
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full bg-theme-bg-start border border-theme-border rounded-xl p-3 text-sm text-theme-fg focus:ring-2 focus:ring-indigo-500/50 outline-none"

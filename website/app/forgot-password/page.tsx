@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
       <div className="max-w-md w-full">
 
         {!submitted ? (
-          <div className="bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
+          <div className="bg-theme-panel rounded-2xl p-6 sm:p-8 border border-theme-border shadow-2xl">
             {/* Header */}
             <div className="mb-8">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-5">
@@ -53,6 +53,8 @@ export default function ForgotPasswordPage() {
                   id="forgot-email"
                   type="email"
                   required
+                  autoComplete="email"
+                  inputMode="email"
                   className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                   placeholder="you@example.com"
                   value={email}

@@ -80,20 +80,25 @@ export class ChatService {
       return `I'm not able to reach the assistant service right now. Please describe the situation in simple terms (e.g. "choking", "bleeding", "burn") so I can share basic steps, and make sure officials are on the way. ${FIRST_AID_DISCLAIMER}`;
     }
 
-    const history = await ChatService.getHistory(sessionId);
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...history.slice(-10).map((m: any) => ({ role: m.role, content: m.content } as OpenAI.Chat.ChatCompletionMessageParam)),
-    ];
+    try {
+      const history = await ChatService.getHistory(sessionId);
+      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...history.slice(-10).map((m: any) => ({ role: m.role, content: m.content } as OpenAI.Chat.ChatCompletionMessageParam)),
+      ];
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages,
-      max_tokens: 250,
-      temperature: 0.3,
-    });
+      const completion = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages,
+        max_tokens: 250,
+        temperature: 0.3,
+      });
 
-    const text = completion.choices[0]?.message?.content?.trim();
-    return text || `I want to make sure I guide you safely. Could you describe what's happening in a bit more detail? ${FIRST_AID_DISCLAIMER}`;
+      const text = completion.choices[0]?.message?.content?.trim();
+      return text || `I want to make sure I guide you safely. Could you describe what's happening in a bit more detail? ${FIRST_AID_DISCLAIMER}`;
+    } catch (error) {
+      console.error('OpenAI request failed:', error);
+      return `I'm having trouble reaching the assistant service right now. In the meantime, keep the person still, comfortable, and warm, and make sure officials have been notified — they'll take it from there. ${FIRST_AID_DISCLAIMER}`;
+    }
   }
 }

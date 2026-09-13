@@ -28,9 +28,6 @@ export default function RootLayout({
             <main className="flex-grow w-full py-6">
               {children}
             </main>
-            <footer className="border-t border-theme-border py-6 text-center text-theme-fg-muted text-sm">
-              &copy; {new Date().getFullYear()} SafePath. All rights reserved.
-            </footer>
             <SafetyChatWidget />
           </AuthProvider>
         </ThemeProvider>

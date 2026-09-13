@@ -514,7 +514,8 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
+            className="flex items-center justify-center w-11 h-11 -mr-2.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
+            aria-label="Close directions"
           >
             <X className="w-4 h-4" />
           </button>

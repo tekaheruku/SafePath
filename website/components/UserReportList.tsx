@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resolvePhotoUrl } from '../lib/photoUrl';
 
 interface UserReportListProps {
   reports: any[];
@@ -45,7 +46,7 @@ const UserReportList: React.FC<UserReportListProps> = ({ reports, onDelete, onVi
             
             {r.photo_url && (
               <div className="mb-3">
-                <img src={r.photo_url} alt="Report Photo" className="w-full h-32 object-cover rounded-lg border border-theme-border opacity-90 group-hover:opacity-100 transition-opacity" />
+                <img src={resolvePhotoUrl(r.photo_url) ?? undefined} alt="Report Photo" className="w-full h-32 object-cover rounded-lg border border-theme-border opacity-90 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
 

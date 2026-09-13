@@ -7,6 +7,7 @@ import { useAuth } from '../../../components/AuthContext';
 import { DateFilterModal } from '../../../components/DateFilterModal';
 import { Calendar, FilterX, RotateCcw, Archive, AlertTriangle, ExternalLink } from 'lucide-react';
 import { ADMIN_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, APP_ROUTES } from '@safepath/shared';
+import { resolvePhotoUrl } from '../../../lib/photoUrl';
 
 export default function AdminArchivePage() {
   const { user, token, loading: authLoading } = useAuth();
@@ -227,7 +228,7 @@ export default function AdminArchivePage() {
                 {r.photo_url && (
                   <div className="mb-3">
                     <img
-                      src={r.photo_url}
+                      src={resolvePhotoUrl(r.photo_url) ?? undefined}
                       alt="Archived Report"
                       className="w-full h-32 object-cover rounded-lg border border-theme-border opacity-75"
                     />

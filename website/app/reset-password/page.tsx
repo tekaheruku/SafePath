@@ -77,7 +77,7 @@ function ResetPasswordContent() {
       <div className="max-w-md w-full">
 
         {!success ? (
-          <div className="bg-theme-panel rounded-2xl p-8 border border-theme-border shadow-2xl">
+          <div className="bg-theme-panel rounded-2xl p-6 sm:p-8 border border-theme-border shadow-2xl">
             {/* Header */}
             <div className="mb-8">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5">
@@ -108,6 +108,7 @@ function ResetPasswordContent() {
                     id="new-password"
                     type={showPassword ? 'text' : 'password'}
                     required
+                    autoComplete="new-password"
                     className="w-full bg-theme-panel border border-slate-700 rounded-xl px-4 py-3 pr-12 text-theme-fg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     placeholder="At least 8 characters"
                     value={password}
@@ -156,6 +157,7 @@ function ResetPasswordContent() {
                   id="confirm-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
                   className={`w-full bg-theme-panel border rounded-xl px-4 py-3 text-theme-fg placeholder-slate-500 focus:ring-2 outline-none transition-all ${
                     confirmPassword && password !== confirmPassword
                       ? 'border-red-500/60 focus:ring-red-500'

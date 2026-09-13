@@ -113,14 +113,14 @@ const AppNav: React.FC = () => {
           <div className="flex-1 flex items-center">
             <button
               onClick={toggleSidebar}
-              className="md:hidden p-2 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
+              className="md:hidden flex items-center justify-center w-11 h-11 -ml-1 text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
               aria-label="Toggle Menu"
             >
               <span className="text-2xl">☰</span>
             </button>
-            <Link href="/" className="hidden md:flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg">S</div>
-              <span className="font-bold text-xl tracking-tight">SafePath</span>
+            <Link href="/" className="flex items-center space-x-2 ml-1 md:ml-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg shrink-0">S</div>
+              <span className="font-bold text-base sm:text-xl tracking-tight">SafePath</span>
             </Link>
           </div>
 
@@ -132,20 +132,20 @@ const AppNav: React.FC = () => {
           </div>
 
           {/* Right Section: User Info & Actions */}
-          <div className="flex-1 flex justify-end items-center space-x-4">
-            <div className="hidden md:flex items-center space-x-4">
-              <Link
-                href="/settings"
-                className="p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all relative"
-                title="Settings"
-                aria-label="Settings"
-              >
-                ⚙️
-                {user && user.id_verification_status !== 'verified' && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
-                )}
-              </Link>
+          <div className="flex-1 flex justify-end items-center space-x-2 md:space-x-4">
+            <Link
+              href="/settings"
+              className="flex items-center justify-center w-11 h-11 md:w-auto md:h-auto md:p-2 rounded-full bg-theme-panel hover:bg-theme-border-hover text-sm font-semibold transition-all relative"
+              title="Settings"
+              aria-label="Settings"
+            >
+              ⚙️
+              {user && user.id_verification_status !== 'verified' && (
+                <span className="absolute top-1.5 right-1.5 md:top-1 md:right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
+              )}
+            </Link>
 
+            <div className="hidden md:flex items-center space-x-4">
               {user ? (
                 <div className="flex items-center space-x-4">
                   <Link href="/settings#profile" className="text-sm text-theme-fg-muted hover:text-theme-fg transition-colors">
@@ -198,18 +198,24 @@ const AppNav: React.FC = () => {
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Close button - Fixed to top-right */}
-        <button
-          onClick={closeSidebar}
-          className="absolute top-4 right-4 p-2 text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel rounded-lg transition-colors z-10"
-          aria-label="Close Menu"
-        >
-          <span className="text-xl font-bold">✕</span>
-        </button>
+        <div className="flex flex-col h-full p-6" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+          {/* 1. Header row: brand on the left, close button on the right — normal flow, so it never overlaps the content below */}
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/" onClick={closeSidebar} className="flex items-center space-x-2 group">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg transition-transform group-hover:scale-110">S</div>
+              <span className="font-bold text-xl tracking-tight">SafePath</span>
+            </Link>
+            <button
+              onClick={closeSidebar}
+              className="flex items-center justify-center w-11 h-11 -mr-2.5 text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel rounded-lg transition-colors"
+              aria-label="Close Menu"
+            >
+              <span className="text-xl font-bold">✕</span>
+            </button>
+          </div>
 
-        <div className="flex flex-col h-full p-6">
-          {/* 1. User Profile Section at the very top */}
-          <div className="mb-6 pt-2">
+          {/* 2. User Profile Section */}
+          <div className="mb-8">
             {user ? (
               <div className="flex items-center space-x-3 p-3 bg-theme-panel/50 rounded-xl border border-theme-border/50">
                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-theme-fg font-bold shadow-lg shadow-indigo-500/20">
@@ -227,16 +233,8 @@ const AppNav: React.FC = () => {
             )}
           </div>
 
-          {/* 2. Brand/Logo Section below profile */}
-          <div className="mb-8">
-            <Link href="/" onClick={closeSidebar} className="flex items-center space-x-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center font-bold text-theme-fg transition-transform group-hover:scale-110">S</div>
-              <span className="font-bold text-xl tracking-tight">SafePath</span>
-            </Link>
-          </div>
-
           {/* 3. Functional buttons listed vertically in the middle */}
-          <div className="flex-grow space-y-1 overflow-y-auto no-scrollbar pr-1">
+          <div className="flex-grow space-y-1 overflow-y-auto overscroll-contain no-scrollbar pr-1">
             <div className="text-[10px] font-bold text-theme-fg-muted uppercase tracking-wider mb-2 px-4">Navigation</div>
             <NavLinks mobile />
           </div>

@@ -111,8 +111,8 @@ export default function DashboardPage() {
           <div className="mt-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-theme-fg italic uppercase tracking-wider">Report History</h2>
-              <button 
-                onClick={() => router.push('/report')}
+              <button
+                onClick={() => router.push('/')}
                 className="text-xs font-black text-emerald-400 hover:text-emerald-300 uppercase tracking-widest"
               >
                 + New Report
@@ -122,8 +122,8 @@ export default function DashboardPage() {
             {reports.length === 0 ? (
               <div className="bg-theme-panel/40 rounded-3xl border border-theme-border/60 p-12 text-center">
                 <p className="text-theme-fg-muted font-bold italic mb-6">You haven't submitted any reports yet. Be the eyes of your community.</p>
-                <button 
-                  onClick={() => router.push('/report')}
+                <button
+                  onClick={() => router.push('/')}
                   className="px-6 py-2.5 rounded-full bg-theme-panel hover:bg-theme-border-hover text-theme-fg font-black text-[10px] uppercase tracking-widest transition-all"
                 >
                   Create Your First Report

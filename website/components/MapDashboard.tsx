@@ -15,9 +15,10 @@ import ReportForm from './ReportForm';
 import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
 import { DateFilterModal } from './DateFilterModal';
+import { resolvePhotoUrl } from '../lib/photoUrl';
 
 import DirectionsPanel from './DirectionsPanel';
-import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation } from 'lucide-react';
+import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation, Layers, Plus, HelpCircle, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { IncidentType, SeverityLevel, MAP_CONFIG, ADMIN_ROLES, REPORT_STATUS } from '@safepath/shared';
 
@@ -183,6 +184,12 @@ const MapDashboard: React.FC = () => {
 
   const [showReportForm, setShowReportForm] = useState(false);
   const [showRatingForm, setShowRatingForm] = useState(false);
+  // Mobile-only compact chrome: popovers/sheets that consolidate the desktop
+  // sidebar cards into icon-triggered overlays so the map stays uncluttered
+  // on small screens.
+  const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const [mobileLegendOpen, setMobileLegendOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
   const [selectedIncidentTypeId, setSelectedIncidentTypeId] = useState<string | null>(null);
@@ -424,8 +431,8 @@ const MapDashboard: React.FC = () => {
               </div>
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
-            ${r.photo_url 
-              ? `<img src="${r.photo_url}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${r.photo_url}')" />` 
+            ${resolvePhotoUrl(r.photo_url)
+              ? `<img src="${resolvePhotoUrl(r.photo_url)}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${resolvePhotoUrl(r.photo_url)}')" />`
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
             <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
@@ -499,8 +506,8 @@ const MapDashboard: React.FC = () => {
             </div>
             <div class="text-[10px] text-theme-fg-muted mb-2 font-bold uppercase tracking-tight">${format(new Date(r.created_at), 'MMM d, yyyy · p')}</div>
             <div class="mb-2 text-theme-fg font-medium">Score: <span class="text-violet-400 font-bold">${r.overall_safety_score}/5</span></div>
-            ${r.photo_url 
-              ? `<img src="${r.photo_url}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${r.photo_url}')" />` 
+            ${resolvePhotoUrl(r.photo_url)
+              ? `<img src="${resolvePhotoUrl(r.photo_url)}" alt="Street Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${resolvePhotoUrl(r.photo_url)}')" />`
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
             ${r.comment ? `<p class="italic text-[13px] mt-1 text-theme-fg leading-relaxed font-medium mb-2">"${r.comment}"</p>` : ''}
@@ -571,9 +578,13 @@ const MapDashboard: React.FC = () => {
       maxBounds: IBA_BOUNDS,
       maxBoundsViscosity: 1.0,
       zoomControl: false,
+      attributionControl: false,
     });
 
     L.control.zoom({ position: 'topright' }).addTo(map);
+    // Keep the OSM data credit (required by their license) but drop the
+    // "Leaflet" flag/logo prefix — it's just noise on a small map.
+    L.control.attribution({ prefix: false }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
@@ -656,12 +667,18 @@ const MapDashboard: React.FC = () => {
       }
     });
 
-    // FORCED CENTER FIX: Aggressively snap to Iba after 300ms to correct responsive shifts
+    // FORCED CENTER FIX: Aggressively snap to Iba after 300ms to correct responsive shifts.
+    // Use a slightly closer zoom on narrow/portrait screens (phones) than on wide
+    // desktop viewports — otherwise the fixed town boundary leaves a lot of the
+    // (intentionally darkened) fog-of-war area showing above/below the map on
+    // tall screens, which reads as a big dead/black strip behind the floating UI.
     t1 = setTimeout(() => {
       if (mapRef.current) {
         mapRef.current.invalidateSize();
         if (!searchParams.get('lat')) {
-          mapRef.current.setView([15.348781, 119.997669], 13);
+          const el = mapContainerRef.current;
+          const isPortrait = !!el && el.clientHeight > el.clientWidth;
+          mapRef.current.setView([15.348781, 119.997669], isPortrait ? 14 : 13);
         }
       }
     }, 300);
@@ -920,7 +937,7 @@ const MapDashboard: React.FC = () => {
 
       {/* Top Left: Title & Stats (Glassmorphic) */}
       <div className="absolute top-3 left-3 md:top-4 md:left-4 z-[1000] flex flex-col gap-2 pointer-events-none">
-        <div className="glass-panel p-3 md:p-4 rounded-xl text-theme-fg shadow-xl min-w-[140px] md:min-w-[180px] pointer-events-auto">
+        <div className="glass-panel p-2.5 md:p-4 rounded-xl text-theme-fg shadow-xl min-w-[120px] md:min-w-[180px] pointer-events-auto">
           <h3 className="font-extrabold text-xs md:text-base mb-1 bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent text-outline">SafePath Iba</h3>
             <div className="flex flex-col gap-1 mt-2">
               <div className="flex justify-between items-center text-xs">
@@ -941,26 +958,120 @@ const MapDashboard: React.FC = () => {
              )}
           </div>
         </div>
-      </div>
 
-      {/* Bottom Left: Heatmap Legend (Static Scale) */}
-      <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[1000]">
-        <HeatmapLegend />
-      </div>
+        {/* Layers collapses into a small icon button + popover (same on every screen
+            size), kept on the left below the stats card so it never sits over
+            Leaflet's zoom control, which is anchored top-right. */}
+        <div className="relative pointer-events-auto">
+          {mobileLayersOpen && (
+            <div className="absolute top-full left-0 mt-2 glass-panel p-3 rounded-xl text-theme-fg shadow-xl flex flex-col gap-2 w-[190px]">
+              <h3 className="text-[9px] font-bold text-indigo-100 uppercase tracking-wider text-outline">Layers</h3>
+              <button
+                onClick={() => {
+                  const next = !showIncidentsHeat;
+                  setIncidentsHeat(next);
+                  showIncidentsHeatRef.current = next;
+                  setSelectedReportId(null);
+                  setSelectedRatingId(null);
+                  if (next && mapRef.current) fetchMapData();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                  showIncidentsHeat ? 'bg-orange-500/20 border-orange-500/50' : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
+                <span className="text-outline">Incident Heat</span>
+              </button>
+              <button
+                onClick={() => {
+                  const next = !showRatingsHeat;
+                  setRatingsHeat(next);
+                  showRatingsHeatRef.current = next;
+                  setSelectedReportId(null);
+                  setSelectedRatingId(null);
+                  if (next && mapRef.current) fetchMapData();
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                  showRatingsHeat ? 'bg-violet-500/20 border-violet-500/50' : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
+                <span className="text-outline">Safety Heat</span>
+              </button>
 
-      {/* Bottom Right: Guest Info Overlays */}
-      {!user && (
-        <div className="absolute bottom-6 right-6 md:bottom-12 md:right-12 z-[1000] flex flex-col gap-4 md:gap-6 max-w-[260px] md:max-w-[480px] pointer-events-none">
-          <div className="glass-panel p-5 md:p-8 rounded-2xl border border-theme-border/40 animate-in slide-in-from-right duration-500 backdrop-blur-xl shadow-2xl">
-            <h4 className="text-sm md:text-2xl font-black text-indigo-300 mb-2 md:mb-3 text-outline tracking-tight">Community Reports</h4>
-            <p className="text-[11px] md:text-base text-theme-fg font-medium leading-relaxed text-outline opacity-90">Submit incident reports to alert others about potential hazards or safety concerns in your area.</p>
-          </div>
-          <div className="glass-panel p-5 md:p-8 rounded-2xl border border-theme-border/40 animate-in slide-in-from-right duration-700 backdrop-blur-xl shadow-2xl">
-            <h4 className="text-sm md:text-2xl font-black text-emerald-300 mb-2 md:mb-3 text-outline tracking-tight">Street Ratings</h4>
-            <p className="text-[11px] md:text-base text-theme-fg font-medium leading-relaxed text-outline opacity-90">Rate the safety and accessibility of streets based on lighting, pedestrian facilities, and overall security.</p>
-          </div>
+              <div className="mt-1 pt-2 border-t border-theme-border space-y-2">
+                <button
+                  onClick={() => setIsDateModalOpen(true)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold transition-all border ${
+                    dateRange.from ? 'bg-indigo-500/20 border-indigo-500/50' : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3 text-white dark:text-indigo-400" />
+                    <span className="text-outline">{dateRange.from ? 'Filtered Dates' : 'Filter by Date'}</span>
+                  </div>
+                  {dateRange.from && <span className="text-[8px] opacity-70 text-outline">Active</span>}
+                </button>
+                {dateRange.from && dateLabel && (
+                  <div className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                    <p className="text-[9px] font-semibold text-center leading-tight text-outline">{dateLabel}</p>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    const todayStr = `${yyyy}-${mm}-${dd}`;
+                    setDateRange({ from: todayStr, to: todayStr });
+                    setDateLabel(today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
+                >
+                  <Calendar className="w-3 h-3" />
+                  Present day
+                </button>
+                {dateRange.from && (
+                  <button
+                    onClick={() => {
+                      setDateRange({ from: null, to: null });
+                      setDateLabel(null);
+                    }}
+                    className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-theme-fg-muted hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
+                  >
+                    <FilterX className="w-3 h-3" />
+                    Reset Time Range
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setMobileLayersOpen(v => !v)}
+            className={`w-11 h-11 flex items-center justify-center rounded-full glass-panel shadow-xl text-theme-fg transition-all ${mobileLayersOpen ? 'ring-2 ring-indigo-400/60' : ''}`}
+            aria-label="Toggle map layers"
+          >
+            <Layers className="w-5 h-5" />
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* Bottom Left: Heatmap Legend collapses into a small icon button + popover (same on every screen size, wplace.live-style minimal chrome) */}
+      <div className="absolute bottom-4 left-4 z-[1000]">
+        {mobileLegendOpen && (
+          <div className="absolute bottom-full left-0 mb-2">
+            <HeatmapLegend />
+          </div>
+        )}
+        <button
+          onClick={() => setMobileLegendOpen(v => !v)}
+          className={`w-11 h-11 flex items-center justify-center rounded-full glass-panel shadow-xl text-theme-fg transition-all ${mobileLegendOpen ? 'ring-2 ring-indigo-400/60' : ''}`}
+          aria-label="Toggle heatmap legend"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* Directions map-click mode banner */}
       {directionsSelectionTarget && (
@@ -972,168 +1083,100 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Top Right: Layer Toggles & Action Buttons */}
-      <div className="absolute top-3 right-3 md:top-4 md:right-4 z-[1000] flex flex-col gap-2 md:gap-4 w-[160px] md:w-[220px]">
-        {/* Heatmap Layer Toggles (Glassmorphic) */}
-        <div className="glass-panel p-3 md:p-4 rounded-xl text-theme-fg shadow-xl flex flex-col gap-2 md:gap-3">
-          <h3 className="text-[9px] md:text-[10px] font-bold text-indigo-100 uppercase tracking-wider text-outline">Layers</h3>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => {
-                const next = !showIncidentsHeat;
-                // Update store + ref synchronously so the consolidated rendering
-                // effect (which fires after this render) reads the correct value.
-                setIncidentsHeat(next);
-                showIncidentsHeatRef.current = next;
-                setSelectedReportId(null);
-                setSelectedRatingId(null);
-                // When enabling, fetch fresh data for the current date filter.
-                // When disabling, the consolidated effect will call
-                // updateIncidentsHeatmap which clears the canvas and shows pins.
-                if (next && mapRef.current) {
-                  fetchMapData();
-                }
-              }}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-                showIncidentsHeat 
-                  ? 'bg-orange-500/20 border-orange-500/50' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${showIncidentsHeat ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-700'}`} />
-              <span className="text-outline">Incident Heat</span>
-            </button>
-            <button
-              onClick={() => {
-                const next = !showRatingsHeat;
-                setRatingsHeat(next);
-                showRatingsHeatRef.current = next;
-                setSelectedReportId(null);
-                setSelectedRatingId(null);
-                if (next && mapRef.current) {
-                  fetchMapData();
-                }
-              }}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-                showRatingsHeat 
-                  ? 'bg-violet-500/20 border-violet-500/50' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${showRatingsHeat ? 'bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]' : 'bg-slate-700'}`} />
-              <span className="text-outline">Safety Heat</span>
-            </button>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-theme-border space-y-2">
-            <button
-              onClick={() => setIsDateModalOpen(true)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-bold transition-all border ${
-                dateRange.from 
-                  ? 'bg-indigo-500/20 border-indigo-500/50' 
-                  : 'bg-theme-panel/50 border-theme-border text-theme-fg-muted'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3 h-3 text-white dark:text-indigo-400" />
-                <span className="text-outline">{dateRange.from ? 'Filtered Dates' : 'Filter by Date'}</span>
-              </div>
-              {dateRange.from && <span className="text-[8px] opacity-70 text-outline">Active</span>}
-            </button>
-            {dateRange.from && dateLabel && (
-              <div className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                <p className="text-[9px] font-semibold text-center leading-tight text-outline">{dateLabel}</p>
-              </div>
-            )}
-            
-            <button
-              onClick={() => {
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                const todayStr = `${yyyy}-${mm}-${dd}`;
-                setDateRange({ from: todayStr, to: todayStr });
-                setDateLabel(today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
-              }}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300"
-            >
-              <Calendar className="w-3 h-3" />
-              Present day
-            </button>
-
-            {dateRange.from && (
-              <button
-                onClick={() => {
-                  setDateRange({ from: null, to: null });
-                  setDateLabel(null);
-                }}
-                className="w-full flex items-center justify-center gap-1 py-1 text-[9px] text-theme-fg-muted hover:text-red-400 transition-colors uppercase tracking-widest font-bold"
-              >
-                <FilterX className="w-3 h-3" />
-                Reset Time Range
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2">
-          {/* Directions button */}
+      {/* Report/rating placement mode banner */}
+      {selectionMode && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1600]">
           <button
-            onClick={() => {
-              setDirectionsOpen(!directionsOpen);
-              if (directionsOpen) clearRoutesFromMap();
-              // Close report/rating selection if open
-              setSelectionMode(null);
-            }}
-            className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md border ${
-              directionsOpen
-                ? 'bg-indigo-500/30 border-indigo-400/50 text-indigo-200'
-                : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-300/50'
-            }`}
+            onClick={() => { setSelectionMode(null); setSelectedIncidentTypeId(null); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-white shadow-2xl border border-orange-400/40 animate-pulse"
+            style={{ background: 'rgba(194,65,12,0.85)', backdropFilter: 'blur(12px)' }}
           >
-            <Navigation className="w-3 md:w-3.5 h-3 md:h-3.5" />
-            {directionsOpen ? 'Close' : 'Directions'}
-          </button>
-
-          {/* Dynamic Incident Type Buttons */}
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {incidentTypes.map(type => {
-              const isSelected = selectionMode === 'report' && selectedIncidentTypeId === type.id;
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectionMode(null);
-                      setSelectedIncidentTypeId(null);
-                    } else {
-                      setSelectionMode('report');
-                      setSelectedIncidentTypeId(type.id);
-                    }
-                  }}
-                  disabled={directionsOpen}
-                  title={directionsOpen ? 'Close Directions panel first' : undefined}
-                  className={`w-full ${isSelected ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-2 py-2 rounded-lg text-[11px] font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 leading-tight text-center`}
-                >
-                  {isSelected ? 'Cancel' : type.name}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => setSelectionMode(selectionMode === 'rating' ? null : 'rating')}
-            disabled={directionsOpen}
-            title={directionsOpen ? 'Close Directions panel first' : undefined}
-            className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-[10px] md:text-xs font-extrabold transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-lg backdrop-blur-md flex items-center justify-center gap-2 border disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100`}
-          >
-            {selectionMode === 'rating' ? 'Cancel' : 'Road Safety'}
+            Tap the map to place your {selectionMode === 'rating' ? 'street rating' : 'report'}
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
+      )}
+
+      {/* Primary action FAB + bottom sheet consolidating Directions / Report / Road Safety (same on every screen size) */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
+        <button
+          onClick={() => setMobileActionsOpen(v => !v)}
+          className="flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-indigo-600 text-white font-extrabold text-sm shadow-2xl shadow-indigo-600/30 active:scale-95 transition-all"
+        >
+          <Plus className={`w-5 h-5 transition-transform ${mobileActionsOpen ? 'rotate-45' : ''}`} />
+          Report
+        </button>
       </div>
 
+      {mobileActionsOpen && (
+        <>
+          <div
+            className="absolute inset-0 z-[1650] bg-black/40"
+            onClick={() => setMobileActionsOpen(false)}
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 z-[1700] rounded-t-2xl border-t border-white/10 shadow-2xl p-4 pb-6 flex flex-col gap-2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:bottom-24 md:w-[380px] md:rounded-2xl md:border"
+            style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(2,6,23,0.99) 100%)', backdropFilter: 'blur(24px)' }}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-1 md:hidden" />
 
+            <button
+              onClick={() => {
+                setDirectionsOpen(!directionsOpen);
+                if (directionsOpen) clearRoutesFromMap();
+                setSelectionMode(null);
+                setMobileActionsOpen(false);
+              }}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-extrabold transition-all border ${
+                directionsOpen
+                  ? 'bg-indigo-500/30 border-indigo-400/50 text-indigo-200'
+                  : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-300/50'
+              }`}
+            >
+              <Navigation className="w-4 h-4" />
+              {directionsOpen ? 'Close Directions' : 'Directions'}
+            </button>
+
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {incidentTypes.map(type => {
+                const isSelected = selectionMode === 'report' && selectedIncidentTypeId === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectionMode(null);
+                        setSelectedIncidentTypeId(null);
+                      } else {
+                        setSelectionMode('report');
+                        setSelectedIncidentTypeId(type.id);
+                      }
+                      setMobileActionsOpen(false);
+                    }}
+                    disabled={directionsOpen}
+                    title={directionsOpen ? 'Close Directions panel first' : undefined}
+                    className={`w-full ${isSelected ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-2 py-3 rounded-lg text-xs font-extrabold transition-all border disabled:opacity-40 disabled:cursor-not-allowed leading-tight text-center`}
+                  >
+                    {isSelected ? 'Cancel' : type.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectionMode(selectionMode === 'rating' ? null : 'rating');
+                setMobileActionsOpen(false);
+              }}
+              disabled={directionsOpen}
+              title={directionsOpen ? 'Close Directions panel first' : undefined}
+              className={`w-full ${selectionMode === 'rating' ? 'bg-blue-200 shadow-blue-300/40 text-blue-900 border-blue-300/50' : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300/50'} px-4 py-3 rounded-lg text-sm font-extrabold transition-all border disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+            >
+              {selectionMode === 'rating' ? 'Cancel' : 'Road Safety'}
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Directions Panel */}
       {directionsOpen && (

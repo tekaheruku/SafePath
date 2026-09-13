@@ -67,7 +67,19 @@ const SafetyChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div
+      // z-[1800]: Leaflet's own panes (tiles/markers/popups) use z-index up to
+      // 700 and share this stacking context (no ancestor isolates them), so a
+      // low z-index here would let the map tiles paint over this widget once
+      // they load on pages where the map fills the screen — sit above the
+      // map's own floating controls (z-[1000]-[1700]) but below full-screen
+      // modals (z-[2000]) so those can still cover it when open.
+      className="fixed z-[1800] flex flex-col items-end"
+      style={{
+        bottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+        right: 'calc(1.5rem + env(safe-area-inset-right))',
+      }}
+    >
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -94,7 +106,7 @@ const SafetyChatWidget: React.FC = () => {
               </div>
             )}
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-2">
               {messages.length === 0 && (
                 <p className="text-xs text-theme-fg-muted">
                   Tell me what's happening (e.g. "someone is choking") and I'll share basic first-aid steps while help is on the way.

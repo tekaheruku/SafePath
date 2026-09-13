@@ -7,6 +7,7 @@ import { useAuth } from '../../components/AuthContext';
 import { DateFilterModal } from '../../components/DateFilterModal';
 import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check } from 'lucide-react';
 import { ADMIN_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus } from '@safepath/shared';
+import { resolvePhotoUrl } from '../../lib/photoUrl';
 
 export default function IncidentsPage() {
   const { user, token } = useAuth();
@@ -294,10 +295,10 @@ export default function IncidentsPage() {
 
                 {r.photo_url && (
                   <div className="mb-3">
-                    <img 
-                      src={r.photo_url} 
-                      alt="Incident Photo" 
-                      className="w-full h-32 object-cover rounded-lg border border-theme-border" 
+                    <img
+                      src={resolvePhotoUrl(r.photo_url) ?? undefined}
+                      alt="Incident Photo"
+                      className="w-full h-32 object-cover rounded-lg border border-theme-border"
                     />
                   </div>
                 )}
