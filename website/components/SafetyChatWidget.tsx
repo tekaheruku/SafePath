@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircleHeart, Send, X, AlertTriangle } from 'lucide-react';
+import { useMapStore } from '../store/useMapStore';
 
 interface DisplayMessage {
   role: 'user' | 'assistant';
@@ -20,6 +21,7 @@ const SafetyChatWidget: React.FC = () => {
   const [escalate, setEscalate] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isActionSheetOpen = useMapStore((s) => s.isActionSheetOpen);
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_STORAGE_KEY) : null;
@@ -66,14 +68,21 @@ const SafetyChatWidget: React.FC = () => {
     }
   };
 
+  // The map's mobile Directions/Report/Road Safety sheet renders inside the
+  // map's own `position: fixed` panel, which always opens its own stacking
+  // context — no z-index on this widget could ever be made to lose to that
+  // sheet from outside it, so we hide the widget outright while it's open
+  // instead of fighting stacking contexts.
+  if (isActionSheetOpen) return null;
+
   return (
     <div
       // z-[1800]: Leaflet's own panes (tiles/markers/popups) use z-index up to
       // 700 and share this stacking context (no ancestor isolates them), so a
       // low z-index here would let the map tiles paint over this widget once
       // they load on pages where the map fills the screen — sit above the
-      // map's own floating controls (z-[1000]-[1700]) but below full-screen
-      // modals (z-[2000]) so those can still cover it when open.
+      // map's own floating controls but below full-screen modals (z-[2000])
+      // so those can still cover it when open.
       className="fixed z-[1800] flex flex-col items-end"
       style={{
         bottom: 'calc(1.5rem + env(safe-area-inset-bottom))',

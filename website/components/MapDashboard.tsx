@@ -141,9 +141,10 @@ const MapDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ reports: 0, heatmapPoints: 0 });
   
-  const { 
+  const {
     lat: storeLat, lng: storeLng, zoom: storeZoom, setView,
-    showIncidentsHeat, showRatingsHeat, setIncidentsHeat, setRatingsHeat
+    showIncidentsHeat, showRatingsHeat, setIncidentsHeat, setRatingsHeat,
+    setActionSheetOpen
   } = useMapStore();
 
   // Directions store
@@ -189,6 +190,12 @@ const MapDashboard: React.FC = () => {
   // on small screens.
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  // Let the layout-level chat widget know so it can hide itself instead of
+  // floating on top of this sheet's buttons (see useMapStore's comment).
+  useEffect(() => {
+    setActionSheetOpen(mobileActionsOpen);
+    return () => setActionSheetOpen(false);
+  }, [mobileActionsOpen, setActionSheetOpen]);
   const [mobileLegendOpen, setMobileLegendOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<L.LatLng | null>(null);
   const [selectionMode, setSelectionMode] = useState<'report' | 'rating' | null>(null);
