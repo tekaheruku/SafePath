@@ -225,3 +225,24 @@ export interface PaginationParams {
     sort_by?: string;
     sort_order?: 'asc' | 'desc';
 }
+
+export type ChatRole = 'user' | 'assistant' | 'system';
+
+export interface ChatMessage {
+    id: string;
+    session_id: string;
+    role: ChatRole;
+    content: string;
+    created_at: string;
+}
+
+export interface ChatSendRequest {
+    session_id?: string;
+    message: string;
+}
+
+export interface ChatSendResponse {
+    session_id: string;
+    reply: string;
+    escalate: boolean;
+}

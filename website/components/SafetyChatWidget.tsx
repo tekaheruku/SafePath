@@ -1,0 +1,150 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+import { AnimatePresence, motion } from 'framer-motion';
+import { MessageCircleHeart, Send, X, AlertTriangle } from 'lucide-react';
+
+interface DisplayMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const SESSION_STORAGE_KEY = 'safepath_chat_session_id';
+
+const SafetyChatWidget: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [escalate, setEscalate] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_STORAGE_KEY) : null;
+    if (stored) setSessionId(stored);
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, isOpen]);
+
+  const sendMessage = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || isSending) return;
+
+    setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
+    setInput('');
+    setIsSending(true);
+
+    try {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/chat/messages`, {
+        session_id: sessionId,
+        message: trimmed,
+      });
+      const { session_id, reply, escalate: shouldEscalate } = res.data.data;
+      setSessionId(session_id);
+      if (typeof window !== 'undefined') sessionStorage.setItem(SESSION_STORAGE_KEY, session_id);
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      if (shouldEscalate) setEscalate(true);
+    } catch (err) {
+      console.error('Failed to send chat message:', err);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry, something went wrong reaching the assistant. Please try again, and make sure officials have been notified.' },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="glass-panel rounded-xl w-[340px] max-w-[90vw] h-[480px] max-h-[70vh] flex flex-col mb-3 overflow-hidden"
+          >
+            <div className="px-4 py-3 border-b border-theme-border flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-theme-fg text-sm">Safety Assistant</p>
+                <p className="text-xs text-theme-fg-muted">Basic guidance only — not a substitute for professional medical care.</p>
+              </div>
+              <button onClick={() => setIsOpen(false)} className="text-theme-fg-muted hover:text-theme-fg shrink-0">
+                <X size={18} />
+              </button>
+            </div>
+
+            {escalate && (
+              <div className="mx-3 mt-3 flex items-start gap-2 rounded-lg bg-red-500/15 border border-red-500/30 px-3 py-2 text-xs text-red-300">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <span>If this is a life-threatening emergency, call your local emergency number now. Officials will take over care when they arrive.</span>
+              </div>
+            )}
+
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+              {messages.length === 0 && (
+                <p className="text-xs text-theme-fg-muted">
+                  Tell me what's happening (e.g. "someone is choking") and I'll share basic first-aid steps while help is on the way.
+                </p>
+              )}
+              {messages.map((m, i) => (
+                <div
+                  key={i}
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                    m.role === 'user'
+                      ? 'ml-auto bg-theme-accent text-white'
+                      : 'mr-auto bg-theme-panel text-theme-fg'
+                  }`}
+                >
+                  {m.content}
+                </div>
+              ))}
+              {isSending && <p className="text-xs text-theme-fg-muted">Thinking…</p>}
+            </div>
+
+            <div className="p-3 border-t border-theme-border flex items-center gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Describe the situation…"
+                className="flex-1 bg-theme-panel border border-theme-border rounded-lg px-3 py-2 text-sm text-theme-fg placeholder:text-theme-fg-muted focus:outline-none focus:border-theme-border-hover"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={isSending || !input.trim()}
+                className="p-2 rounded-lg bg-theme-accent text-white disabled:opacity-50"
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <button
+        onClick={() => setIsOpen((o) => !o)}
+        className="glass-panel rounded-full p-4 text-theme-fg hover:text-theme-accent transition-colors"
+        aria-label="Open safety assistant"
+      >
+        <MessageCircleHeart size={24} />
+      </button>
+    </div>
+  );
+};
+
+export default SafetyChatWidget;

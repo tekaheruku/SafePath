@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AppNav from '../components/AppNav'
+import SafetyChatWidget from '../components/SafetyChatWidget'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -30,6 +31,7 @@ export default function RootLayout({
             <footer className="border-t border-theme-border py-6 text-center text-theme-fg-muted text-sm">
               &copy; {new Date().getFullYear()} SafePath. All rights reserved.
             </footer>
+            <SafetyChatWidget />
           </AuthProvider>
         </ThemeProvider>
       </body>

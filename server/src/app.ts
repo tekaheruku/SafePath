@@ -16,6 +16,7 @@ import { VoteController } from './controllers/votes.js';
 import { RoutesController } from './controllers/routes.js';
 import { IncidentConfigController } from './controllers/incident_config.js';
 import { UploadController, upload } from './controllers/upload.js';
+import { ChatController } from './controllers/chat.js';
 import { authMiddleware, roleMiddleware, optionalAuthMiddleware } from './middleware/auth.js';
 import { ADMIN_ROLES } from '@safepath/shared';
 import path from 'path';
@@ -78,6 +79,10 @@ app.post(`${apiRoot}/reports/:id/confirm`, authMiddleware, roleMiddleware(ADMIN_
 app.post(`${apiRoot}/reports/:id/falsify`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.falsifyReport(req, res));
 app.post(`${apiRoot}/reports/:id/restore`, authMiddleware, roleMiddleware(ADMIN_ROLES), (req, res) => ReportController.restoreReport(req, res));
 app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
+
+// Chat / Safety Assistant
+app.post(`${apiRoot}/chat/messages`, optionalAuthMiddleware, (req, res) => ChatController.sendMessage(req, res));
+app.get(`${apiRoot}/chat/sessions/:id`, optionalAuthMiddleware, (req, res) => ChatController.getHistory(req, res));
 
 // Configs
 app.get(`${apiRoot}/incident-types`, (req, res) => IncidentConfigController.getIncidentTypes(req, res));
