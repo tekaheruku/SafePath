@@ -18,7 +18,12 @@ export class HeatmapService {
     const filterAny = filter as any;
     const start_date = filterAny.start_date && filterAny.start_date !== 'null' && filterAny.start_date !== '' ? filterAny.start_date : null;
     const end_date = filterAny.end_date && filterAny.end_date !== 'null' && filterAny.end_date !== '' ? filterAny.end_date : null;
-    const days_back = filterAny.days_back || 30;
+    // Only restrict by recency when the caller explicitly asks for it (a date
+    // range, or an explicit daysBack) — matching /api/reports and /api/ratings,
+    // which show all matching data unless a filter is given. Defaulting this to
+    // 30 days made the heatmap silently drop older confirmed reports/ratings
+    // that the individual-pin views still displayed.
+    const days_back = filterAny.days_back || null;
 
     const params: any[] = [
       filter.min_longitude,
@@ -35,17 +40,19 @@ export class HeatmapService {
       timeFilterR = `AND r.created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
       timeFilter  = `AND created_at BETWEEN $5::timestamptz AND $6::timestamptz`;
       params.push(start_date, end_date);
-    } else {
+    } else if (days_back) {
       timeFilterR = `AND r.created_at >= NOW() - ($5::text || ' days')::interval`;
       timeFilter  = `AND created_at >= NOW() - ($5::text || ' days')::interval`;
       params.push(days_back);
     }
 
     // Interval for recency weight calculation
-    const intervalExpr = start_date && end_date 
-      ? `(($6::timestamptz - $5::timestamptz))` 
-      : `($5::text || ' days')::interval`;
-    
+    const intervalExpr = start_date && end_date
+      ? `(($6::timestamptz - $5::timestamptz))`
+      : days_back
+        ? `($5::text || ' days')::interval`
+        : `INTERVAL '30 days'`;
+
     // Reference time for recency (NOW() or end_date)
     const refTime = start_date && end_date ? `$6::timestamptz` : `NOW()`;
 

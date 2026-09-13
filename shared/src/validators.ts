@@ -34,7 +34,12 @@ export const heatmapFilterSchema = Joi.object({
   max_latitude: Joi.number().required(),
   min_longitude: Joi.number().required(),
   max_longitude: Joi.number().required(),
-  days_back: Joi.number().min(1).max(365).default(30),
+  // No default here: the heatmap should show all matching confirmed data by
+  // default, same as the individual report/rating pins. A default of 30 here
+  // used to silently hide anything older than 30 days from the heatmap only,
+  // making it look empty/broken even when reports existed and displayed fine
+  // as pins.
+  days_back: Joi.number().min(1).max(365).optional(),
   // Use plain .string() here — Joi's built-in .isoDate() only accepts
   // bare date strings (YYYY-MM-DD) and silently rejects full ISO-8601
   // datetimes like "2026-06-07T16:00:00.000Z", causing the dates to be
