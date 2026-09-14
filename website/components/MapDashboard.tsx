@@ -1137,7 +1137,36 @@ const MapDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Primary action FAB + bottom sheet consolidating Directions / Report / Road Safety (same on every screen size) */}
+      {/* Directions FAB — sits beside the Safety Assistant widget (which is fixed at
+          bottom-right in the root layout) rather than inside the Report sheet, since
+          directions are navigation, not a report. Rendered from MapDashboard so it only
+          ever appears on the map tab. Hidden while the Report sheet is open, for the same
+          stacking-context reason SafetyChatWidget hides itself. */}
+      {!mobileActionsOpen && (
+        <button
+          onClick={() => {
+            setDirectionsOpen(!directionsOpen);
+            if (directionsOpen) clearRoutesFromMap();
+            setSelectionMode(null);
+          }}
+          aria-label={directionsOpen ? 'Close directions' : 'Open directions'}
+          title={directionsOpen ? 'Close Directions' : 'Directions'}
+          className={`fixed z-[1800] rounded-full p-4 transition-colors ${
+            directionsOpen
+              ? 'bg-indigo-500/30 border border-indigo-400/50 text-indigo-200'
+              : 'glass-panel text-theme-fg hover:text-theme-accent'
+          }`}
+          style={{
+            bottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+            // 1.5rem gutter + the 56px Safety Assistant button + a 12px gap.
+            right: 'calc(1.5rem + 68px + env(safe-area-inset-right))',
+          }}
+        >
+          <Navigation size={24} />
+        </button>
+      )}
+
+      {/* Primary action FAB + bottom sheet for Report / Road Safety (same on every screen size) */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
         <button
           onClick={() => setMobileActionsOpen(v => !v)}
@@ -1159,23 +1188,6 @@ const MapDashboard: React.FC = () => {
             style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(2,6,23,0.99) 100%)', backdropFilter: 'blur(24px)' }}
           >
             <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-1 md:hidden" />
-
-            <button
-              onClick={() => {
-                setDirectionsOpen(!directionsOpen);
-                if (directionsOpen) clearRoutesFromMap();
-                setSelectionMode(null);
-                setMobileActionsOpen(false);
-              }}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-extrabold transition-all border ${
-                directionsOpen
-                  ? 'bg-indigo-500/30 border-indigo-400/50 text-indigo-200'
-                  : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border-indigo-300/50'
-              }`}
-            >
-              <Navigation className="w-4 h-4" />
-              {directionsOpen ? 'Close Directions' : 'Directions'}
-            </button>
 
             <div className="grid grid-cols-2 gap-2 mt-1">
               {incidentTypes.map(type => {
