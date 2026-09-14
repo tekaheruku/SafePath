@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../components/AuthContext';
@@ -17,7 +17,16 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(5);
 
+  // The token is single-use: the server clears it on the first successful call.
+  // React re-runs effects whenever AuthContext re-renders (login() is not memoized),
+  // so without this guard a second request fires with an already-consumed token and
+  // overwrites the success state with 'Invalid or expired verification link.'
+  const hasRun = useRef(false);
+
   const verify = useCallback(async () => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     if (!token) {
       setStatus('error');
       setErrorMessage('No verification token found. Please check the link in your email.');
@@ -36,7 +45,8 @@ function VerifyEmailContent() {
       setErrorMessage(msg);
       setStatus('error');
     }
-  }, [token, login]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   useEffect(() => {
     verify();
