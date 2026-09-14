@@ -219,11 +219,12 @@ const InputField: React.FC<InputFieldProps> = ({
 /* ── Route Card ──────────────────────────────────────────────────────────── */
 interface RouteCardProps {
   route: ScoredRoute;
-  rank: number;
+  /** Omitted when this is the only route shown — no list position to rank. */
+  rank?: number;
   isSelected: boolean;
   isRecommended: boolean;
   recommendedLabel: string;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecommended, recommendedLabel, onClick }) => {
@@ -232,7 +233,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => { onClick?.(); setExpanded(v => !v); }}
       className={`cursor-pointer rounded-xl border transition-all duration-200 overflow-hidden ${
         isSelected
           ? `${color.bg} ring-1 ${color.ring} border-white/20`
@@ -254,12 +255,14 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
 
       {/* Main row */}
       <div className="p-3.5 flex items-center gap-3">
-        {/* Rank badge */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black border ${
-          isSelected ? 'bg-white/20 border-white/30 text-white' : 'bg-white/5 border-white/10 text-white/60'
-        }`}>
-          {rank}
-        </div>
+        {/* Rank badge — only meaningful when this card sits in a list */}
+        {rank !== undefined && (
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black border ${
+            isSelected ? 'bg-white/20 border-white/30 text-white' : 'bg-white/5 border-white/10 text-white/60'
+          }`}>
+            {rank}
+          </div>
+        )}
 
         {/* Core info */}
         <div className="flex-1 min-w-0">
@@ -513,11 +516,6 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
     setEndPoint(tmp);
   };
 
-  const handleRouteCardClick = (rank: number) => {
-    setSelectedRouteIndex(rank);
-    onRouteSelected(rank);
-  };
-
   const handleRouteModeChange = (mode: RouteMode) => {
     setRouteMode(mode);
     // The store auto-updates selectedRouteIndex; sync to map
@@ -533,10 +531,6 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
     onClose();
   };
 
-  // null in safest mode means "no safety opinion" — badge nothing rather than
-  // silently crowning card 0.
-  const currentRecommendedIndex =
-    routeMode === 'safest' ? safestRecommendedIndex : balancedRecommendedIndex;
   const currentModeConfig = ROUTE_MODES.find(m => m.id === routeMode)!;
 
   return (
@@ -751,56 +745,55 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
             </div>
           )}
 
-          {/* Route cards */}
-          {!isLoading && !error && routes.length > 0 && (
-            <div className="flex flex-col gap-2.5">
-              {/* Safety scoring failed — say so rather than passing the shortest
-                  route off as the safest one. */}
-              {safetyDegraded && (
-                <div
-                  className="flex items-start gap-2 rounded-xl px-3 py-2.5 border"
-                  style={{
-                    backgroundColor: 'rgba(245,158,11,0.12)',
-                    borderColor: 'rgba(245,158,11,0.3)',
-                  }}
-                >
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-200/90 leading-relaxed">
-                    Safety data unavailable — routes below are <strong>not</strong> safety-ranked.
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-bold text-white/50 uppercase tracking-wider">
-                  {routes.length} route{routes.length !== 1 ? 's' : ''} found
-                </p>
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: currentModeConfig.color === 'emerald' ? '#22c55e' : '#f59e0b' }}>
+          {/* Route card — exactly one route: whichever the active mode
+              (Safest / Shortest) recommends. We still fetch and score several
+              candidate routes behind the scenes (that's what lets safest and
+              shortest genuinely differ), but showing all of them as a pickable
+              list read as a random grab-bag of routes rather than a clear
+              choice, so only the single relevant one is shown here. Switching
+              the Safest/Shortest toggle above swaps which one that is. */}
+          {!isLoading && !error && routes.length > 0 && (() => {
+            const shownRoute = routes[selectedRouteIndex] ?? routes[0];
+            return (
+              <div className="flex flex-col gap-2.5">
+                {/* Safety scoring failed — say so rather than passing the shortest
+                    route off as the safest one. */}
+                {safetyDegraded && (
+                  <div
+                    className="flex items-start gap-2 rounded-xl px-3 py-2.5 border"
+                    style={{
+                      backgroundColor: 'rgba(245,158,11,0.12)',
+                      borderColor: 'rgba(245,158,11,0.3)',
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-200/90 leading-relaxed">
+                      Safety data unavailable — this route is <strong>not</strong> safety-ranked.
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: currentModeConfig.color === 'emerald' ? '#22c55e' : '#f59e0b' }}>
                   {currentModeConfig.icon}
                   <span className="font-bold">{currentModeConfig.label}</span>
                 </div>
-              </div>
-              {routes.map((route, i) => (
                 <RouteCard
-                  key={route.index}
-                  route={route}
-                  rank={i + 1}
-                  isSelected={selectedRouteIndex === i}
-                  isRecommended={currentRecommendedIndex !== null && i === currentRecommendedIndex}
+                  route={shownRoute}
+                  isSelected={true}
+                  isRecommended={true}
                   recommendedLabel={
                     routeMode === 'safest'
-                      ? (route.reasons?.[0]
-                          ? `✦ Recommended — ${route.reasons[0]}`
-                          : '✦ Recommended — Highest Safety')
-                      : '✦ Recommended — Shortest Route'
+                      ? (shownRoute.reasons?.[0]
+                          ? `✦ ${shownRoute.reasons[0]}`
+                          : '✦ Highest Safety')
+                      : '✦ Shortest Route'
                   }
-                  onClick={() => handleRouteCardClick(i)}
                 />
-              ))}
-              <p className="text-[11px] text-white/25 text-center mt-1 leading-relaxed">
-                Safety scores powered by community street ratings in SafePath's database
-              </p>
-            </div>
-          )}
+                <p className="text-[11px] text-white/25 text-center mt-1 leading-relaxed">
+                  Safety scores powered by community street ratings in SafePath's database
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

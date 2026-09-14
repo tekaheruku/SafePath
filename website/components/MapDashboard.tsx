@@ -869,32 +869,29 @@ const MapDashboard: React.FC = () => {
     routeMarkersRef.current.forEach(m => m.remove());
     routeMarkersRef.current = [];
 
-    if (routes.length === 0) return;
+    // Several candidate routes are scored behind the scenes (that's what lets
+    // Safest and Shortest genuinely differ), but only the one the active mode
+    // recommends is ever drawn — dimmed alternate lines read as clutter rather
+    // than a meaningful choice. The Directions panel mirrors this: it shows
+    // this same single route as its one card.
+    const selected = routes[selectedIdx];
+    if (!selected) return;
 
-    routes.forEach((route, i) => {
-      const isSelected = i === selectedIdx;
-      const color = routePolylineColor(route.riskScore);
-      // Geometry is in [lng, lat] order; Leaflet needs [lat, lng]
-      const latlngs: [number, number][] = route.geometry.map(([lng, lat]) => [lat, lng]);
+    const color = routePolylineColor(selected.riskScore);
+    // Geometry is in [lng, lat] order; Leaflet needs [lat, lng]
+    const latlngs: [number, number][] = selected.geometry.map(([lng, lat]) => [lat, lng]);
 
-      // Unselected routes: thinner, semi-transparent
-      const polyline = L.polyline(latlngs, {
-        color,
-        weight: isSelected ? 6 : 3,
-        opacity: isSelected ? 0.92 : 0.38,
-        lineCap: 'round',
-        lineJoin: 'round',
-        dashArray: isSelected ? undefined : '8, 6',
-        // Bring selected route to front via pane z-index
-        pane: isSelected ? 'markerPane' : 'overlayPane',
-      }).addTo(mapRef.current!);
-
-      routePolylinesRef.current.push(polyline);
-    });
+    const polyline = L.polyline(latlngs, {
+      color,
+      weight: 6,
+      opacity: 0.92,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(mapRef.current!);
+    routePolylinesRef.current.push(polyline);
 
     // Start and end markers for the selected route
-    const selected = routes[selectedIdx];
-    if (selected && selected.geometry.length >= 2) {
+    if (selected.geometry.length >= 2) {
       const [startLng, startLat] = selected.geometry[0];
       const [endLng, endLat] = selected.geometry[selected.geometry.length - 1];
 
