@@ -15,6 +15,10 @@ export const API_ENDPOINTS = {
     REPORTS_UPDATE: (id: string) => `/reports/${id}`,
     REPORTS_DELETE: (id: string) => `/reports/${id}`,
     REPORTS_COMMENTS: (id: string) => `/reports/${id}/comments`,
+    REPORTS_NEARBY_SIMILAR: "/reports/nearby-similar",
+    COMMENT_DELETE: (id: string) => `/comments/${id}`,
+    COMMENT_VOTE: (id: string) => `/comments/${id}/vote`,
+    COMMENT_REPORT: (id: string) => `/comments/${id}/report`,
     REPORTS_CONFIRM: (id: string) => `/reports/${id}/confirm`,
     REPORTS_FALSIFY: (id: string) => `/reports/${id}/falsify`,
     REPORTS_RESTORE: (id: string) => `/reports/${id}/restore`,
@@ -50,6 +54,22 @@ export const REPORT_REVIEW_ACTIONS = {
     FALSIFY: "Falsify",
     RESTORE: "Restore",
 } as const;
+
+// A pending report is flagged as community-suspicious once it collects enough
+// downvotes and they clearly outweigh upvotes. This is a display-only signal
+// for admins reviewing the queue — it never changes report status on its own.
+export const SUSPICIOUS_VOTE_THRESHOLD = {
+    MIN_DOWNVOTES: 3,
+    DOWNVOTE_TO_UPVOTE_RATIO: 2,
+};
+
+// Vote-ratio thresholds (downvotes : upvotes) used to derive a plausibility tier
+// from community voting alone, so it can be combined with the AI plausibility
+// score even on reports the AI has not scored. Display-only, like the threshold above.
+export const VOTE_PLAUSIBILITY_RATIOS = {
+    UNCERTAIN: 2, // downvotes >= 2x upvotes -> "uncertain"
+    LIKELY_FALSE: 3, // downvotes >= 3x upvotes -> "likely false"
+};
 
 export const APP_ROUTES = {
     HOME: "/",

@@ -126,6 +126,9 @@ export default function SettingsPage() {
   };
 
   const submitFinalPasswordChange = async () => {
+    if (!window.confirm('Are you sure you want to change your password?')) {
+      return;
+    }
     setIsSubmitting(true);
     setMessage(null);
     try {

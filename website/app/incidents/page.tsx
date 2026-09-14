@@ -5,9 +5,61 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthContext';
 import { DateFilterModal } from '../../components/DateFilterModal';
-import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check } from 'lucide-react';
-import { ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus } from '@safepath/shared';
+import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check, AlertTriangle, ShieldAlert, MessageCircle } from 'lucide-react';
+import { ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus, VOTE_PLAUSIBILITY_RATIOS } from '@safepath/shared';
 import { resolvePhotoUrl } from '../../lib/photoUrl';
+import CommentThread from '../../components/CommentThread';
+
+type PlausibilityTier = 'likely_false' | 'uncertain' | 'plausible';
+
+const TIER_RANK: Record<PlausibilityTier, number> = { likely_false: 0, uncertain: 1, plausible: 2 };
+
+// Derives a plausibility tier from community votes alone, so old reports (and
+// reports the AI hasn't scored yet) still get a useful signal.
+function getVoteTier(upvotes: number, downvotes: number): PlausibilityTier | null {
+  if (!upvotes && !downvotes) return null;
+  if (!downvotes) return 'plausible';
+  const ratio = upvotes > 0 ? downvotes / upvotes : Infinity;
+  if (ratio >= VOTE_PLAUSIBILITY_RATIOS.LIKELY_FALSE) return 'likely_false';
+  if (ratio >= VOTE_PLAUSIBILITY_RATIOS.UNCERTAIN) return 'uncertain';
+  return 'plausible';
+}
+
+function getAiTier(score: number | null | undefined): PlausibilityTier | null {
+  if (typeof score !== 'number') return null;
+  if (score < 0.4) return 'likely_false';
+  if (score < 0.7) return 'uncertain';
+  return 'plausible';
+}
+
+// Combines the AI plausibility score with the community vote ratio, taking
+// whichever signal is more cautious (lower tier) when both are available.
+function getCombinedTier(aiTier: PlausibilityTier | null, voteTier: PlausibilityTier | null): PlausibilityTier | null {
+  if (aiTier && voteTier) return TIER_RANK[aiTier] <= TIER_RANK[voteTier] ? aiTier : voteTier;
+  return aiTier ?? voteTier;
+}
+
+// Corroborating comments (and their votes) count toward a report's credibility the
+// same way report-level upvotes do, so a well-supported report reads as more
+// plausible without needing more duplicate report rows.
+function getTotalVotes(r: any): { upvotes: number; downvotes: number } {
+  return {
+    upvotes: (r.upvotes_count || 0) + (r.comment_upvotes_total || 0),
+    downvotes: (r.downvotes_count || 0) + (r.comment_downvotes_total || 0),
+  };
+}
+
+const TIER_LABELS: Record<PlausibilityTier, string> = {
+  likely_false: 'Likely False',
+  uncertain: 'Uncertain',
+  plausible: 'Plausible',
+};
+
+const TIER_STYLES: Record<PlausibilityTier, string> = {
+  likely_false: 'bg-red-500/20 text-red-400 border-red-500/30',
+  uncertain: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  plausible: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+};
 
 export default function IncidentsPage() {
   const { user, token } = useAuth();
@@ -30,6 +82,7 @@ export default function IncidentsPage() {
   const [dateRange, setDateRange] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
   const [dateLabel, setDateLabel] = useState<string | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [selectedCommentsReportId, setSelectedCommentsReportId] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -66,6 +119,24 @@ export default function IncidentsPage() {
   useEffect(() => {
     fetchReports();
   }, [dateRange, selectedType, activeTab, isAdmin, token]);
+
+  // For the pending-review queue, surface the most likely-false reports first so
+  // admins triage them ahead of straightforward, plausible ones (assist-only —
+  // it only affects display order, never the status itself).
+  const displayedReports = isAdmin && activeTab === REPORT_STATUS.PENDING
+    ? [...reports].sort((a, b) => {
+        const riskScore = (r: any) => {
+          let risk = 0;
+          const totals = getTotalVotes(r);
+          const tier = getCombinedTier(getAiTier(r.ai_plausibility_score), getVoteTier(totals.upvotes, totals.downvotes));
+          if (tier) risk += (2 - TIER_RANK[tier]); // likely_false=2, uncertain=1, plausible=0
+          if (r.is_vote_flagged) risk += 1;
+          if (typeof r.trust_score === 'number') risk += (1 - r.trust_score) * 0.5;
+          return risk;
+        };
+        return riskScore(b) - riskScore(a);
+      })
+    : reports;
 
   const handleReportClick = (r: any) => {
     if (!r.location?.coordinates) return;
@@ -269,7 +340,7 @@ export default function IncidentsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {reports.map((r: any) => (
+          {displayedReports.map((r: any) => (
             <div 
               key={r.id} 
               onClick={() => handleReportClick(r)}
@@ -283,6 +354,40 @@ export default function IncidentsPage() {
                     {isAdmin && r.status === REPORT_STATUS.PENDING && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
                         Pending
+                      </span>
+                    )}
+                    {/* Plausibility badge (admin only, assist signal — never changes status automatically).
+                        Combines the AI score with the community vote ratio, taking whichever signal
+                        is more cautious, so old reports with only votes (no AI score) still get a rating. */}
+                    {isAdmin && (() => {
+                      const aiTier = getAiTier(r.ai_plausibility_score);
+                      const totals = getTotalVotes(r);
+                      const voteTier = getVoteTier(totals.upvotes, totals.downvotes);
+                      const tier = getCombinedTier(aiTier, voteTier);
+                      if (!tier) return null;
+                      const tooltip = [r.ai_flag_reason, voteTier && voteTier !== aiTier ? `Community votes (incl. comments): ${totals.upvotes} up / ${totals.downvotes} down` : null]
+                        .filter(Boolean)
+                        .join(' — ') || undefined;
+                      return (
+                        <span
+                          title={tooltip}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1 ${TIER_STYLES[tier]}`}
+                        >
+                          <ShieldAlert className="w-3 h-3" />
+                          {TIER_LABELS[tier]}
+                        </span>
+                      );
+                    })()}
+                    {isAdmin && r.status === REPORT_STATUS.PENDING && r.ai_plausibility_score === null && !getTotalVotes(r).upvotes && !getTotalVotes(r).downvotes && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-500/20 text-theme-fg-muted border border-slate-500/30 uppercase tracking-wider">
+                        Scoring…
+                      </span>
+                    )}
+                    {/* Vote-based flag (admin only, assist signal) */}
+                    {isAdmin && r.is_vote_flagged && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 uppercase tracking-wider flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Community Flagged
                       </span>
                     )}
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
@@ -314,19 +419,36 @@ export default function IncidentsPage() {
                   <div>
                     <span className="block text-[11px] font-semibold text-theme-fg">By: {r.author_name || 'Anonymous'}</span>
                     <span className="text-[10px]">{new Date(r.created_at).toLocaleDateString()}</span>
+                    {isAdmin && typeof r.trust_score === 'number' && (
+                      <span className="block text-[10px] text-theme-fg-muted">
+                        Trust: {Math.round(r.trust_score * 100)}% ({r.confirmed_reports_count || 0} confirmed / {r.falsified_reports_count || 0} false)
+                      </span>
+                    )}
                   </div>
                   
-                  {/* Delete button (owner or admin) */}
-                  {user && (user.id === r.user_id || isAdmin) && (
-                    <button 
-                      onClick={(e) => handleDelete(e, r.id)}
-                      className="px-2.5 py-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                      title="Delete Report"
+                  <div className="flex items-center gap-1.5">
+                    {/* Comments — supporting evidence/discussion instead of a duplicate report */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedCommentsReportId(r.id); }}
+                      className="px-2.5 py-1 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                      title="View comments"
                     >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Delete</span>
+                      <MessageCircle className="w-3 h-3" />
+                      <span>{r.comment_count || 0}</span>
                     </button>
-                  )}
+
+                    {/* Delete button (owner or admin) */}
+                    {user && (user.id === r.user_id || isAdmin) && (
+                      <button
+                        onClick={(e) => handleDelete(e, r.id)}
+                        className="px-2.5 py-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                        title="Delete Report"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Verification Actions (LGU admin only). Pending reports can be
@@ -370,6 +492,10 @@ export default function IncidentsPage() {
         initialFrom={dateRange.from}
         initialTo={dateRange.to}
       />
+
+      {selectedCommentsReportId && (
+        <CommentThread reportId={selectedCommentsReportId} onClose={() => setSelectedCommentsReportId(null)} />
+      )}
     </div>
   );
 }

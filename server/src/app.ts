@@ -13,6 +13,7 @@ import { ReportController } from './controllers/reports.js';
 import { HeatmapController } from './controllers/heatmap.js';
 import { StreetRatingController } from './controllers/street_ratings.js';
 import { VoteController } from './controllers/votes.js';
+import { CommentController } from './controllers/comments.js';
 import { RoutesController } from './controllers/routes.js';
 import { IncidentConfigController } from './controllers/incident_config.js';
 import { UploadController, upload } from './controllers/upload.js';
@@ -71,6 +72,7 @@ app.post(`${apiRoot}/auth/verify-id`, authMiddleware, (req, res) => AuthControll
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
 app.get(`${apiRoot}/reports`, optionalAuthMiddleware, (req, res) => ReportController.listReports(req, res));
 app.get(`${apiRoot}/reports/archive`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.listArchivedReports(req, res));
+app.get(`${apiRoot}/reports/nearby-similar`, optionalAuthMiddleware, (req, res) => ReportController.nearbySimilar(req, res));
 app.get(`${apiRoot}/reports/stats/:userId`, (req, res) => ReportController.getUserStats(req, res));
 app.get(`${apiRoot}/reports/:id`, optionalAuthMiddleware, (req, res) => ReportController.getReport(req, res));
 app.put(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.updateReport(req, res));
@@ -79,6 +81,12 @@ app.post(`${apiRoot}/reports/:id/confirm`, authMiddleware, roleMiddleware(REPORT
 app.post(`${apiRoot}/reports/:id/falsify`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.falsifyReport(req, res));
 app.post(`${apiRoot}/reports/:id/restore`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.restoreReport(req, res));
 app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
+
+app.get(`${apiRoot}/reports/:id/comments`, optionalAuthMiddleware, (req, res) => CommentController.listComments(req, res));
+app.post(`${apiRoot}/reports/:id/comments`, authMiddleware, (req, res) => CommentController.createComment(req, res));
+app.delete(`${apiRoot}/comments/:id`, authMiddleware, (req, res) => CommentController.deleteComment(req, res));
+app.post(`${apiRoot}/comments/:id/vote`, authMiddleware, (req, res) => CommentController.castVote(req, res));
+app.post(`${apiRoot}/comments/:id/report`, authMiddleware, (req, res) => CommentController.reportComment(req, res));
 
 // Chat / Safety Assistant
 app.post(`${apiRoot}/chat/messages`, optionalAuthMiddleware, (req, res) => ChatController.sendMessage(req, res));

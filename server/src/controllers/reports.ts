@@ -8,13 +8,13 @@ import { ReportService } from '../services/report.js';
 import {
   createReportSchema,
   updateReportSchema,
-  createCommentSchema,
   paginationSchema,
   validateSync,
 } from '@safepath/shared/validators';
 import { IBA_POLYGON, isPointInPolygon, REPORT_STATUS } from '@safepath/shared';
 import { HeatmapService } from '../services/heatmap.js';
 import { SocketEventBroadcaster } from '../utils/socket-broadcaster.js';
+import { ReportClassifierService } from '../services/report-classifier.js';
 
 export class ReportController {
   /**
@@ -34,6 +34,21 @@ export class ReportController {
 
       // Broadcast new report
       SocketEventBroadcaster.broadcastNewReport(report as any);
+
+      // Score plausibility in the background so LLM latency never delays report creation.
+      ReportService.getReportById(report.id)
+        .then((fullReport) => ReportClassifierService.scoreReport({
+          description: data.description,
+          incidentTypeName: fullReport?.incident_type_name,
+          severityLevelName: fullReport?.severity_level_name,
+        }))
+        .then(async ({ plausibility, reason }) => {
+          const scoredReport = await ReportService.updateAiScore(report.id, plausibility, reason);
+          if (scoredReport) {
+            SocketEventBroadcaster.broadcastReportUpdate(scoredReport);
+          }
+        })
+        .catch((error) => console.error('Failed to score report plausibility:', error));
 
       // Regenerate heatmap for the area
       const bufferDegrees = 0.05;
@@ -439,6 +454,40 @@ export class ReportController {
       res.status(500).json({
         success: false,
         error: { code: 'INTERNAL_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/reports/nearby-similar
+   * Advisory only: surfaces recent, active reports of the same incident type near a
+   * location so a submitter can be nudged toward commenting instead of duplicating.
+   * Never blocks report creation.
+   */
+  static async nearbySimilar(req: Request, res: Response): Promise<void> {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      const incidentTypeId = req.query.incident_type_id as string;
+
+      if (!lat || !lng || !incidentTypeId) {
+        throw new Error('lat, lng, and incident_type_id are required');
+      }
+
+      const reports = await ReportService.findNearbySimilar(lat, lng, incidentTypeId);
+
+      res.json({
+        success: true,
+        data: reports,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: error.message },
         timestamp: new Date().toISOString(),
         request_id: req.id,
       });

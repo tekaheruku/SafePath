@@ -21,8 +21,9 @@ export const updateReportSchema = Joi.object({
 });
 
 export const createCommentSchema = Joi.object({
-  comment: Joi.string().pattern(/[a-zA-Z0-9]/).message('Comment must contain at least one alphanumeric character').required(),
-});
+  content: Joi.string().allow('', null),
+  photo_url: Joi.string().uri({ allowRelative: true }).allow('', null),
+}).or('content', 'photo_url');
 
 export const paginationSchema = Joi.object({
   page: Joi.number().min(1).default(1),

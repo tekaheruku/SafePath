@@ -60,6 +60,16 @@ export class SocketEventBroadcaster {
   }
 
   /**
+   * Broadcast comment deletion
+   */
+  static broadcastCommentDelete(reportId: string, commentId: string): void {
+    if (!this.io) return;
+
+    console.log(`[Socket.IO] Broadcasting comment deletion: ${commentId} on report ${reportId}`);
+    this.io.emit(SOCKET_EVENTS.COMMENT_DELETED, { report_id: reportId, id: commentId });
+  }
+
+  /**
    * Broadcast heatmap update
    */
   static broadcastHeatmapUpdate(heatmapData: HeatmapPoint[]): void {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,6 +9,7 @@ import { useAuth } from './AuthContext';
 import Link from 'next/link';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import LoginModal from './LoginModal';
+import CommentThread from './CommentThread';
 
 import { IncidentType, SeverityLevel } from '@safepath/shared';
 
@@ -45,6 +46,9 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [nearbyReports, setNearbyReports] = useState<any[]>([]);
+  const [dismissedNearbyNudge, setDismissedNearbyNudge] = useState(false);
+  const [commentsReportId, setCommentsReportId] = useState<string | null>(null);
 
   // Auto-select the first severity level if available, or just the middle one if possible
   const sortedSeverityLevels = [...severityLevels].sort((a, b) => a.level - b.level);
@@ -64,7 +68,27 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
 
   const selectedSeverityId = watch('severity_level_id');
   const selectedSeverity = sortedSeverityLevels.find(s => s.id === selectedSeverityId);
-  const selectedIncidentType = incidentTypes.find(t => t.id === watch('incident_type_id'));
+  const watchedIncidentTypeId = watch('incident_type_id');
+  const selectedIncidentType = incidentTypes.find(t => t.id === watchedIncidentTypeId);
+
+  // Soft, non-blocking nudge: if a recent report of the same type already exists
+  // nearby, suggest commenting on it instead of filing a duplicate. The user can
+  // always dismiss this and submit their own report anyway.
+  useEffect(() => {
+    if (!watchedIncidentTypeId) {
+      setNearbyReports([]);
+      return;
+    }
+    setDismissedNearbyNudge(false);
+    const timeout = setTimeout(() => {
+      axios.get(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports/nearby-similar`, {
+        params: { lat: location.lat, lng: location.lng, incident_type_id: watchedIncidentTypeId },
+      })
+        .then(res => setNearbyReports(res.data.data || []))
+        .catch(() => setNearbyReports([]));
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [watchedIncidentTypeId, location.lat, location.lng]);
 
   const onSubmit = async (data: ReportFormValues) => {
     // Authentication Check
@@ -138,6 +162,36 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
           <div className="text-xs text-amber-200/80 leading-relaxed">
             Your account is unverified. Reports from unverified accounts may be given lower priority. 
             <Link href="/settings" className="text-amber-400 hover:underline ml-1 font-semibold">Verify in Settings</Link>
+          </div>
+        </div>
+      )}
+      {!dismissedNearbyNudge && nearbyReports.length > 0 && (
+        <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs text-indigo-200/90 leading-relaxed">
+              {nearbyReports.length} similar report{nearbyReports.length > 1 ? 's' : ''} already nearby. Consider adding a supporting comment instead of a new report.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDismissedNearbyNudge(true)}
+              className="text-indigo-300/70 hover:text-indigo-200 text-xs font-bold shrink-0"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {nearbyReports.map((nr) => (
+              <div key={nr.id} className="flex items-center justify-between gap-2 bg-theme-panel/50 rounded-lg p-2">
+                <p className="text-xs text-theme-fg-muted line-clamp-1 flex-1">{nr.description || nr.incident_type_name}</p>
+                <button
+                  type="button"
+                  onClick={() => setCommentsReportId(nr.id)}
+                  className="text-[11px] font-bold px-2 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 transition-colors"
+                >
+                  View & Comment
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -241,6 +295,16 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
           </button>
         </div>
       </form>
+
+      {commentsReportId && (
+        <CommentThread
+          reportId={commentsReportId}
+          onClose={() => {
+            setCommentsReportId(null);
+            onCancel();
+          }}
+        />
+      )}
     </div>
   );
 };

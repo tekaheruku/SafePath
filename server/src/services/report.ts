@@ -1,5 +1,14 @@
 import { pool } from '../config/database.js';
-import { Report, ReportWithUser, ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, ReportStatus } from '@safepath/shared';
+import { Report, ReportWithUser, ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, ReportStatus, SUSPICIOUS_VOTE_THRESHOLD } from '@safepath/shared';
+
+const VOTE_FLAG_SQL = `(r.downvotes_count >= ${SUSPICIOUS_VOTE_THRESHOLD.MIN_DOWNVOTES} AND r.downvotes_count > r.upvotes_count * ${SUSPICIOUS_VOTE_THRESHOLD.DOWNVOTE_TO_UPVOTE_RATIO})`;
+
+// Aggregated comment vote totals feed into the frontend's plausibility tier alongside
+// report-level votes and the AI score, so well-corroborated comments raise credibility too.
+const COMMENT_AGGREGATE_SQL = `
+             COALESCE((SELECT SUM(upvotes_count) FROM report_comments WHERE report_id = r.id), 0) as comment_upvotes_total,
+             COALESCE((SELECT SUM(downvotes_count) FROM report_comments WHERE report_id = r.id), 0) as comment_downvotes_total,
+             (SELECT COUNT(*) FROM report_comments WHERE report_id = r.id) as comment_count`;
 
 /**
  * Single reusable SQL filter for confirmed reports (public map and public feed visibility)
@@ -126,7 +135,11 @@ export class ReportService {
       SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
+             r.ai_plausibility_score, r.ai_flag_reason,
+             ${VOTE_FLAG_SQL} as is_vote_flagged,
+             ${COMMENT_AGGREGATE_SQL},
              u.name as author_name,
+             u.trust_score, u.confirmed_reports_count, u.falsified_reports_count,
              it.name as incident_type_name, it.icon as incident_type_icon,
              sl.name as severity_level_name, sl.color_code as severity_level_color
              ${filters?.currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $${paramIndex}) as user_vote` : ''}
@@ -206,7 +219,11 @@ export class ReportService {
       SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
+             r.ai_plausibility_score, r.ai_flag_reason,
+             ${VOTE_FLAG_SQL} as is_vote_flagged,
+             ${COMMENT_AGGREGATE_SQL},
              u.name as author_name,
+             u.trust_score, u.confirmed_reports_count, u.falsified_reports_count,
              it.name as incident_type_name, it.icon as incident_type_icon,
              sl.name as severity_level_name, sl.color_code as severity_level_color
              ${currentUserId ? `, (SELECT vote_type FROM report_votes WHERE report_id = r.id AND user_id = $2) as user_vote` : ''}
@@ -222,7 +239,10 @@ export class ReportService {
   }
 
   /**
-   * Update report status (admin/LGU action: confirm, falsify, restore)
+   * Update report status (admin/LGU action: confirm, falsify, restore).
+   * Confirming or falsifying a report that was previously pending also recomputes
+   * the reporting user's trust score, so only first-time decisions count — a later
+   * restore-then-decide-again cycle must not double count.
    */
   static async updateReportStatus(id: string, status: ReportStatus, userRole: string): Promise<any> {
     const canReview = REPORT_REVIEW_ROLES.includes(userRole as any);
@@ -230,16 +250,62 @@ export class ReportService {
       throw new Error('Forbidden: Only LGU officials can update report status');
     }
 
-    const query = `
-      UPDATE reports 
-      SET status = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING id, user_id, incident_type_id, severity_level_id, description, 
-                ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, status, created_at, updated_at
-    `;
-    const result = await pool.query(query, [status, id]);
-    if (result.rowCount === 0) throw new Error('Report not found');
-    return result.rows[0];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const current = await client.query('SELECT user_id, status FROM reports WHERE id = $1 FOR UPDATE', [id]);
+      if (current.rowCount === 0) throw new Error('Report not found');
+      const { user_id: reportUserId, status: previousStatus } = current.rows[0];
+
+      const updateResult = await client.query(
+        `UPDATE reports
+         SET status = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, user_id, incident_type_id, severity_level_id, description,
+                   ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, status, created_at, updated_at`,
+        [status, id]
+      );
+
+      const isFirstTimeDecision = previousStatus === REPORT_STATUS.PENDING;
+      if (isFirstTimeDecision && (status === REPORT_STATUS.CONFIRMED || status === REPORT_STATUS.FALSIFIED)) {
+        const countColumn = status === REPORT_STATUS.CONFIRMED ? 'confirmed_reports_count' : 'falsified_reports_count';
+        // Increment the relevant count, then recompute trust_score from the fresh totals
+        // using Laplace smoothing so a single early falsified report doesn't zero out a new user.
+        await client.query(
+          `UPDATE users SET ${countColumn} = ${countColumn} + 1 WHERE id = $1`,
+          [reportUserId]
+        );
+        await client.query(
+          `UPDATE users
+           SET trust_score = (confirmed_reports_count + 1)::float / (confirmed_reports_count + falsified_reports_count + 2)
+           WHERE id = $1`,
+          [reportUserId]
+        );
+      }
+
+      await client.query('COMMIT');
+      return updateResult.rows[0];
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Persist an AI plausibility score computed asynchronously after report creation.
+   */
+  static async updateAiScore(id: string, plausibility: number | null, reason: string | null): Promise<any> {
+    const result = await pool.query(
+      `UPDATE reports SET ai_plausibility_score = $1, ai_flag_reason = $2 WHERE id = $3
+       RETURNING id, user_id, incident_type_id, severity_level_id, description,
+                 ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, status,
+                 ai_plausibility_score, ai_flag_reason, created_at, updated_at`,
+      [plausibility, reason, id]
+    );
+    return result.rows[0] || null;
   }
 
   static async updateReport(id: string, userId: string, data: any): Promise<any> {
@@ -293,5 +359,35 @@ export class ReportService {
 
     const result = await pool.query(query, params);
     if (result.rowCount === 0) throw new Error('Report not found or Unauthorized');
+  }
+
+  /**
+   * Find recent, active reports of the same incident type near a location — used to
+   * softly nudge a submitter toward commenting on an existing report instead of
+   * filing a duplicate. Never blocks submission; purely advisory.
+   */
+  static async findNearbySimilar(
+    lat: number,
+    lng: number,
+    incidentTypeId: string,
+    radiusMeters: number = 150,
+    hoursBack: number = 48
+  ): Promise<any[]> {
+    const query = `
+      SELECT r.id, r.description, r.status, r.created_at,
+             ST_AsGeoJSON(r.location)::json as location,
+             ST_Distance(r.location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance_meters,
+             it.name as incident_type_name
+      FROM reports r
+      LEFT JOIN incident_types it ON r.incident_type_id = it.id
+      WHERE r.incident_type_id = $3
+        AND r.status IN ('${REPORT_STATUS.PENDING}', '${REPORT_STATUS.CONFIRMED}')
+        AND r.created_at >= NOW() - ($4::text || ' hours')::interval
+        AND ST_DWithin(r.location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+      ORDER BY distance_meters ASC
+      LIMIT 5
+    `;
+    const result = await pool.query(query, [lng, lat, incidentTypeId, hoursBack, radiusMeters]);
+    return result.rows;
   }
 }

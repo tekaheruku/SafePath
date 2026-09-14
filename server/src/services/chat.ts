@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { db } from '../config/knex.js';
 import { ChatRole } from '@safepath/shared';
 import { FIRST_AID_DISCLAIMER, matchFirstAidTopic, shouldEscalate } from '../data/first-aid-topics.js';
+import { getLlmClient, getLlmModel } from './llm-client.js';
 
 const SYSTEM_PROMPT = `You are the SafePath Safety Assistant, a chat helper inside an incident-reporting app.
 You help someone at the scene of an incident (accident, injury, roadside emergency, etc.) figure out
@@ -19,20 +20,6 @@ Boundaries — do not cross these:
 - If the situation is genuinely unclear, ask ONE short clarifying question before giving steps.
 - Keep replies concise (a handful of short sentences or a short numbered list), calm, and easy to follow
   under stress. End with a brief reminder that officials will take over full care when they arrive.`;
-
-let client: OpenAI | null = null;
-
-// Points at a local Ollama server (OpenAI-compatible /v1 API), not OpenAI's hosted API.
-function getClient(): OpenAI {
-  if (!client) {
-    client = new OpenAI({
-      baseURL: process.env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
-      apiKey: 'ollama', // ignored by Ollama, but the SDK requires a non-empty string
-      timeout: 30_000,
-    });
-  }
-  return client;
-}
 
 export interface ChatReply {
   sessionId: string;
@@ -78,7 +65,7 @@ export class ChatService {
   }
 
   private static async getLlmReply(sessionId: string, message: string): Promise<string> {
-    const openai = getClient();
+    const openai = getLlmClient();
 
     try {
       const history = await ChatService.getHistory(sessionId);
@@ -88,7 +75,7 @@ export class ChatService {
       ];
 
       const completion = await openai.chat.completions.create({
-        model: process.env.LOCAL_LLM_MODEL || 'llama3.2:3b',
+        model: getLlmModel(),
         messages,
         max_tokens: 250,
         temperature: 0.3,

@@ -16,6 +16,7 @@ import StreetRatingForm from './StreetRatingForm';
 import HeatmapLegend from './HeatmapLegend';
 import { DateFilterModal } from './DateFilterModal';
 import { resolvePhotoUrl } from '../lib/photoUrl';
+import CommentThread from './CommentThread';
 
 import DirectionsPanel from './DirectionsPanel';
 import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation, Layers, Plus, HelpCircle, BarChart3 } from 'lucide-react';
@@ -48,20 +49,9 @@ const IBA_POLYGON: [number, number][] = [[15.363195, 120.16533], [15.400907, 120
 
 // ── Stable Fog-of-War Layer ────────────────────────────────────────────────
 function createFogLayer(map: L.Map): () => void {
-  // Create an SVG element with filters for the glow
-  const svg = L.SVG.create('svg');
-  svg.innerHTML = `
-    <defs>
-      <filter id="fog-inner-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="15" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="out" />
-      </filter>
-    </defs>
-  `;
-  map.getPane('overlayPane')?.appendChild(svg);
-
-  // Use a dedicated SVG renderer with high padding to reduce repositioning frequency/lag
-  const fogRenderer = L.svg({ padding: 1.0 });
+  // Padding 1.0 made the SVG surface 3x the viewport in each axis — 9x the area
+  // to rasterize on every zoom. 0.2 still absorbs normal panning.
+  const fogRenderer = L.svg({ padding: 0.2 });
 
   // Define World Bounds for the inverted polygon
   const WORLD_BOUNDS: [number, number][] = [
@@ -73,38 +63,48 @@ function createFogLayer(map: L.Map): () => void {
     fillColor: '#080c1c',
     fillOpacity: 0.88,
     weight: 1,
-    color: 'rgba(100, 160, 255, 0.8)', // Glowing edge color
+    color: 'rgba(100, 160, 255, 0.8)',
     className: 'fog-of-war-polygon',
     interactive: false,
     pane: 'overlayPane',
     renderer: fogRenderer
   }).addTo(map);
 
-  // Add a dedicated glowing edge layer on top
-  const glowLayer = L.polygon(IBA_POLYGON, {
+  // The glow is two stacked strokes — a wide translucent halo under a narrow
+  // bright edge — rather than an feGaussianBlur filter. An SVG filter has to be
+  // re-rasterized every time the map scales, which is the expensive part of a
+  // zoom; stroked paths are drawn straight by the renderer.
+  const haloLayer = L.polygon(IBA_POLYGON, {
     fill: false,
-    weight: 4,
+    weight: 10,
     color: '#64a0ff',
+    opacity: 0.18,
     className: 'fog-glow-edge',
     interactive: false,
     pane: 'overlayPane',
     renderer: fogRenderer
   }).addTo(map);
 
-  // Apply the SVG filter and backdrop-filter via CSS
+  const glowLayer = L.polygon(IBA_POLYGON, {
+    fill: false,
+    weight: 2.5,
+    color: '#8fc0ff',
+    opacity: 0.95,
+    className: 'fog-glow-edge',
+    interactive: false,
+    pane: 'overlayPane',
+    renderer: fogRenderer
+  }).addTo(map);
+
+  // No backdrop-filter and no will-change here. backdrop-filter re-blurs the
+  // tiles underneath every frame the map moves; will-change/translateZ pins a
+  // viewport-sized compositor layer that buys nothing, since Leaflet transforms
+  // the SVG container rather than these paths.
   const style = document.createElement('style');
   style.innerHTML = `
-    .fog-of-war-polygon {
-      backdrop-filter: grayscale(1) brightness(0.35);
-      -webkit-backdrop-filter: grayscale(1) brightness(0.35);
-      pointer-events: none !important;
-      will-change: transform, opacity;
-      transform: translateZ(0);
-    }
+    .fog-of-war-polygon,
     .fog-glow-edge {
-      filter: url(#fog-inner-glow);
       pointer-events: none !important;
-      will-change: transform;
     }
   `;
 
@@ -112,8 +112,8 @@ function createFogLayer(map: L.Map): () => void {
 
   return () => {
     map.removeLayer(fogLayer);
+    map.removeLayer(haloLayer);
     map.removeLayer(glowLayer);
-    if (svg.parentNode) svg.parentNode.removeChild(svg);
     if (style.parentNode) style.parentNode.removeChild(style);
   };
 }
@@ -126,6 +126,25 @@ function routePolylineColor(riskScore: number): string {
   if (riskScore <= 2.5) return '#f59e0b';
   return '#ef4444';
 }
+
+// ── Pin icons ──────────────────────────────────────────────────────────────
+function pinIcon(className: string, fill: string): L.DivIcon {
+  return L.divIcon({
+    className,
+    html: `
+      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="${fill}"/>
+        <circle cx="15" cy="15" r="5" fill="white"/>
+      </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+    popupAnchor: [0, -40],
+  });
+}
+
+const IncidentIcon = pinIcon('custom-pin-incident', '#f97316');
+const PendingIncidentIcon = pinIcon('custom-pin-incident-pending', '#6b7280');
+const RatingIcon = pinIcon('custom-pin-rating', '#3b82f6');
 
 const MapDashboard: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -142,11 +161,15 @@ const MapDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ reports: 0, heatmapPoints: 0 });
   
-  const {
-    lat: storeLat, lng: storeLng, zoom: storeZoom, setView,
-    showIncidentsHeat, showRatingsHeat, setIncidentsHeat, setRatingsHeat,
-    setActionSheetOpen
-  } = useMapStore();
+  // One selector per value, and deliberately NOT lat/lng/zoom. Subscribing to the
+  // whole store meant every moveend and zoomend — which call setView — re-rendered
+  // this entire component, even though nothing here reads the stored position.
+  const setView = useMapStore((s) => s.setView);
+  const showIncidentsHeat = useMapStore((s) => s.showIncidentsHeat);
+  const showRatingsHeat = useMapStore((s) => s.showRatingsHeat);
+  const setIncidentsHeat = useMapStore((s) => s.setIncidentsHeat);
+  const setRatingsHeat = useMapStore((s) => s.setRatingsHeat);
+  const setActionSheetOpen = useMapStore((s) => s.setActionSheetOpen);
 
   // Directions store
   const {
@@ -206,6 +229,7 @@ const MapDashboard: React.FC = () => {
   const [incidentTypes, setIncidentTypes] = useState<IncidentType[]>([]);
   const [severityLevels, setSeverityLevels] = useState<SeverityLevel[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [selectedCommentsReportId, setSelectedCommentsReportId] = useState<string | null>(null);
   // Ref that always holds the latest dateRange so stale closures (socket handlers,
   // window.deleteReport, etc.) always read the current filter value.
   const dateRangeRef = useRef<{ from: string | null; to: string | null }>({ from: null, to: null });
@@ -239,26 +263,28 @@ const MapDashboard: React.FC = () => {
     }
   }, [searchParams, router]);
 
-  // Consolidated Rendering Effect: The single source of truth for map visual state
+  // Each layer redraws only on the state it actually reads. Redrawing all four
+  // from one effect meant e.g. toggling the ratings heat tore down and rebuilt
+  // every incident marker and its popup HTML too.
   useEffect(() => {
     if (!mapRef.current) return;
-    
-    // Clear and redraw everything in sync
     updateMarkers(reports);
+  }, [reports, selectedReportId, showIncidentsHeat, user]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
     updateRatingMarkers(ratings);
+  }, [ratings, selectedRatingId, showRatingsHeat, user]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
     updateIncidentsHeatmap(incidentHeatPoints);
+  }, [incidentHeatPoints, selectedReportId, showIncidentsHeat]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
     updateRatingsHeatmap(ratingHeatPoints);
-  }, [
-    reports, 
-    ratings, 
-    incidentHeatPoints, 
-    ratingHeatPoints, 
-    selectedReportId, 
-    selectedRatingId, 
-    showIncidentsHeat, 
-    showRatingsHeat, 
-    dateRange
-  ]);
+  }, [ratingHeatPoints, selectedRatingId, showRatingsHeat]);
 
   useEffect(() => {
     if (selectionMode) {
@@ -269,57 +295,17 @@ const MapDashboard: React.FC = () => {
 
 
 
-  // Custom Pin Icons
-  const IncidentIcon = L.divIcon({
-    className: 'custom-pin-incident',
-    html: `
-      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
-        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#f97316"/>
-        <circle cx="15" cy="15" r="5" fill="white"/>
-      </svg>`,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42],
-    popupAnchor: [0, -40]
-  });
-
-  const PendingIncidentIcon = L.divIcon({
-    className: 'custom-pin-incident-pending',
-    html: `
-      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
-        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#6b7280"/>
-        <circle cx="15" cy="15" r="5" fill="white"/>
-      </svg>`,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42],
-    popupAnchor: [0, -40]
-  });
-
-  const RatingIcon = L.divIcon({
-    className: 'custom-pin-rating',
-    html: `
-      <svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
-        <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#3b82f6"/>
-        <circle cx="15" cy="15" r="5" fill="white"/>
-      </svg>`,
-    iconSize: [30, 42],
-    iconAnchor: [15, 42],
-    popupAnchor: [0, -40]
-  });
-
   const fetchMapData = async () => {
     // Always read from the ref so stale closures (socket handlers, delete/vote
     // handlers) use the current date filter rather than the value at the time
     // the closure was created.
     const currentDateRange = dateRangeRef.current;
 
+    // Old data is deliberately left on the map until the new data arrives: clearing
+    // it first tore down and rebuilt every marker twice per fetch. The `loading`
+    // flag drives the "Fetching live data..." indicator instead.
     setLoading(true);
     setError(null);
-    
-    // Clear old data immediately to provide visual feedback that filtering is active
-    setReports([]);
-    setRatings([]);
-    setIncidentHeatPoints([]);
-    setRatingHeatPoints([]);
 
     try {
       const b = {
@@ -441,6 +427,10 @@ const MapDashboard: React.FC = () => {
             <button onclick="window.voteReport('${r.id}', 'down')" class="flex items-center gap-1 transition-all hover:scale-110 active:scale-95 ${downvoteClass}" title="Downvote">
               <span class="text-sm">🔽</span>
               <span class="text-[11px] font-mono">${r.downvotes_count || 0}</span>
+            </button>
+            <button onclick="window.openComments('${r.id}')" class="flex items-center gap-1 transition-all hover:scale-110 active:scale-95 text-theme-fg-muted hover:text-indigo-400" title="Comments">
+              <span class="text-sm">💬</span>
+              <span class="text-[11px] font-mono">${r.comment_count || 0}</span>
             </button>
           </div>
           ${deleteHtml}
@@ -665,10 +655,14 @@ const MapDashboard: React.FC = () => {
     map.on('zoomend', () => {
       const center = map.getCenter();
       setView(center.lat, center.lng, map.getZoom());
-      // Re-validate the container size after every zoom so Leaflet issues
-      // tile requests for the full visible area. This fixes blank squares
-      // that appear when the container dimensions were stale at zoom time.
-      if (mapRef.current) map.invalidateSize({ pan: false });
+      // Re-validate only when the container really has drifted from the size
+      // Leaflet recorded (the original fix for blank squares at zoom time).
+      // Doing it unconditionally repositioned every layer on every zoom.
+      const el = mapContainerRef.current;
+      const size = map.getSize();
+      if (el && (el.clientWidth !== size.x || el.clientHeight !== size.y)) {
+        map.invalidateSize({ pan: false });
+      }
     });
 
 
@@ -825,6 +819,9 @@ const MapDashboard: React.FC = () => {
     (window as any).openLightbox = (url: string) => {
       setLightboxImage(url);
     };
+    (window as any).openComments = (reportId: string) => {
+      setSelectedCommentsReportId(reportId);
+    };
     return () => {
       delete (window as any).deleteReport;
       delete (window as any).deleteRating;
@@ -832,6 +829,7 @@ const MapDashboard: React.FC = () => {
       delete (window as any).confirmReport;
       delete (window as any).falsifyReport;
       delete (window as any).openLightbox;
+      delete (window as any).openComments;
     };
 
   }, [token]);
@@ -1314,6 +1312,10 @@ const MapDashboard: React.FC = () => {
         initialFrom={dateRange.from}
         initialTo={dateRange.to}
       />
+
+      {selectedCommentsReportId && (
+        <CommentThread reportId={selectedCommentsReportId} onClose={() => setSelectedCommentsReportId(null)} />
+      )}
     </div>
   );
 };

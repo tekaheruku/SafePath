@@ -89,6 +89,31 @@ export interface Report {
     downvotes_count: number;
     user_vote?: VoteType;
     status: ReportStatus;
+    ai_plausibility_score?: number | null;
+    ai_flag_reason?: string | null;
+    is_vote_flagged?: boolean;
+    trust_score?: number;
+    confirmed_reports_count?: number;
+    falsified_reports_count?: number;
+    comment_count?: number;
+    comment_upvotes_total?: number;
+    comment_downvotes_total?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReportComment {
+    id: string;
+    report_id: string;
+    user_id: string;
+    author_name?: string;
+    content: string | null;
+    photo_url: string | null;
+    upvotes_count: number;
+    downvotes_count: number;
+    user_vote?: VoteType;
+    ai_flagged: boolean;
+    ai_flag_reason: string | null;
     created_at: string;
     updated_at: string;
 }
