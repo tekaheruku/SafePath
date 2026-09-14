@@ -33,11 +33,6 @@ export default function SettingsPage() {
   const [otpMode, setOtpMode] = useState(false);
   const [otpToken, setOtpToken] = useState('');
 
-  // ID Verification States
-  const [idFront, setIdFront] = useState<File | null>(null);
-  const [idBack, setIdBack] = useState<File | null>(null);
-  const [isUploadingId, setIsUploadingId] = useState(false);
-
   useEffect(() => {
     if (user) {
       setName(user.name || '');
@@ -153,57 +148,15 @@ export default function SettingsPage() {
     }
   };
 
-  const uploadId = async (front: File, back: File) => {
-    setIsUploadingId(true);
-    setMessage(null);
-    try {
-      // 1. Upload front
-      const formDataFront = new FormData();
-      formDataFront.append('photo', front);
-      const resFront = await apiClient.post('/upload', formDataFront);
-      
-      // 2. Upload back
-      const formDataBack = new FormData();
-      formDataBack.append('photo', back);
-      const resBack = await apiClient.post('/upload', formDataBack);
-
-      // 3. Submit verification
-      await apiClient.post('/auth/verify-id', {
-        frontUrl: resFront.data.url,
-        backUrl: resBack.data.url
-      });
-
-      updateUser({ id_verification_status: 'pending' });
-      setMessage({ type: 'success', text: 'ID verification submitted successfully' });
-      setIdFront(null);
-      setIdBack(null);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.error?.message || 'Failed to upload ID' });
-    } finally {
-      setIsUploadingId(false);
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      case 'pending': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
-      case 'not_verified': return 'text-red-400 bg-red-400/10 border-red-400/20';
       case 'active': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      case 'banned': 
+      case 'banned':
       case 'suspended': return 'text-red-400 bg-red-400/10 border-red-400/20';
       default: return 'text-theme-fg-muted bg-theme-panel border-theme-border';
     }
   };
 
-  const getVerificationLabel = (status: string) => {
-    switch (status) {
-      case 'verified': return 'Verified';
-      case 'pending': return 'Verification Pending';
-      case 'not_verified': return 'Not Verified';
-      default: return status;
-    }
-  };
 
   const getRoleLabel = (role: string) => {
     if (role === 'user') return 'Regular User';
@@ -349,15 +302,6 @@ export default function SettingsPage() {
                         </span>
                       </div>
 
-                      {user.role !== 'superadmin' && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-theme-fg-muted">ID Verification</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(user.id_verification_status)}`}>
-                            {getVerificationLabel(user.id_verification_status)}
-                          </span>
-                        </div>
-                      )}
-
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-theme-fg-muted">Account Status</span>
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(user.account_status)}`}>
@@ -365,39 +309,6 @@ export default function SettingsPage() {
                         </span>
                       </div>
                     </div>
-
-                    {user.role !== 'superadmin' && user.id_verification_status === 'not_verified' && (
-                      <div className="pt-4 border-t border-theme-border mt-4">
-                        <p className="text-xs text-theme-fg-muted mb-4">Upload your ID to unlock all features and increase trust.</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <label className={`cursor-pointer group relative flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl transition-all ${idFront ? 'border-blue-500 bg-blue-500/5' : 'border-theme-border hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
-                            <input 
-                              type="file" accept="image/*" capture="environment" hidden 
-                              onChange={(e) => e.target.files?.[0] && setIdFront(e.target.files[0])} 
-                            />
-                            <span className="text-xl mb-1">{idFront ? '✅' : '📷'}</span>
-                            <span className="text-[10px] font-bold text-center">{idFront ? 'Front Ready' : 'Capture Front'}</span>
-                          </label>
-                          <label className={`cursor-pointer group relative flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl transition-all ${idBack ? 'border-blue-500 bg-blue-500/5' : 'border-theme-border hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
-                            <input 
-                              type="file" accept="image/*" capture="environment" hidden 
-                              onChange={(e) => e.target.files?.[0] && setIdBack(e.target.files[0])} 
-                            />
-                            <span className="text-xl mb-1">{idBack ? '✅' : '📷'}</span>
-                            <span className="text-[10px] font-bold text-center">{idBack ? 'Back Ready' : 'Capture Back'}</span>
-                          </label>
-                        </div>
-                        {idFront && idBack && (
-                          <button
-                            onClick={() => uploadId(idFront, idBack)}
-                            disabled={isUploadingId}
-                            className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-theme-fg text-xs font-bold py-2.5 rounded-lg transition-all shadow-lg shadow-emerald-600/20"
-                          >
-                            {isUploadingId ? 'Uploading...' : 'Submit for Verification'}
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

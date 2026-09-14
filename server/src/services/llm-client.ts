@@ -17,3 +17,10 @@ export function getLlmClient(): OpenAI {
 export function getLlmModel(): string {
   return process.env.LOCAL_LLM_MODEL || 'llama3.2:3b';
 }
+
+// A separate, vision-capable model — llama3.2:3b is text-only. Ollama serves
+// both through the same OpenAI-compatible client; only the model name and
+// message content shape differ.
+export function getVisionModel(): string {
+  return process.env.LOCAL_VISION_MODEL || 'moondream';
+}

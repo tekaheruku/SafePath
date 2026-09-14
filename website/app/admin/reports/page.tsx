@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import { format, subDays, subMonths, subYears, startOfDay, endOfDay, parseISO } from 'date-fns';
-import { Calendar, Download, Filter, BarChart3, TrendingUp, ChevronLeft, Table as TableIcon } from 'lucide-react';
+import { Calendar, Download, BarChart3, TrendingUp, ChevronLeft, Table as TableIcon } from 'lucide-react';
 import Link from 'next/link';
 
 interface SummaryData {
@@ -43,7 +43,6 @@ export default function ReportSummaryPage() {
   // Filters
   const [preset, setPreset] = useState('30d');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
-  const [verificationFilter, setVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
@@ -90,7 +89,6 @@ export default function ReportSummaryPage() {
         params: {
           from: dateRange.from,
           to: dateRange.to,
-          verified: verificationFilter
         },
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -104,7 +102,7 @@ export default function ReportSummaryPage() {
 
   useEffect(() => {
     fetchData();
-  }, [dateRange, verificationFilter, token]);
+  }, [dateRange, token]);
 
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(data.map(row => ({
@@ -207,28 +205,6 @@ export default function ReportSummaryPage() {
               )}
             </div>
 
-            {/* Verification Status */}
-            <div className="space-y-3">
-              <label className="text-xs font-black text-theme-fg-muted uppercase tracking-widest flex items-center gap-2">
-                <Filter className="w-3.5 h-3.5" /> User Verification
-              </label>
-              <div className="flex bg-slate-900/50 p-1 rounded-xl border border-slate-700">
-                {(['all', 'verified', 'unverified'] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setVerificationFilter(v)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-                      verificationFilter === v 
-                        ? 'bg-slate-700 text-indigo-400 shadow-sm' 
-                        : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Chart Type */}
             <div className="space-y-3">
               <label className="text-xs font-black text-theme-fg-muted uppercase tracking-widest flex items-center gap-2">
@@ -260,7 +236,7 @@ export default function ReportSummaryPage() {
         <div className="bg-theme-panel border border-theme-border rounded-2xl p-6 mb-8 shadow-xl overflow-hidden">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-sm font-black text-theme-fg-muted uppercase tracking-widest">
-              Incident Reports — {PRESETS.find(p => p.value === preset)?.label} ({verificationFilter === 'all' ? 'All Users' : verificationFilter + ' only'})
+              Incident Reports — {PRESETS.find(p => p.value === preset)?.label}
             </h3>
           </div>
           <div className="h-64 md:h-80 w-full">

@@ -41,9 +41,10 @@ export class ReportController {
           description: data.description,
           incidentTypeName: fullReport?.incident_type_name,
           severityLevelName: fullReport?.severity_level_name,
+          photoUrl: fullReport?.photo_url,
         }))
-        .then(async ({ plausibility, reason }) => {
-          const scoredReport = await ReportService.updateAiScore(report.id, plausibility, reason);
+        .then(async ({ plausibility, reason, breakdown }) => {
+          const scoredReport = await ReportService.updateAiScore(report.id, plausibility, reason, breakdown);
           if (scoredReport) {
             SocketEventBroadcaster.broadcastReportUpdate(scoredReport);
           }
@@ -488,6 +489,54 @@ export class ReportController {
       res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/reports/:id/analyze
+   * Admin/LGU action: manually (re-)run AI plausibility scoring on demand — e.g. to
+   * check the current AI verdict without waiting, or to re-score after a description/
+   * photo edit. Runs synchronously (unlike the background scoring on creation) since
+   * this is an explicit, user-initiated action expecting an immediate result.
+   */
+  static async analyzeReport(req: Request, res: Response): Promise<void> {
+    try {
+      const report = await ReportService.getReportById(req.params.id);
+      if (!report) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Report not found' },
+          timestamp: new Date().toISOString(),
+          request_id: req.id,
+        });
+        return;
+      }
+
+      const { plausibility, reason, breakdown } = await ReportClassifierService.scoreReport({
+        description: report.description,
+        incidentTypeName: report.incident_type_name,
+        severityLevelName: report.severity_level_name,
+        photoUrl: report.photo_url,
+      });
+
+      const scoredReport = await ReportService.updateAiScore(report.id, plausibility, reason, breakdown);
+      if (scoredReport) {
+        SocketEventBroadcaster.broadcastReportUpdate(scoredReport);
+      }
+
+      res.json({
+        success: true,
+        data: scoredReport,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: error.message },
         timestamp: new Date().toISOString(),
         request_id: req.id,
       });

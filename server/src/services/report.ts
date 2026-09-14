@@ -135,7 +135,7 @@ export class ReportService {
       SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
-             r.ai_plausibility_score, r.ai_flag_reason,
+             r.ai_plausibility_score, r.ai_flag_reason, r.ai_score_breakdown,
              ${VOTE_FLAG_SQL} as is_vote_flagged,
              ${COMMENT_AGGREGATE_SQL},
              u.name as author_name,
@@ -219,7 +219,7 @@ export class ReportService {
       SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
-             r.ai_plausibility_score, r.ai_flag_reason,
+             r.ai_plausibility_score, r.ai_flag_reason, r.ai_score_breakdown,
              ${VOTE_FLAG_SQL} as is_vote_flagged,
              ${COMMENT_AGGREGATE_SQL},
              u.name as author_name,
@@ -295,15 +295,16 @@ export class ReportService {
   }
 
   /**
-   * Persist an AI plausibility score computed asynchronously after report creation.
+   * Persist an AI plausibility score (and its text/photo component breakdown, so
+   * admins can see what drove it) computed asynchronously after report creation.
    */
-  static async updateAiScore(id: string, plausibility: number | null, reason: string | null): Promise<any> {
+  static async updateAiScore(id: string, plausibility: number | null, reason: string | null, breakdown?: unknown): Promise<any> {
     const result = await pool.query(
-      `UPDATE reports SET ai_plausibility_score = $1, ai_flag_reason = $2 WHERE id = $3
+      `UPDATE reports SET ai_plausibility_score = $1, ai_flag_reason = $2, ai_score_breakdown = $3, updated_at = NOW() WHERE id = $4
        RETURNING id, user_id, incident_type_id, severity_level_id, description,
                  ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, status,
-                 ai_plausibility_score, ai_flag_reason, created_at, updated_at`,
-      [plausibility, reason, id]
+                 ai_plausibility_score, ai_flag_reason, ai_score_breakdown, created_at, updated_at`,
+      [plausibility, reason, breakdown ? JSON.stringify(breakdown) : null, id]
     );
     return result.rows[0] || null;
   }

@@ -3,28 +3,11 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import { EmailService } from './email.js';
-import { ADMIN_ROLES } from '@safepath/shared';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not defined in environment variables');
-}
-
-/**
- * Superadmins and LGU admins are staff accounts, not community reporters —
- * they show as verified in Settings the moment they hold that role, without
- * going through the ID-document upload flow. This is purely a read-time
- * override (the underlying id_verification_status column is untouched), so
- * a "user" who merely has a pending admin-role request (still role='user'
- * until approved) is unaffected and stays whatever their real ID
- * verification status is.
- */
-function withAdminAutoVerification<T extends { role: string; id_verification_status?: string }>(user: T): T {
-  if (ADMIN_ROLES.includes(user.role as any)) {
-    return { ...user, id_verification_status: 'verified' };
-  }
-  return user;
 }
 
 export class AuthService {
@@ -79,7 +62,7 @@ export class AuthService {
 
     const token = this.generateToken(user);
     const { password_hash: _, ...userWithoutPassword } = user;
-    return { user: withAdminAutoVerification(userWithoutPassword), token };
+    return { user: userWithoutPassword, token };
   }
 
   private static normalizeText(text: string): string {
@@ -435,11 +418,11 @@ export class AuthService {
 
   static async getUserById(id: string) {
     const result = await pool.query(
-      'SELECT id, email, name, role, two_factor_enabled, address, birthday, phone_number, id_verification_status, account_status, id_front_url, id_back_url FROM users WHERE id = $1',
+      'SELECT id, email, name, role, two_factor_enabled, address, birthday, phone_number, account_status FROM users WHERE id = $1',
       [id]
     );
     if (result.rowCount === 0) throw new Error('User not found');
-    return withAdminAutoVerification(result.rows[0]);
+    return result.rows[0];
   }
 
   static async updateProfile(userId: string, data: any) {
@@ -453,31 +436,16 @@ export class AuthService {
     }
 
     const query = `
-      UPDATE users 
+      UPDATE users
       SET name = COALESCE($1, name),
           address = COALESCE($2, address),
           birthday = COALESCE($3, birthday),
           phone_number = COALESCE($4, phone_number),
           updated_at = NOW()
       WHERE id = $5
-      RETURNING id, email, name, role, address, birthday, phone_number, id_verification_status, account_status
+      RETURNING id, email, name, role, address, birthday, phone_number, account_status
     `;
     const params = [name || null, address || null, birthday || null, phone_number || null, userId];
-    const result = await pool.query(query, params);
-    return withAdminAutoVerification(result.rows[0]);
-  }
-
-  static async submitIdVerification(userId: string, frontUrl: string, backUrl: string) {
-    const query = `
-      UPDATE users 
-      SET id_front_url = $1,
-          id_back_url = $2,
-          id_verification_status = 'pending',
-          updated_at = NOW()
-      WHERE id = $3
-      RETURNING id, id_verification_status
-    `;
-    const params = [frontUrl, backUrl, userId];
     const result = await pool.query(query, params);
     return result.rows[0];
   }

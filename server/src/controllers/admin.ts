@@ -102,53 +102,12 @@ export class AdminController {
     }
   }
 
-  static async listIDVerificationRequests(req: Request, res: Response) {
-    try {
-      const query = `
-        SELECT id, email, name, role, id_verification_status, id_front_url, id_back_url, updated_at
-        FROM users
-        WHERE id_verification_status = 'pending'
-        ORDER BY updated_at ASC
-      `;
-      const result = await pool.query(query);
-      res.json({ success: true, data: result.rows });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: { message: err.message } });
-    }
-  }
-
-  static async handleIDVerification(req: any, res: Response) {
-    try {
-      const { userId } = req.params;
-      const { status } = req.body; // 'verified' or 'not_verified'
-      const adminRole = req.user.role;
-
-      if (adminRole !== 'lgu_admin') {
-        return res.status(403).json({ success: false, error: { message: 'Only LGU Admins can verify IDs' } });
-      }
-
-      if (status !== 'verified' && status !== 'not_verified') {
-        return res.status(400).json({ success: false, message: 'Invalid status' });
-      }
-
-      await pool.query(
-        'UPDATE users SET id_verification_status = $1, updated_at = NOW() WHERE id = $2',
-        [status, userId]
-      );
-
-      res.json({ success: true, message: `User ID ${status} successfully` });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: { message: err.message } });
-    }
-  }
-
   static async getReportSummary(req: Request, res: Response) {
     try {
-      const { from, to, verified } = req.query;
-      
+      const { from, to } = req.query;
+
       const fromDate = from ? new Date(from as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const toDate = to ? new Date(to as string) : new Date();
-      const verifiedFilter = verified || 'all';
 
       // Determine grouping interval
       const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -158,22 +117,18 @@ export class AdminController {
 
       const query = `
         WITH combined_data AS (
-          SELECT 
+          SELECT
             r.created_at,
-            it.slug as type_slug,
-            u.id_verification_status
+            it.slug as type_slug
           FROM reports r
           LEFT JOIN incident_types it ON r.incident_type_id = it.id
-          JOIN users u ON r.user_id = u.id
           UNION ALL
-          SELECT 
+          SELECT
             sr.created_at,
-            'road-safety' as type_slug,
-            COALESCE(u.id_verification_status, 'not_verified') as id_verification_status
+            'road-safety' as type_slug
           FROM street_ratings sr
-          LEFT JOIN users u ON sr.user_id = u.id
         )
-        SELECT 
+        SELECT
           DATE_TRUNC($1, created_at) as period,
           COUNT(*) FILTER (WHERE type_slug = 'car-crash') as car_crash,
           COUNT(*) FILTER (WHERE type_slug = 'traffic-congestion') as traffic_congestion,
@@ -183,17 +138,12 @@ export class AdminController {
           COUNT(*) as total
         FROM combined_data
         WHERE created_at BETWEEN $2 AND $3
-          AND (
-            $4 = 'all' OR 
-            ($4 = 'verified' AND id_verification_status = 'verified') OR 
-            ($4 = 'unverified' AND id_verification_status != 'verified')
-          )
         GROUP BY period
         ORDER BY period ASC
       `;
 
-      const result = await pool.query(query, [interval, fromDate, toDate, verifiedFilter]);
-      
+      const result = await pool.query(query, [interval, fromDate, toDate]);
+
       // Format response
       const data = result.rows.map(row => ({
         period: row.period,

@@ -25,19 +25,6 @@ const AppNav: React.FC = () => {
 
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {user?.role === 'lgu_admin' && (
-        <Link
-          href="/admin/id-verifications"
-          onClick={closeSidebar}
-          className={`${mobile ? 'block w-full text-left' : ''} px-4 py-2 rounded-lg transition-all duration-150 whitespace-nowrap ${
-            isActive('/admin/id-verifications')
-              ? 'bg-indigo-600 text-theme-fg font-semibold shadow-md shadow-indigo-500/30'
-              : 'text-theme-fg-muted hover:text-theme-fg hover:bg-theme-panel'
-          }`}
-        >
-          Verification Requests
-        </Link>
-      )}
       {user && ADMIN_ROLES.includes(user.role as any) && (
         <>
           <Link
@@ -142,9 +129,6 @@ const AppNav: React.FC = () => {
               aria-label="Settings"
             >
               ⚙️
-              {user && user.id_verification_status !== 'verified' && (
-                <span className="absolute top-1.5 right-1.5 md:top-1 md:right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900" />
-              )}
             </Link>
 
             <div className="hidden md:flex items-center space-x-4">
@@ -254,9 +238,6 @@ const AppNav: React.FC = () => {
             >
               <span className="text-lg relative">
                 ⚙️
-                {user && user.id_verification_status !== 'verified' && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-950" />
-                )}
               </span>
               <span className="font-medium">Settings</span>
             </Link>

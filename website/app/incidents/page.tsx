@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthContext';
 import { DateFilterModal } from '../../components/DateFilterModal';
-import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check, AlertTriangle, ShieldAlert, MessageCircle } from 'lucide-react';
-import { ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus, VOTE_PLAUSIBILITY_RATIOS } from '@safepath/shared';
+import { Calendar, FilterX, CheckCircle, XCircle, Trash2, Clock, Check, AlertTriangle, ShieldAlert, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, ReportStatus, VOTE_PLAUSIBILITY_RATIOS, SOCKET_EVENTS } from '@safepath/shared';
 import { resolvePhotoUrl } from '../../lib/photoUrl';
 import CommentThread from '../../components/CommentThread';
 
@@ -25,18 +26,14 @@ function getVoteTier(upvotes: number, downvotes: number): PlausibilityTier | nul
   return 'plausible';
 }
 
-function getAiTier(score: number | null | undefined): PlausibilityTier | null {
-  if (typeof score !== 'number') return null;
+function scoreToTier(score: number): PlausibilityTier {
   if (score < 0.4) return 'likely_false';
   if (score < 0.7) return 'uncertain';
   return 'plausible';
 }
 
-// Combines the AI plausibility score with the community vote ratio, taking
-// whichever signal is more cautious (lower tier) when both are available.
-function getCombinedTier(aiTier: PlausibilityTier | null, voteTier: PlausibilityTier | null): PlausibilityTier | null {
-  if (aiTier && voteTier) return TIER_RANK[aiTier] <= TIER_RANK[voteTier] ? aiTier : voteTier;
-  return aiTier ?? voteTier;
+function getAiTier(score: number | null | undefined): PlausibilityTier | null {
+  return typeof score === 'number' ? scoreToTier(score) : null;
 }
 
 // Corroborating comments (and their votes) count toward a report's credibility the
@@ -47,6 +44,41 @@ function getTotalVotes(r: any): { upvotes: number; downvotes: number } {
     upvotes: (r.upvotes_count || 0) + (r.comment_upvotes_total || 0),
     downvotes: (r.downvotes_count || 0) + (r.comment_downvotes_total || 0),
   };
+}
+
+// Votes nudge, at most, a good chunk of a point off the AI score — they can never
+// drag a plausible report all the way to "Likely False" on their own once the AI
+// has scored it. When there's no AI score at all, votes are the only signal we have.
+const VOTE_TIER_PENALTY: Record<PlausibilityTier, number> = {
+  likely_false: 0.15,
+  uncertain: 0.05,
+  plausible: 0,
+};
+
+interface Credibility {
+  tier: PlausibilityTier | null;
+  score: number | null;
+  driver: string | null;
+}
+
+// AI analysis is the primary signal; community votes (report + comment) only ever
+// adjust it, they don't independently override it. Falls back to votes alone when
+// the AI hasn't scored the report yet.
+function getCredibility(r: any): Credibility {
+  const totals = getTotalVotes(r);
+  const voteTier = getVoteTier(totals.upvotes, totals.downvotes);
+  const aiScore = typeof r.ai_plausibility_score === 'number' ? r.ai_plausibility_score : null;
+
+  if (aiScore === null) {
+    return { tier: voteTier, score: null, driver: voteTier ? 'Community votes (no AI score yet)' : null };
+  }
+
+  const penalty = voteTier ? VOTE_TIER_PENALTY[voteTier] : 0;
+  const adjustedScore = Math.max(0, Math.min(1, aiScore - penalty));
+  const tier = scoreToTier(adjustedScore);
+  const driver = penalty > 0 ? 'AI analysis (adjusted by community votes)' : 'AI analysis';
+
+  return { tier, score: adjustedScore, driver };
 }
 
 const TIER_LABELS: Record<PlausibilityTier, string> = {
@@ -83,6 +115,8 @@ export default function IncidentsPage() {
   const [dateLabel, setDateLabel] = useState<string | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedCommentsReportId, setSelectedCommentsReportId] = useState<string | null>(null);
+  const [expandedBreakdownId, setExpandedBreakdownId] = useState<string | null>(null);
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
@@ -120,6 +154,26 @@ export default function IncidentsPage() {
     fetchReports();
   }, [dateRange, selectedType, activeTab, isAdmin, token]);
 
+  // Background AI plausibility scoring (and confirm/falsify/vote/comment changes) land
+  // asynchronously after the initial fetch — without this, a report's badge stays frozen
+  // at whatever it was when the page loaded until a manual refresh.
+  useEffect(() => {
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin.replace(/:\d+$/, ':3001') : 'http://localhost:3001'));
+
+    socket.on(SOCKET_EVENTS.REPORT_NEW, () => fetchReports());
+    socket.on(SOCKET_EVENTS.REPORT_UPDATED, (updated: any) => {
+      setReports(prev => prev.map(r => (r.id === updated.id ? { ...r, ...updated } : r)));
+    });
+    socket.on(SOCKET_EVENTS.REPORT_DELETED, ({ id }: any) => {
+      setReports(prev => prev.filter(r => r.id !== id));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // For the pending-review queue, surface the most likely-false reports first so
   // admins triage them ahead of straightforward, plausible ones (assist-only —
   // it only affects display order, never the status itself).
@@ -127,8 +181,7 @@ export default function IncidentsPage() {
     ? [...reports].sort((a, b) => {
         const riskScore = (r: any) => {
           let risk = 0;
-          const totals = getTotalVotes(r);
-          const tier = getCombinedTier(getAiTier(r.ai_plausibility_score), getVoteTier(totals.upvotes, totals.downvotes));
+          const { tier } = getCredibility(r);
           if (tier) risk += (2 - TIER_RANK[tier]); // likely_false=2, uncertain=1, plausible=0
           if (r.is_vote_flagged) risk += 1;
           if (typeof r.trust_score === 'number') risk += (1 - r.trust_score) * 0.5;
@@ -194,6 +247,33 @@ export default function IncidentsPage() {
       });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleAnalyze = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!token || !canReviewReports) return;
+
+    setAnalyzingId(id);
+    setFeedbackMessage(null);
+    try {
+      const res = await axios.post(`${apiUrl}/reports/${id}/analyze`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const updated = res.data.data;
+      if (updated) {
+        setReports(prev => prev.map(r => (r.id === id ? { ...r, ...updated } : r)));
+      }
+      setExpandedBreakdownId(id);
+      setFeedbackMessage({ type: 'success', text: 'AI analysis complete.' });
+    } catch (err: any) {
+      console.error('Failed to analyze report:', err);
+      setFeedbackMessage({
+        type: 'error',
+        text: err.response?.data?.error?.message || 'Failed to run AI analysis.',
+      });
+    } finally {
+      setAnalyzingId(null);
     }
   };
 
@@ -357,25 +437,24 @@ export default function IncidentsPage() {
                       </span>
                     )}
                     {/* Plausibility badge (admin only, assist signal — never changes status automatically).
-                        Combines the AI score with the community vote ratio, taking whichever signal
-                        is more cautious, so old reports with only votes (no AI score) still get a rating. */}
+                        AI analysis is the primary signal; community votes only nudge it (see getCredibility),
+                        so old reports with only votes (no AI score) still get a rating from votes alone. */}
                     {isAdmin && (() => {
-                      const aiTier = getAiTier(r.ai_plausibility_score);
-                      const totals = getTotalVotes(r);
-                      const voteTier = getVoteTier(totals.upvotes, totals.downvotes);
-                      const tier = getCombinedTier(aiTier, voteTier);
+                      const { tier, driver } = getCredibility(r);
                       if (!tier) return null;
-                      const tooltip = [r.ai_flag_reason, voteTier && voteTier !== aiTier ? `Community votes (incl. comments): ${totals.upvotes} up / ${totals.downvotes} down` : null]
-                        .filter(Boolean)
-                        .join(' — ') || undefined;
+                      const tooltip = [r.ai_flag_reason, driver].filter(Boolean).join(' — ') || undefined;
+                      const isExpanded = expandedBreakdownId === r.id;
                       return (
-                        <span
+                        <button
+                          type="button"
                           title={tooltip}
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1 ${TIER_STYLES[tier]}`}
+                          onClick={(e) => { e.stopPropagation(); setExpandedBreakdownId(isExpanded ? null : r.id); }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider flex items-center gap-1 transition-colors ${TIER_STYLES[tier]}`}
                         >
                           <ShieldAlert className="w-3 h-3" />
                           {TIER_LABELS[tier]}
-                        </span>
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
                       );
                     })()}
                     {isAdmin && r.status === REPORT_STATUS.PENDING && r.ai_plausibility_score === null && !getTotalVotes(r).upvotes && !getTotalVotes(r).downvotes && (
@@ -400,6 +479,58 @@ export default function IncidentsPage() {
                     </span>
                   </div>
                 </div>
+
+                {isAdmin && expandedBreakdownId === r.id && (() => {
+                  const breakdown = r.ai_score_breakdown;
+                  const { tier, score, driver } = getCredibility(r);
+                  return (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mb-3 p-3 rounded-lg bg-theme-bg-start/40 border border-theme-border text-[11px] space-y-2"
+                    >
+                      <p className="font-bold text-theme-fg-muted uppercase tracking-wider text-[10px]">Credibility Breakdown</p>
+
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-theme-fg-muted">AI · Text</span>
+                        <span className="text-right text-theme-fg">
+                          {breakdown?.text?.plausibility != null
+                            ? `${Math.round(breakdown.text.plausibility * 100)}%${breakdown.text.reason ? ` — ${breakdown.text.reason}` : ''}`
+                            : 'Not scored'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-theme-fg-muted">AI · Photo</span>
+                        <span className="text-right text-theme-fg">
+                          {breakdown?.photo?.plausibility != null
+                            ? `${Math.round(breakdown.photo.plausibility * 100)}%${breakdown.photo.reason ? ` — ${breakdown.photo.reason}` : ''}`
+                            : r.photo_url ? 'Not scored' : 'No photo'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-theme-fg-muted">Report votes</span>
+                        <span className="text-theme-fg">{r.upvotes_count || 0} up / {r.downvotes_count || 0} down</span>
+                      </div>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-theme-fg-muted">Comment votes</span>
+                        <span className="text-theme-fg">{r.comment_upvotes_total || 0} up / {r.comment_downvotes_total || 0} down</span>
+                      </div>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-theme-fg-muted">Reporter trust</span>
+                        <span className="text-theme-fg">
+                          {typeof r.trust_score === 'number' ? `${Math.round(r.trust_score * 100)}%` : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-theme-border/50 flex justify-between items-center gap-2">
+                        <span className="text-theme-fg-muted font-semibold">Final rating</span>
+                        <span className="text-theme-fg font-bold">
+                          {tier ? TIER_LABELS[tier] : 'Not enough data'}
+                          {score != null ? ` (${Math.round(score * 100)}%)` : ''}
+                          {driver ? ` — ${driver}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {r.photo_url && (
                   <div className="mb-3">
@@ -450,6 +581,19 @@ export default function IncidentsPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Manual AI (re-)analysis — assist-only, runs synchronously so admins
+                    get an immediate result instead of waiting on background scoring. */}
+                {canReviewReports && (
+                  <button
+                    onClick={(e) => handleAnalyze(e, r.id)}
+                    disabled={analyzingId === r.id}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold text-xs active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>{analyzingId === r.id ? 'Analyzing…' : 'Analyze with AI'}</span>
+                  </button>
+                )}
 
                 {/* Verification Actions (LGU admin only). Pending reports can be
                     confirmed or falsified; confirmed reports can still be falsified

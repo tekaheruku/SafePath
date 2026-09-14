@@ -66,7 +66,6 @@ app.post(`${apiRoot}/auth/reset-password`, (req, res) => AuthController.resetPas
 app.post(`${apiRoot}/auth/toggle-2fa`, authMiddleware, (req, res) => AuthController.toggle2fa(req, res));
 app.post(`${apiRoot}/auth/change-password`, authMiddleware, (req, res) => AuthController.changePassword(req, res));
 app.patch(`${apiRoot}/auth/profile`, authMiddleware, (req, res) => AuthController.updateProfile(req, res));
-app.post(`${apiRoot}/auth/verify-id`, authMiddleware, (req, res) => AuthController.submitIdVerification(req, res));
 
 // Reports — /archive and /stats/:userId must be declared before /:id to avoid route collision
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
@@ -80,6 +79,7 @@ app.delete(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportControl
 app.post(`${apiRoot}/reports/:id/confirm`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.confirmReport(req, res));
 app.post(`${apiRoot}/reports/:id/falsify`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.falsifyReport(req, res));
 app.post(`${apiRoot}/reports/:id/restore`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.restoreReport(req, res));
+app.post(`${apiRoot}/reports/:id/analyze`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.analyzeReport(req, res));
 app.post(`${apiRoot}/reports/:id/vote`, authMiddleware, (req, res) => VoteController.castVote(req, res));
 
 app.get(`${apiRoot}/reports/:id/comments`, optionalAuthMiddleware, (req, res) => CommentController.listComments(req, res));
@@ -114,8 +114,6 @@ app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 
 app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.banUser(req, res));
 app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.unbanUser(req, res));
 app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
-app.get(`${apiRoot}/admin/id-verifications`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.listIDVerificationRequests(req, res));
-app.post(`${apiRoot}/admin/id-verifications/:userId/handle`, authMiddleware, roleMiddleware(['lgu_admin']), (req, res) => AdminController.handleIDVerification(req, res));
 app.get(`${apiRoot}/admin/reports/summary`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.getReportSummary(req, res));
 
 // Admin Requests

@@ -91,6 +91,10 @@ export interface Report {
     status: ReportStatus;
     ai_plausibility_score?: number | null;
     ai_flag_reason?: string | null;
+    ai_score_breakdown?: {
+        text: { plausibility: number | null; reason: string | null };
+        photo: { plausibility: number | null; reason: string | null };
+    } | null;
     is_vote_flagged?: boolean;
     trust_score?: number;
     confirmed_reports_count?: number;

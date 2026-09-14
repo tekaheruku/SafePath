@@ -160,14 +160,4 @@ export class AuthController {
     }
   }
 
-  static async submitIdVerification(req: any, res: Response) {
-    try {
-      const { frontUrl, backUrl } = req.body;
-      if (!frontUrl || !backUrl) throw new Error('Both front and back ID images are required.');
-      const result = await AuthService.submitIdVerification(req.user.id, frontUrl, backUrl);
-      res.json({ success: true, data: result });
-    } catch (err: any) {
-      res.status(400).json({ success: false, error: { message: err.message } });
-    }
-  }
 }

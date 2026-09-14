@@ -79,7 +79,6 @@ export const APP_ROUTES = {
     ADMIN_ACCOUNTS: "/admin/accounts",
     ADMIN_ARCHIVE: "/admin/archive",
     ADMIN_REQUESTS: "/admin/requests",
-    ADMIN_ID_VERIFICATIONS: "/admin/id-verifications",
 } as const;
 
 export const USER_ROLES = {

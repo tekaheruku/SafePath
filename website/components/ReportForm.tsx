@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
-import Link from 'next/link';
 import { IBA_POLYGON, isPointInPolygon } from '@safepath/shared';
 import LoginModal from './LoginModal';
 import CommentThread from './CommentThread';
@@ -41,7 +40,7 @@ const SEVERITY_LABELS: Record<number, string> = {
 };
 
 const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severityLevels, preselectedIncidentTypeId, onSuccess, onCancel }) => {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -156,15 +155,6 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
 
       <h2 className="text-xl font-bold text-theme-fg">Report Incident</h2>
 
-      {user && user.id_verification_status !== 'verified' && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
-          <span className="text-amber-500 mt-0.5">⚠️</span>
-          <div className="text-xs text-amber-200/80 leading-relaxed">
-            Your account is unverified. Reports from unverified accounts may be given lower priority. 
-            <Link href="/settings" className="text-amber-400 hover:underline ml-1 font-semibold">Verify in Settings</Link>
-          </div>
-        </div>
-      )}
       {!dismissedNearbyNudge && nearbyReports.length > 0 && (
         <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
           <div className="flex items-start justify-between gap-2">

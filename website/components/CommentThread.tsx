@@ -110,7 +110,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ reportId, onClose }) => {
   const isAdmin = Boolean(user && ['lgu_admin', 'superadmin'].includes(user.role));
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-[2px] p-4" onClick={onClose}>
       <div
         className="bg-theme-panel border border-theme-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
