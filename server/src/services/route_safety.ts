@@ -37,11 +37,16 @@ export const ROUTE_SAFETY_CONSTANTS = {
   REPORT_RADIUS_M: num('ROUTE_SAFETY_REPORT_RADIUS_M', 250),
   REPORT_DECAY_D0_M: num('ROUTE_SAFETY_REPORT_DECAY_D0_M', 100),
   /**
-   * Which calendar day counts as "today" for incidents. Deliberately an explicit
-   * zone: if the server or database runs UTC, date_trunc('day', NOW()) would roll
-   * the day over at 8am local time.
+   * How far back a confirmed incident report still counts as a live hazard.
+   * A rolling window ("now minus N days"), not a calendar-day cutoff, so it
+   * needs no timezone handling and never has an artificial boundary at
+   * midnight — an incident from 71 hours ago counts the same as one from 1
+   * hour ago; at 73 hours it drops out entirely. Full weight inside the
+   * window, none outside — deliberately no extra recency decay on top, to
+   * keep the rule easy to reason about ("did something happen here in the
+   * last 3 days, yes or no").
    */
-  INCIDENT_TIMEZONE: process.env.ROUTE_SAFETY_INCIDENT_TIMEZONE || 'Asia/Manila',
+  INCIDENT_WINDOW_DAYS: num('ROUTE_SAFETY_INCIDENT_WINDOW_DAYS', 3),
   /** Prior strength for rating confidence — 3 full-weight ratings give 50% confidence. */
   K_RATINGS: num('ROUTE_SAFETY_K_RATINGS', 3.0),
   /** Severity-weighted incidents per km at which the incident penalty saturates. */
@@ -73,19 +78,34 @@ export const ROUTE_SAFETY_CONSTANTS = {
 };
 
 /**
- * How much each rating category matters per travel mode, and how much weight
- * incidents carry. A driver is shielded from pedestrian-level hazards and
- * tolerates detours worse, so `car` leans on driver_safety_score.
+ * Which evidence each travel mode's safety score is built from, kept as a
+ * clean either/or rather than a blend of both:
+ *
+ * - Walking and cycling use community street ratings (lighting, pedestrian
+ *   safety) — ratingWeight: 1, reportWeight: 0. A crash report is mostly a
+ *   vehicle-to-vehicle event; it says little about whether a sidewalk is
+ *   safe to walk, so it's left out entirely rather than diluting the rating
+ *   signal.
+ * - Driving uses confirmed incident reports (crashes, road blockages,
+ *   hazards, congestion) from the last few days — ratingWeight: 0,
+ *   reportWeight: 1. A recent incident is exactly the kind of thing a driver
+ *   needs to route around; lighting/pedestrian ratings say little about
+ *   whether a road is currently passable, so driving ignores them and a
+ *   route with no incidents nearby simply scores neutral.
+ *
+ * `lighting`/`pedestrian`/`driver` are only the per-category weights used
+ * when ratingWeight > 0, i.e. they matter for foot/bike but are unused by car.
  */
 const PROFILE_WEIGHTS: Record<RouteProfile, {
   lighting: number;
   pedestrian: number;
   driver: number;
+  ratingWeight: number;
   reportWeight: number;
 }> = {
-  foot: { lighting: 0.35, pedestrian: 0.50, driver: 0.15, reportWeight: 1.00 },
-  bike: { lighting: 0.30, pedestrian: 0.35, driver: 0.35, reportWeight: 1.00 },
-  car:  { lighting: 0.15, pedestrian: 0.15, driver: 0.70, reportWeight: 0.80 },
+  foot: { lighting: 0.35, pedestrian: 0.50, driver: 0.15, ratingWeight: 1.00, reportWeight: 0 },
+  bike: { lighting: 0.30, pedestrian: 0.35, driver: 0.35, ratingWeight: 1.00, reportWeight: 0 },
+  car:  { lighting: 0.15, pedestrian: 0.15, driver: 0.70, ratingWeight: 0,    reportWeight: 1.00 },
 };
 
 export interface RouteSafetyBreakdown {
@@ -262,7 +282,9 @@ const toNum = (v: unknown, fallback = 0): number => {
 export class RouteSafetyService {
   /**
    * Score an array of OSRM routes (geometry in [lng,lat] pairs) against nearby
-   * community street ratings and same-day confirmed incident reports.
+   * community street ratings and confirmed incident reports from the last
+   * INCIDENT_WINDOW_DAYS days — walking/cycling weigh ratings only, driving
+   * weighs incidents only (see PROFILE_WEIGHTS).
    *
    * Returns routes sorted by selection cost ascending, plus recommended indexes
    * for 'safest' and 'balanced' modes.
@@ -343,8 +365,12 @@ export class RouteSafetyService {
         riskNorm * (1 + ROUTE_SAFETY_CONSTANTS.BETA * excess) +
         ROUTE_SAFETY_CONSTANTS.LAMBDA * excess;
 
+      // "Do we have evidence backing this score" is profile-aware: ratings
+      // aren't evidence of anything for car (its score ignores them), and
+      // incidents aren't evidence of anything for foot/bike (same).
       const hasRatings =
-        confidence >= ROUTE_SAFETY_CONSTANTS.MIN_CONFIDENCE_FOR_EVIDENCE || incidentCount > 0;
+        (weights.ratingWeight > 0 && confidence >= ROUTE_SAFETY_CONSTANTS.MIN_CONFIDENCE_FOR_EVIDENCE) ||
+        (weights.reportWeight > 0 && incidentCount > 0);
 
       return {
         index: route.index,
@@ -356,6 +382,8 @@ export class RouteSafetyService {
         scoreStatus: 'ok' as const,
         reasons: this.buildReasons({
           hazard, confidence, ratingCount, incidentCount, detourRatio,
+          usesRatings: weights.ratingWeight > 0,
+          usesIncidents: weights.reportWeight > 0,
         }),
         breakdown: {
           lighting: round2(lighting),
@@ -394,13 +422,16 @@ export class RouteSafetyService {
   }
 
   /**
-   * Blend the two evidence channels into a single 1-4 hazard score.
+   * Blend the two evidence channels into a single 1-4 hazard score, weighted
+   * by which ones this travel profile actually uses (see PROFILE_WEIGHTS —
+   * foot/bike use ratings only, car uses incidents only, never both).
    *
    * Channel A (ratings) is shrunk toward the neutral prior by confidence, so a
    * route with plenty of good ratings beats an unrated one while a route with a
    * single rating barely moves off neutral. Channel B (incidents) is additive
-   * only: an absence of reports is not evidence of safety, so it can never lower
-   * the score.
+   * only, relative to that same neutral prior: an absence of reports is not
+   * evidence of safety, so it can never pull the score below neutral, only
+   * push it above.
    */
   private static computeHazard(
     row: HazardRow,
@@ -421,7 +452,12 @@ export class RouteSafetyService {
     const channelB =
       Math.min(1, incidentPressure / ROUTE_SAFETY_CONSTANTS.P_SAT) * (RISK_MAX - RISK_NEUTRAL);
 
-    const hazard = clamp(channelA + weights.reportWeight * channelB, RISK_MIN, RISK_MAX);
+    const hazard = clamp(
+      RISK_NEUTRAL +
+        weights.ratingWeight * (channelA - RISK_NEUTRAL) +
+        weights.reportWeight * channelB,
+      RISK_MIN, RISK_MAX
+    );
 
     return {
       hazard,
@@ -468,25 +504,33 @@ export class RouteSafetyService {
   private static buildReasons(o: {
     hazard: number; confidence: number; ratingCount: number;
     incidentCount: number; detourRatio: number;
+    /** Only mention a channel this profile's score actually uses — see PROFILE_WEIGHTS. */
+    usesRatings: boolean; usesIncidents: boolean;
   }): string[] {
     const reasons: string[] = [];
 
-    if (o.ratingCount > 0) {
-      const tone = o.hazard <= 1.8 ? 'mostly safe' : o.hazard <= 2.6 ? 'mixed' : 'poorly rated';
-      reasons.push(`${o.ratingCount} nearby rating${o.ratingCount === 1 ? '' : 's'}, ${tone}`);
-    } else {
-      reasons.push('No community ratings nearby');
+    if (o.usesRatings) {
+      if (o.ratingCount > 0) {
+        const tone = o.hazard <= 1.8 ? 'mostly safe' : o.hazard <= 2.6 ? 'mixed' : 'poorly rated';
+        reasons.push(`${o.ratingCount} nearby rating${o.ratingCount === 1 ? '' : 's'}, ${tone}`);
+      } else {
+        reasons.push('No community ratings nearby');
+      }
     }
 
-    if (o.incidentCount > 0) {
-      reasons.push(`${o.incidentCount} incident${o.incidentCount === 1 ? '' : 's'} reported today`);
+    if (o.usesIncidents) {
+      if (o.incidentCount > 0) {
+        reasons.push(`${o.incidentCount} incident${o.incidentCount === 1 ? '' : 's'} reported in the last 3 days`);
+      } else {
+        reasons.push('No incidents reported in the last 3 days');
+      }
     }
 
     if (o.detourRatio > 1.02) {
       reasons.push(`${Math.round((o.detourRatio - 1) * 100)}% longer than the shortest route`);
     }
 
-    if (o.confidence < ROUTE_SAFETY_CONSTANTS.MIN_CONFIDENCE_FOR_EVIDENCE && o.incidentCount === 0) {
+    if (o.usesRatings && o.confidence < ROUTE_SAFETY_CONSTANTS.MIN_CONFIDENCE_FOR_EVIDENCE) {
       reasons.push('Limited data — treated as neutral');
     }
 
@@ -594,9 +638,8 @@ export class RouteSafetyService {
          AND ST_DWithin(rep.location, rl.line, $12::float8)
         LEFT JOIN severity_levels sl ON rep.severity_level_id = sl.id
         WHERE ${getConfirmedReportsFilter('rep')}
-          -- Same-day only: incidents are treated as live hazards, not history.
-          AND (rep.created_at AT TIME ZONE $14::text)::date
-            = (NOW() AT TIME ZONE $14::text)::date
+          -- Rolling window: incidents are live hazards, not permanent history.
+          AND rep.created_at >= NOW() - ($14::text || ' days')::interval
       ),
       report_agg AS (
         SELECT route_idx,
@@ -628,7 +671,7 @@ export class RouteSafetyService {
       C.RATING_RADIUS_M, C.RATING_DECAY_D0_M,
       weights.lighting, weights.pedestrian, weights.driver,
       C.REPORT_RADIUS_M, C.REPORT_DECAY_D0_M,
-      C.INCIDENT_TIMEZONE,
+      C.INCIDENT_WINDOW_DAYS,
     ];
 
     const client = await pool.connect();

@@ -230,6 +230,11 @@ interface RouteCardProps {
 const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecommended, recommendedLabel, onClick }) => {
   const [expanded, setExpanded] = useState(false);
   const color = safetyColor(route.riskScore, route.hasRatings);
+  // Driving is scored from incident reports; walking/cycling from community
+  // street ratings — never both (see PROFILE_WEIGHTS on the backend). The
+  // breakdown below shows whichever one actually produced this route's score.
+  const profile = useDirectionsStore((s) => s.profile);
+  const usesIncidents = profile === 'car';
 
   return (
     <div
@@ -292,7 +297,7 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
             ) : (
               <span className="text-xs text-indigo-300/70 font-medium flex items-center gap-1">
                 <Info className="w-3 h-3" />
-                No ratings yet
+                {usesIncidents ? 'No incidents nearby' : 'No ratings yet'}
               </span>
             )}
           </div>
@@ -326,7 +331,22 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
       {/* Expanded breakdown */}
       {expanded && (
         <div className="px-3 pb-3 pt-0 border-t border-white/8">
-          {route.hasRatings ? (
+          {usesIncidents ? (
+            route.breakdown.incidentCount > 0 ? (
+              <div className="mt-2.5 flex items-center justify-between bg-white/4 rounded-lg px-2.5 py-2">
+                <span className="text-xs text-white/60">🚧 Incidents nearby (last 3 days)</span>
+                <span className="text-sm font-bold" style={{ color: color.stroke }}>
+                  {route.breakdown.incidentCount}
+                </span>
+              </div>
+            ) : (
+              <div className="mt-2.5 p-3.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <p className="text-xs text-indigo-300/80 leading-relaxed text-center">
+                  🚗 No incidents reported near this route in the last 3 days — treating it as neutral.
+                </p>
+              </div>
+            )
+          ) : route.hasRatings ? (
             <div className="mt-2.5 grid grid-cols-2 gap-2">
               {[
                 { label: 'Lighting',    value: route.breakdown.lighting,   icon: '💡' },
@@ -349,14 +369,19 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
               </p>
             </div>
           )}
-          {route.hasRatings && (
-            <p className="text-[11px] text-white/35 mt-2 text-center">
-              Based on {route.breakdown.ratingCount} rating{route.breakdown.ratingCount !== 1 ? 's' : ''}
-              {route.breakdown.incidentCount > 0 && (
-                <> and {route.breakdown.incidentCount} incident{route.breakdown.incidentCount !== 1 ? 's' : ''} reported today</>
-              )}
-              {' · '}{Math.round((route.breakdown.confidence ?? 0) * 100)}% confidence
-            </p>
+          {usesIncidents ? (
+            route.breakdown.incidentCount > 0 && (
+              <p className="text-[11px] text-white/35 mt-2 text-center">
+                Based on {route.breakdown.incidentCount} confirmed incident{route.breakdown.incidentCount !== 1 ? 's' : ''} reported in the last 3 days
+              </p>
+            )
+          ) : (
+            route.hasRatings && (
+              <p className="text-[11px] text-white/35 mt-2 text-center">
+                Based on {route.breakdown.ratingCount} rating{route.breakdown.ratingCount !== 1 ? 's' : ''}
+                {' · '}{Math.round((route.breakdown.confidence ?? 0) * 100)}% confidence
+              </p>
+            )
           )}
         </div>
       )}
