@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
-import { RouteSafetyService } from '../services/route_safety.js';
+import { RouteSafetyService, RouteProfile } from '../services/route_safety.js';
+
+const VALID_PROFILES: RouteProfile[] = ['foot', 'bike', 'car'];
 
 export class RoutesController {
   /**
@@ -11,14 +13,16 @@ export class RoutesController {
    *     geometry: [number, number][],   // [lng, lat] pairs (GeoJSON order)
    *     distance: number,
    *     duration: number
-   *   }>
+   *   }>,
+   *   profile?: 'foot' | 'bike' | 'car'   // defaults to 'foot'
    * }
    *
    * Returns ranked, scored routes with recommended indexes for each mode.
+   * `safestRecommendedIndex` is null when safety data could not be loaded.
    */
   static async scoreSafetyForRoutes(req: Request, res: Response): Promise<void> {
     try {
-      const { routes } = req.body;
+      const { routes, profile } = req.body;
 
       if (!Array.isArray(routes) || routes.length === 0) {
         res.status(400).json({
@@ -41,7 +45,10 @@ export class RoutesController {
         }
       }
 
-      const result = await RouteSafetyService.scoreRoutes(routes);
+      // Omitted profile keeps the previous behaviour for any older client.
+      const safeProfile: RouteProfile = VALID_PROFILES.includes(profile) ? profile : 'foot';
+
+      const result = await RouteSafetyService.scoreRoutes(routes, safeProfile);
 
       res.json({
         success: true,
@@ -49,6 +56,8 @@ export class RoutesController {
           routes: result.routes,
           safestRecommendedIndex: result.safestRecommendedIndex,
           balancedRecommendedIndex: result.balancedRecommendedIndex,
+          degraded: result.degraded,
+          degradedReason: result.degradedReason,
         },
         timestamp: new Date().toISOString(),
       });

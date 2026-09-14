@@ -11,7 +11,7 @@ const apiClient = axios.create({
 import {
   Navigation, Footprints, Bike, Car, X, RotateCcw, ArrowUpDown,
   MapPin, Clock, Ruler, Shield, ChevronRight, Loader2, AlertCircle,
-  MousePointerClick, CheckCircle2, Star, TrendingUp, Zap, Info
+  MousePointerClick, CheckCircle2, Star, TrendingUp, Zap, Info, AlertTriangle
 } from 'lucide-react';
 import {
   useDirectionsStore, ScoredRoute, DirectionsPoint,
@@ -80,7 +80,8 @@ const ROUTE_MODES: { id: RouteMode; label: string; sublabel: string; icon: React
   {
     id: 'balanced',
     label: 'Shortest Route',
-    sublabel: 'Fastest path regardless of safety',
+    // Ranking is purely on distance — duration is displayed but never sorted on.
+    sublabel: 'Shortest distance, safety not considered',
     icon: <Zap className="w-3.5 h-3.5" />,
     color: 'amber',
   },
@@ -347,7 +348,11 @@ const RouteCard: React.FC<RouteCardProps> = ({ route, rank, isSelected, isRecomm
           )}
           {route.hasRatings && (
             <p className="text-[11px] text-white/35 mt-2 text-center">
-              Based on {route.breakdown.ratedSegmentCount} community rating{route.breakdown.ratedSegmentCount !== 1 ? 's' : ''} along this route
+              Based on {route.breakdown.ratingCount} rating{route.breakdown.ratingCount !== 1 ? 's' : ''}
+              {route.breakdown.incidentCount > 0 && (
+                <> and {route.breakdown.incidentCount} incident{route.breakdown.incidentCount !== 1 ? 's' : ''} reported today</>
+              )}
+              {' · '}{Math.round((route.breakdown.confidence ?? 0) * 100)}% confidence
             </p>
           )}
         </div>
@@ -385,6 +390,7 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
     error, setError,
     safestRecommendedIndex,
     balancedRecommendedIndex,
+    safetyDegraded,
     clear,
   } = useDirectionsStore();
 
@@ -437,14 +443,32 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
         duration: r.duration,
       }));
 
-      // 3. Score routes via SafePath backend
-      const scoreRes = await apiClient.post('/routes/safety', { routes: routesToScore });
-      const { routes: scoredRoutes, safestRecommendedIndex: safestIdx, balancedRecommendedIndex: balancedIdx } = scoreRes.data.data;
+      // 3. Score routes via SafePath backend. The profile decides which rating
+      //    categories dominate — a driver is not exposed to the same hazards.
+      const scoreRes = await apiClient.post('/routes/safety', {
+        routes: routesToScore,
+        profile: activeProfile,
+      });
+      const {
+        routes: scoredRoutes,
+        safestRecommendedIndex: safestIdx,
+        balancedRecommendedIndex: balancedIdx,
+        degraded,
+        degradedReason,
+      } = scoreRes.data.data;
 
-      // 4. Choose initial selected route based on current mode
-      const initialSelected = activeMode === 'safest' ? safestIdx : balancedIdx;
+      // 4. Choose initial selected route based on current mode. A null safest
+      //    index means the backend has no safety opinion, so fall back.
+      const initialSelected =
+        activeMode === 'safest' ? (safestIdx ?? balancedIdx ?? 0) : (balancedIdx ?? 0);
 
-      setRoutes(scoredRoutes, safestIdx ?? 0, balancedIdx ?? 0);
+      setRoutes(
+        scoredRoutes,
+        safestIdx === null || safestIdx === undefined ? null : safestIdx,
+        balancedIdx ?? 0,
+        Boolean(degraded),
+        degradedReason ?? null
+      );
       setSelectedRouteIndex(initialSelected);
       onRoutesFetched(scoredRoutes, initialSelected);
     } catch (err: any) {
@@ -492,7 +516,10 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
   const handleRouteModeChange = (mode: RouteMode) => {
     setRouteMode(mode);
     // The store auto-updates selectedRouteIndex; sync to map
-    const newIdx = mode === 'safest' ? safestRecommendedIndex : balancedRecommendedIndex;
+    const newIdx =
+      mode === 'safest'
+        ? (safestRecommendedIndex ?? balancedRecommendedIndex)
+        : balancedRecommendedIndex;
     onRouteSelected(newIdx);
   };
 
@@ -501,7 +528,10 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
     onClose();
   };
 
-  const currentRecommendedIndex = routeMode === 'safest' ? safestRecommendedIndex : balancedRecommendedIndex;
+  // null in safest mode means "no safety opinion" — badge nothing rather than
+  // silently crowning card 0.
+  const currentRecommendedIndex =
+    routeMode === 'safest' ? safestRecommendedIndex : balancedRecommendedIndex;
   const currentModeConfig = ROUTE_MODES.find(m => m.id === routeMode)!;
 
   return (
@@ -702,7 +732,7 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-2 w-full mt-1">
                 {[
-                  { c: '#22c55e', l: '≥ 4.0 — Safest'   },
+                  { c: '#22c55e', l: '≥ 3.5 — Safest'   },
                   { c: '#f59e0b', l: '≥ 2.5 — Moderate' },
                   { c: '#ef4444', l: '< 2.5 — Caution'  },
                   { c: '#818cf8', l: 'Unrated — Neutral' },
@@ -719,6 +749,22 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
           {/* Route cards */}
           {!isLoading && !error && routes.length > 0 && (
             <div className="flex flex-col gap-2.5">
+              {/* Safety scoring failed — say so rather than passing the shortest
+                  route off as the safest one. */}
+              {safetyDegraded && (
+                <div
+                  className="flex items-start gap-2 rounded-xl px-3 py-2.5 border"
+                  style={{
+                    backgroundColor: 'rgba(245,158,11,0.12)',
+                    borderColor: 'rgba(245,158,11,0.3)',
+                  }}
+                >
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-200/90 leading-relaxed">
+                    Safety data unavailable — routes below are <strong>not</strong> safety-ranked.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {routes.length} route{routes.length !== 1 ? 's' : ''} found
@@ -734,10 +780,12 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
                   route={route}
                   rank={i + 1}
                   isSelected={selectedRouteIndex === i}
-                  isRecommended={i === currentRecommendedIndex}
+                  isRecommended={currentRecommendedIndex !== null && i === currentRecommendedIndex}
                   recommendedLabel={
                     routeMode === 'safest'
-                      ? (!route.hasRatings ? '✦ Recommended — Unrated (neutral)' : '✦ Recommended — Highest Safety')
+                      ? (route.reasons?.[0]
+                          ? `✦ Recommended — ${route.reasons[0]}`
+                          : '✦ Recommended — Highest Safety')
                       : '✦ Recommended — Shortest Route'
                   }
                   onClick={() => handleRouteCardClick(i)}

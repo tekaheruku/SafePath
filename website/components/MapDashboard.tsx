@@ -680,10 +680,18 @@ const MapDashboard: React.FC = () => {
           distance: r.distance,
           duration: r.duration,
         }));
-        apiClient.post('/routes/safety', { routes: routesToRescore })
+        apiClient.post('/routes/safety', { routes: routesToRescore, profile: storeState.profile })
           .then(res => {
-            const { routes: newRoutes, safestRecommendedIndex, balancedRecommendedIndex } = res.data.data;
-            storeState.setRoutes(newRoutes, safestRecommendedIndex ?? 0, balancedRecommendedIndex ?? 0);
+            const { routes: newRoutes, safestRecommendedIndex, balancedRecommendedIndex, degraded, degradedReason } = res.data.data;
+            // safestRecommendedIndex may legitimately be null (no safety opinion);
+            // preserve that rather than coalescing it onto route 0.
+            storeState.setRoutes(
+              newRoutes,
+              safestRecommendedIndex === null || safestRecommendedIndex === undefined ? null : safestRecommendedIndex,
+              balancedRecommendedIndex ?? 0,
+              Boolean(degraded),
+              degradedReason ?? null
+            );
             // Redraw polylines with updated colors
             drawRoutesOnMap(newRoutes, storeState.selectedRouteIndex);
           })

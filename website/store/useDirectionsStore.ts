@@ -17,6 +17,17 @@ export interface RouteSafetyBreakdown {
   composite: number;
   ratedSegmentCount: number;
   totalSegments: number;
+  /** 0-1. How much evidence backs this score; the score is shrunk toward neutral by it. */
+  confidence: number;
+  ratingCount: number;
+  /** Incidents reported today near this route. */
+  incidentCount: number;
+  /** Severity-weighted incidents per km. */
+  incidentPressure: number;
+  /** distance / shortest candidate distance. 1.0 means this IS the shortest. */
+  detourRatio: number;
+  /** Combined selection cost; lower is better. */
+  cost: number;
 }
 
 export interface ScoredRoute {
@@ -27,6 +38,9 @@ export interface ScoredRoute {
   /** Composite risk on the 1-4 severity scale; higher = more dangerous. */
   riskScore: number;
   hasRatings: boolean;
+  scoreStatus?: 'ok' | 'unavailable';
+  /** Short human explanations of why this route scored as it did. */
+  reasons?: string[];
   breakdown: RouteSafetyBreakdown;
 }
 
@@ -41,9 +55,13 @@ interface DirectionsState {
   selectionTarget: DirectionsSelectionTarget;
   isLoading: boolean;
   error: string | null;
-  // Recommended indexes returned by the backend
-  safestRecommendedIndex: number;
+  // Recommended indexes returned by the backend.
+  // safestRecommendedIndex is null when safety data could not be loaded — the UI
+  // must not badge a route as "safest" in that case.
+  safestRecommendedIndex: number | null;
   balancedRecommendedIndex: number;
+  safetyDegraded: boolean;
+  safetyDegradedReason: string | null;
 
   // Actions
   setOpen: (open: boolean) => void;
@@ -51,7 +69,13 @@ interface DirectionsState {
   setRouteMode: (mode: RouteMode) => void;
   setStartPoint: (point: DirectionsPoint | null) => void;
   setEndPoint: (point: DirectionsPoint | null) => void;
-  setRoutes: (routes: ScoredRoute[], safestIdx?: number, balancedIdx?: number) => void;
+  setRoutes: (
+    routes: ScoredRoute[],
+    safestIdx?: number | null,
+    balancedIdx?: number,
+    degraded?: boolean,
+    degradedReason?: string | null
+  ) => void;
   setSelectedRouteIndex: (index: number) => void;
   setSelectionTarget: (target: DirectionsSelectionTarget) => void;
   setLoading: (loading: boolean) => void;
@@ -72,25 +96,30 @@ export const useDirectionsStore = create<DirectionsState>((set, get) => ({
   error: null,
   safestRecommendedIndex: 0,
   balancedRecommendedIndex: 0,
+  safetyDegraded: false,
+  safetyDegradedReason: null,
 
   setOpen: (open) => set({ isOpen: open }),
   setProfile: (profile) => set({ profile, routes: [], selectedRouteIndex: 0, error: null }),
   setRouteMode: (routeMode) => {
     const state = get();
-    // Auto-select the recommended route for the new mode
+    // Auto-select the recommended route for the new mode. With no safety
+    // opinion available, fall back to the shortest rather than pretending.
     const newSelectedIndex =
       routeMode === 'safest'
-        ? state.safestRecommendedIndex
+        ? (state.safestRecommendedIndex ?? state.balancedRecommendedIndex)
         : state.balancedRecommendedIndex;
     set({ routeMode, selectedRouteIndex: newSelectedIndex });
   },
   setStartPoint: (point) => set({ startPoint: point, routes: [], selectedRouteIndex: 0, error: null }),
   setEndPoint: (point) => set({ endPoint: point, routes: [], selectedRouteIndex: 0, error: null }),
-  setRoutes: (routes, safestIdx = 0, balancedIdx = 0) =>
+  setRoutes: (routes, safestIdx = 0, balancedIdx = 0, degraded = false, degradedReason = null) =>
     set({
       routes,
       safestRecommendedIndex: safestIdx,
       balancedRecommendedIndex: balancedIdx,
+      safetyDegraded: degraded,
+      safetyDegradedReason: degradedReason,
     }),
   setSelectedRouteIndex: (index) => set({ selectedRouteIndex: index }),
   setSelectionTarget: (target) => set({ selectionTarget: target }),
@@ -106,5 +135,7 @@ export const useDirectionsStore = create<DirectionsState>((set, get) => ({
     error: null,
     safestRecommendedIndex: 0,
     balancedRecommendedIndex: 0,
+    safetyDegraded: false,
+    safetyDegradedReason: null,
   }),
 }));
