@@ -484,12 +484,17 @@ const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
     }
   }, []);
 
-  // Auto-fetch when both points are set
+  // Auto-fetch when both points are set. Depend on coordinates rather than the
+  // point objects themselves: updatePointLabel() (used once reverse geocoding
+  // resolves a readable address for a map-clicked pin) replaces the object to
+  // patch its label, and that must NOT be treated as a new pick — it would
+  // wipe the just-loaded routes and refetch for no reason.
   useEffect(() => {
     if (startPoint && endPoint) {
       fetchRoutes(startPoint, endPoint, profile, routeMode);
     }
-  }, [startPoint, endPoint, profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startPoint?.lat, startPoint?.lng, endPoint?.lat, endPoint?.lng, profile]);
 
   /* ── Handlers ─────────────────────────────────────────────────────────── */
   const handleStartMapSelect = (target: 'start' | 'end') => {

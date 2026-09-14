@@ -69,6 +69,13 @@ interface DirectionsState {
   setRouteMode: (mode: RouteMode) => void;
   setStartPoint: (point: DirectionsPoint | null) => void;
   setEndPoint: (point: DirectionsPoint | null) => void;
+  /**
+   * Patch just the label of the start/end point (e.g. once reverse geocoding
+   * resolves a readable address for a map-clicked pin) without touching its
+   * coordinates or clearing the fetched routes — unlike setStartPoint/setEndPoint,
+   * which intentionally reset routes because they represent a genuinely new pick.
+   */
+  updatePointLabel: (target: 'start' | 'end', label: string) => void;
   setRoutes: (
     routes: ScoredRoute[],
     safestIdx?: number | null,
@@ -113,6 +120,15 @@ export const useDirectionsStore = create<DirectionsState>((set, get) => ({
   },
   setStartPoint: (point) => set({ startPoint: point, routes: [], selectedRouteIndex: 0, error: null }),
   setEndPoint: (point) => set({ endPoint: point, routes: [], selectedRouteIndex: 0, error: null }),
+  updatePointLabel: (target, label) => set((state) => {
+    if (target === 'start' && state.startPoint) {
+      return { startPoint: { ...state.startPoint, label } };
+    }
+    if (target === 'end' && state.endPoint) {
+      return { endPoint: { ...state.endPoint, label } };
+    }
+    return {};
+  }),
   setRoutes: (routes, safestIdx = 0, balancedIdx = 0, degraded = false, degradedReason = null) =>
     set({
       routes,

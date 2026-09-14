@@ -19,6 +19,7 @@ import { resolvePhotoUrl } from '../lib/photoUrl';
 import CommentThread from './CommentThread';
 
 import DirectionsPanel from './DirectionsPanel';
+import { reverseGeocode } from '../services/searchService';
 import { Calendar, FilterX, AlertCircle, X, MapPin, Navigation, Layers, Plus, HelpCircle, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { IncidentType, SeverityLevel, MAP_CONFIG, ADMIN_ROLES, REPORT_REVIEW_ROLES, REPORT_STATUS } from '@safepath/shared';
@@ -179,6 +180,7 @@ const MapDashboard: React.FC = () => {
     setSelectionTarget: setDirectionsSelectionTarget,
     setStartPoint: setDirectionsStart,
     setEndPoint: setDirectionsEnd,
+    updatePointLabel: updateDirectionsPointLabel,
     routes: directionRoutes,
     selectedRouteIndex,
   } = useDirectionsStore();
@@ -949,13 +951,27 @@ const MapDashboard: React.FC = () => {
       const dirTarget = directionsSelectionTargetRef.current;
       if (dirTarget) {
         const { lat, lng } = e.latlng;
-        const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        // Drop the pin immediately with a coordinate placeholder so selection
+        // feels instant, then swap in a real street/area name once reverse
+        // geocoding resolves — a bare "15.31519, 119.99292" in the field read
+        // as broken even though the pick itself worked.
+        const placeholderLabel = `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
         if (dirTarget === 'start') {
-          setDirectionsStart({ lat, lng, label });
+          setDirectionsStart({ lat, lng, label: placeholderLabel });
         } else {
-          setDirectionsEnd({ lat, lng, label });
+          setDirectionsEnd({ lat, lng, label: placeholderLabel });
         }
         setDirectionsSelectionTarget(null);
+
+        reverseGeocode(lat, lng).then((address) => {
+          if (!address) return;
+          // Only apply if this point hasn't since been replaced by another
+          // pick (re-pinning, or a search selection) while the lookup was in flight.
+          const current = useDirectionsStore.getState()[dirTarget === 'start' ? 'startPoint' : 'endPoint'];
+          if (current && current.lat === lat && current.lng === lng) {
+            updateDirectionsPointLabel(dirTarget, address);
+          }
+        });
         return;
       }
 

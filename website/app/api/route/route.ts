@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * GET /api/route
- * Proxies requests to the OSRM public demo server.
- * Keeps the OSRM URL server-side and avoids CORS issues on the client.
+ * Proxies routing requests to the public FOSSGIS Valhalla demo server.
+ * Keeps the routing URL server-side and avoids CORS issues on the client.
  *
- * OSRM's `alternatives` option returns at most one or two near-identical paths
- * for short urban trips, which left the safety scorer with nothing meaningful to
- * choose between. On top of the base call we therefore route through two
- * perpendicular via-points to force genuinely different corridors, then drop any
- * candidate that overlaps one we already kept.
+ * This used to proxy OSRM's public demo, but that demo only ever loads a
+ * car-routing graph: requesting /route/v1/foot/... or /route/v1/bike/...
+ * silently returned car-speed routes relabelled as walking/cycling (a 2.8km
+ * walk timed at 3 minutes -- about 57 km/h). Valhalla's pedestrian / bicycle /
+ * auto costing models are genuinely distinct, so Walk and Cycle now report
+ * real walking/cycling speeds and can legitimately prefer different streets
+ * than Drive does.
+ *
+ * Valhalla's own `alternates` option returns at most one or two near-identical
+ * paths for short urban trips, which left the safety scorer with nothing
+ * meaningful to choose between. On top of the base call we therefore route
+ * through two perpendicular via-points to force genuinely different corridors,
+ * then drop any candidate that overlaps one we already kept.
  *
  * Query params:
  *   startLat, startLng  — origin
@@ -122,15 +130,62 @@ function dedupeRoutes(candidates: any[]): any[] {
   return kept.map(k => k.route);
 }
 
-/* ── OSRM fetching ──────────────────────────────────────────────────────── */
-
-const osrmBase = () => process.env.OSRM_BASE_URL || 'https://router.project-osrm.org';
+/* ── Polyline decoding ──────────────────────────────────────────────────── */
 
 /**
- * The public OSRM demo rate-limits aggressively and the panel re-requests on
- * every profile toggle, so identical lookups are served from memory for a few
- * minutes. Per-process and in-memory by design — it is a courtesy to the demo
- * server, not a correctness mechanism.
+ * Decode a Valhalla-encoded polyline (Google's algorithm, precision 6 instead
+ * of Google Maps' usual precision 5) into [lng, lat] pairs, matching the
+ * GeoJSON coordinate order the rest of the app already expects from the old
+ * OSRM `geometry.coordinates` field.
+ */
+function decodePolyline6(encoded: string): LngLat[] {
+  const factor = 1e6;
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates: LngLat[] = [];
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    coordinates.push([lng / factor, lat / factor]);
+  }
+  return coordinates;
+}
+
+/* ── Valhalla fetching ──────────────────────────────────────────────────── */
+
+const PROFILE_TO_COSTING: Record<string, string> = {
+  foot: 'pedestrian',
+  bike: 'bicycle',
+  car: 'auto',
+};
+
+const valhallaBase = () => process.env.VALHALLA_BASE_URL || 'https://valhalla1.openstreetmap.de';
+
+/**
+ * The public Valhalla demo (like the OSRM one before it) rate-limits and asks
+ * callers to self-identify, and the panel re-requests on every profile
+ * toggle, so identical lookups are served from memory for a few minutes.
+ * Per-process and in-memory by design — a courtesy to the demo server, not a
+ * correctness mechanism.
  */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 200;
@@ -154,36 +209,81 @@ function cacheSet(key: string, data: any): void {
   cache.set(key, { at: Date.now(), data });
 }
 
-async function fetchOsrm(
+/**
+ * Fetch a route from Valhalla and adapt its {trip, alternates} response into
+ * the OSRM-shaped {routes: [{geometry:{coordinates}, distance, duration}]}
+ * contract the rest of the app (safety scoring, map drawing, de-dup) is
+ * already written against — so nothing downstream of this file needed to
+ * change for this swap.
+ */
+async function fetchValhalla(
   coords: LngLat[],
   profile: string,
   timeoutMs: number,
-  alternatives: boolean
-): Promise<any> {
-  const path = coords.map(c => `${c[0]},${c[1]}`).join(';');
-  const key = `${profile}|${coords.map(c => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join(';')}|${alternatives}`;
+  alternates: number
+): Promise<{ routes: any[] }> {
+  const costing = PROFILE_TO_COSTING[profile] || 'pedestrian';
+  const key = `${costing}|${coords.map(c => `${c[0].toFixed(5)},${c[1].toFixed(5)}`).join(';')}|${alternates}`;
 
   const cached = cacheGet(key);
   if (cached) return cached;
 
-  const url =
-    `${osrmBase()}/route/v1/${profile}/${path}` +
-    `?${alternatives ? 'alternatives=3&' : ''}geometries=geojson&overview=full&steps=false`;
+  const body = {
+    locations: coords.map(c => ({ lat: c[1], lon: c[0] })),
+    costing,
+    units: 'kilometers',
+    ...(alternates > 0 ? { alternates } : {}),
+  };
 
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'SafePath/1.0 (safepath-iba.local)' },
+  const res = await fetch(`${valhallaBase()}/route`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'SafePath/1.0 (safepath-iba.local)',
+    },
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    const err: any = new Error(`OSRM returned ${res.status}`);
+    const err: any = new Error(`Valhalla returned ${res.status}`);
     err.status = res.status;
     err.body = text;
     throw err;
   }
 
-  const data = await res.json();
+  const raw = await res.json();
+
+  if (raw.error) {
+    // e.g. no route found between the points — not a transport-level failure,
+    // so surface it as an empty result rather than throwing.
+    const data = { routes: [] };
+    cacheSet(key, data);
+    return data;
+  }
+
+  const trips = [raw.trip, ...((raw.alternates || []).map((a: any) => a.trip))].filter(
+    (t: any) => t && t.status === 0
+  );
+
+  const routes = trips.map((trip: any) => {
+    const coordinates: LngLat[] = [];
+    for (const leg of trip.legs || []) {
+      const legCoords = decodePolyline6(leg.shape);
+      // Consecutive legs repeat the shared via-point; drop the duplicate so
+      // the merged line doesn't kink back on itself.
+      if (coordinates.length > 0 && legCoords.length > 0) legCoords.shift();
+      coordinates.push(...legCoords);
+    }
+    return {
+      geometry: { type: 'LineString', coordinates },
+      distance: (trip.summary?.length || 0) * 1000, // km -> m
+      duration: trip.summary?.time || 0,             // already seconds
+    };
+  });
+
+  const data = { routes };
   cacheSet(key, data);
   return data;
 }
@@ -223,7 +323,7 @@ export async function GET(request: NextRequest) {
   // Below ~300 m there is only one sensible path, so the extra calls buy nothing.
   const wantViaCandidates = directDistance >= 300;
 
-  const attempts: Promise<any>[] = [fetchOsrm([start, end], safeProfile, 8000, true)];
+  const attempts: Promise<{ routes: any[] }>[] = [fetchValhalla([start, end], safeProfile, 8000, 2)];
 
   if (wantViaCandidates) {
     const mid: LngLat = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
@@ -235,8 +335,8 @@ export async function GET(request: NextRequest) {
     const viaRight = destinationPoint(mid, theta + Math.PI / 2, offset);
 
     attempts.push(
-      fetchOsrm([start, viaLeft, end], safeProfile, 5000, false),
-      fetchOsrm([start, viaRight, end], safeProfile, 5000, false)
+      fetchValhalla([start, viaLeft, end], safeProfile, 5000, 0),
+      fetchValhalla([start, viaRight, end], safeProfile, 5000, 0)
     );
   }
 
@@ -248,9 +348,9 @@ export async function GET(request: NextRequest) {
   if (base.status === 'rejected') {
     const reason: any = base.reason;
     if (reason?.name === 'TimeoutError' || reason?.name === 'AbortError') {
-      console.error('[/api/route proxy] OSRM timed out');
+      console.error('[/api/route proxy] Valhalla timed out');
     } else {
-      console.error('[/api/route proxy] OSRM error:', reason?.status ?? '', reason?.message ?? reason);
+      console.error('[/api/route proxy] Valhalla error:', reason?.status ?? '', reason?.message ?? reason);
     }
     return NextResponse.json(
       { success: false, error: 'Routing service unavailable. Try again shortly.' },
@@ -277,7 +377,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     {
-      ...baseData,
       routes: routes.length > 0 ? routes : baseData.routes,
     },
     { status: 200 }
