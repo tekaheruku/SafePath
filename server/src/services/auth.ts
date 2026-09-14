@@ -41,9 +41,9 @@ export class AuthService {
     }
 
     // Bug 2 fix: enforce email verification gate before issuing a JWT.
-    // Admin roles (superadmin, lgu_admin, admin) are created manually and bypass
+    // Admin roles (superadmin, pnp_admin, admin) are created manually and bypass
     // the email gate — they also pre-date migration 011 (is_verified defaults false).
-    const ADMIN_ROLES = (process.env.ADMIN_ROLES || 'superadmin,lgu_admin,admin').split(',');
+    const ADMIN_ROLES = (process.env.ADMIN_ROLES || 'superadmin,pnp_admin,admin').split(',');
     if (!user.is_verified && !ADMIN_ROLES.includes(user.role)) {
       throw new Error('Please verify your email address before signing in. Check your inbox or resend the verification email.');
     }

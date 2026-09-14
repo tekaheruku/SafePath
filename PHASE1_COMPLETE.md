@@ -9,7 +9,7 @@
 - ✅ Fully exportable for mobile app team to use
 
 ### 2. PostgreSQL Database with PostGIS
-- ✅ **users** table - User management with roles (user, lgu_admin, superadmin)
+- ✅ **users** table - User management with roles (user, pnp_admin, superadmin)
 - ✅ **reports** table - Incident reports with GIS POINT locations, sentiment scores
 - ✅ **street_ratings** table - Street safety ratings (1-5 scale) with locations
 - ✅ **report_comments** table - Comments on incident reports
@@ -157,7 +157,7 @@ Once backend testing is complete:
    - `/` - Interactive map with incident markers + heatmap overlay
    - `/report` - Incident submission form
    - `/auth/login` & `/auth/register` - Authentication
-   - `/dashboard` - LGU admin analytics (Phase 3)
+   - `/dashboard` - PNP admin analytics (Phase 3)
 3. **Implement Components**:
    - Leaflet map with React-Leaflet
    - Heatmap visualization layer

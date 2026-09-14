@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../components/AuthContext';
 import { DateFilterModal } from '../../../components/DateFilterModal';
-import { Calendar, FilterX, RotateCcw, Archive, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Calendar, FilterX, RotateCcw, Archive, AlertTriangle, ExternalLink, Trash2 } from 'lucide-react';
 import { REPORT_REVIEW_ROLES, REPORT_STATUS, REPORT_REVIEW_ACTIONS, APP_ROUTES } from '@safepath/shared';
 import { resolvePhotoUrl } from '../../../lib/photoUrl';
 
@@ -25,7 +25,7 @@ export default function AdminArchivePage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
-  // Access Control: Only admin and LGU accounts
+  // Access Control: Only admin and PNP accounts
   useEffect(() => {
     if (authLoading) return;
     if (!user || !REPORT_REVIEW_ROLES.includes(user.role as any)) {
@@ -95,6 +95,34 @@ export default function AdminArchivePage() {
     }
   };
 
+  const handlePurge = async (e: React.MouseEvent, reportId: string) => {
+    e.stopPropagation();
+    if (!token) return;
+    if (!confirm('Permanently delete this report? This cannot be undone.')) return;
+
+    setActionLoading(reportId);
+    setFeedbackMessage(null);
+
+    try {
+      await axios.delete(`${apiUrl}/reports/${reportId}/purge`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReports(prev => prev.filter(r => r.id !== reportId));
+      setFeedbackMessage({
+        type: 'success',
+        text: 'Report permanently deleted.',
+      });
+    } catch (err: any) {
+      console.error('Failed to permanently delete report:', err);
+      setFeedbackMessage({
+        type: 'error',
+        text: err.response?.data?.error?.message || 'Failed to permanently delete report.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleReportClick = (r: any) => {
     if (!r.location?.coordinates) return;
     const lat = r.location.coordinates[1];
@@ -116,7 +144,7 @@ export default function AdminArchivePage() {
           <div>
             <h1 className="text-3xl font-extrabold text-theme-fg">Report Archive</h1>
             <p className="text-sm text-theme-fg-muted mt-1">
-              Falsified incident reports removed from the public feed. Restoring a report returns it to the pending review queue.
+              Falsified and deleted incident reports removed from the public feed. Restoring a report returns it to the pending review queue.
             </p>
           </div>
         </div>
@@ -197,7 +225,7 @@ export default function AdminArchivePage() {
         <div className="bg-theme-panel rounded-2xl border border-theme-border p-12 text-center text-theme-fg-muted">
           <span className="text-4xl mb-3 block">📂</span>
           <h3 className="font-bold text-lg text-theme-fg mb-1">Archive is Empty</h3>
-          <p className="text-sm">No falsified reports found matching your criteria.</p>
+          <p className="text-sm">No falsified or deleted reports found matching your criteria.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -211,8 +239,12 @@ export default function AdminArchivePage() {
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-bold text-lg text-theme-fg">{r.incident_type_name ?? r.type ?? 'Incident'}</h3>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">
-                      Falsified
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                      r.status === REPORT_STATUS.DELETED
+                        ? 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                        : 'bg-red-500/20 text-red-400 border-red-500/30'
+                    }`}>
+                      {r.status === REPORT_STATUS.DELETED ? 'Deleted' : 'Falsified'}
                     </span>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                       (r.severity_level_name ?? r.severity_level) === 'Critical' ? 'bg-red-500/20 text-red-400' :
@@ -244,15 +276,25 @@ export default function AdminArchivePage() {
                   <span className="text-[10px]">{new Date(r.created_at).toLocaleDateString()}</span>
                 </div>
 
-                <button
-                  onClick={(e) => handleRestore(e, r.id)}
-                  disabled={actionLoading === r.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 active:scale-95 transition-all disabled:opacity-50"
-                  title="Restore to Pending Review"
-                >
-                  <RotateCcw className={`w-3.5 h-3.5 ${actionLoading === r.id ? 'animate-spin' : ''}`} />
-                  <span>{REPORT_REVIEW_ACTIONS.RESTORE}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => handleRestore(e, r.id)}
+                    disabled={actionLoading === r.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 active:scale-95 transition-all disabled:opacity-50"
+                    title="Restore to Pending Review"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${actionLoading === r.id ? 'animate-spin' : ''}`} />
+                    <span>{REPORT_REVIEW_ACTIONS.RESTORE}</span>
+                  </button>
+                  <button
+                    onClick={(e) => handlePurge(e, r.id)}
+                    disabled={actionLoading === r.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/10 hover:bg-red-600 border border-red-600/30 hover:border-red-600 text-red-400 hover:text-white font-bold text-xs active:scale-95 transition-all disabled:opacity-50"
+                    title="Permanently Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

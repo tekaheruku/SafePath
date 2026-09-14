@@ -20,7 +20,7 @@ export function getConfirmedReportsFilter(alias: string = 'r'): string {
 /**
  * Reusable visibility condition:
  * - Public/regular users (role not in ADMIN_ROLES): strictly confirmed reports only.
- * - Admin/LGU users: can filter by status (pending, confirmed, falsified),
+ * - Admin/PNP users: can filter by status (pending, confirmed, falsified),
  *   or if not specified, defaults to active reports (pending and confirmed).
  */
 export function getReportStatusCondition(
@@ -39,7 +39,7 @@ export function getReportStatusCondition(
     };
   }
 
-  // Admin/LGU user requesting a specific status
+  // Admin/PNP user requesting a specific status
   if (requestedStatus) {
     return {
       sql: ` AND ${alias}.status = $${paramIndexStart}`,
@@ -48,7 +48,7 @@ export function getReportStatusCondition(
     };
   }
 
-  // Default for Admin/LGU: show active (pending + confirmed), exclude falsified (archived)
+  // Default for Admin/PNP: show active (pending + confirmed), exclude falsified (archived)
   return {
     sql: ` AND ${alias}.status IN ('${REPORT_STATUS.PENDING}', '${REPORT_STATUS.CONFIRMED}')`,
     params: [],
@@ -84,7 +84,17 @@ export class ReportService {
     let paramIndex = 1;
 
     // Status & Visibility filter (enforces public visibility strictly to confirmed)
-    const statusCond = getReportStatusCondition(filters?.userRole, filters?.status, paramIndex, 'r');
+    let statusCond: { sql: string; params: any[]; nextParamIndex: number };
+    if (filters?.mine) {
+      // Self-view: the caller sees all of their own reports regardless of role,
+      // except ones they (or an admin) deleted — those are archive-only from here on.
+      statusCond = { sql: ` AND r.status != '${REPORT_STATUS.DELETED}'`, params: [], nextParamIndex: paramIndex };
+    } else if (filters?.archived) {
+      // Archive view: falsified and deleted reports, both hidden from public/pending views.
+      statusCond = { sql: ` AND r.status IN ('${REPORT_STATUS.FALSIFIED}', '${REPORT_STATUS.DELETED}')`, params: [], nextParamIndex: paramIndex };
+    } else {
+      statusCond = getReportStatusCondition(filters?.userRole, filters?.status, paramIndex, 'r');
+    }
     whereClause += statusCond.sql;
     params.push(...statusCond.params);
     paramIndex = statusCond.nextParamIndex;
@@ -239,7 +249,7 @@ export class ReportService {
   }
 
   /**
-   * Update report status (admin/LGU action: confirm, falsify, restore).
+   * Update report status (admin/PNP action: confirm, falsify, restore).
    * Confirming or falsifying a report that was previously pending also recomputes
    * the reporting user's trust score, so only first-time decisions count — a later
    * restore-then-decide-again cycle must not double count.
@@ -247,7 +257,7 @@ export class ReportService {
   static async updateReportStatus(id: string, status: ReportStatus, userRole: string): Promise<any> {
     const canReview = REPORT_REVIEW_ROLES.includes(userRole as any);
     if (!canReview) {
-      throw new Error('Forbidden: Only LGU officials can update report status');
+      throw new Error('Forbidden: Only PNP officials can update report status');
     }
 
     const client = await pool.connect();
@@ -344,22 +354,45 @@ export class ReportService {
     return result.rows[0];
   }
 
+  /**
+   * "Deleting" a report is a soft delete — it drops off every public/pending view
+   * immediately (status !== 'confirmed'/'pending') but the row is kept and lands in
+   * the archive (alongside falsified reports) so it stays recoverable via restore
+   * or auditable, rather than vanishing outright.
+   */
   static async deleteReport(id: string, userId: string, userRole: string): Promise<void> {
     const isAdmin = ADMIN_ROLES.includes(userRole as any);
-    
+
     let query: string;
     let params: any[];
-    
+
     if (isAdmin) {
-      query = 'DELETE FROM reports WHERE id = $1';
+      query = `UPDATE reports SET status = '${REPORT_STATUS.DELETED}', updated_at = NOW() WHERE id = $1`;
       params = [id];
     } else {
-      query = 'DELETE FROM reports WHERE id = $1 AND user_id = $2';
+      query = `UPDATE reports SET status = '${REPORT_STATUS.DELETED}', updated_at = NOW() WHERE id = $1 AND user_id = $2`;
       params = [id, userId];
     }
 
     const result = await pool.query(query, params);
     if (result.rowCount === 0) throw new Error('Report not found or Unauthorized');
+  }
+
+  /**
+   * Permanently removes a report from the database. Only ever allowed for reports
+   * already sitting in the archive (falsified or deleted) — this is the "empty the
+   * trash" action on the archive page, never a way to remove an active report.
+   */
+  static async purgeReport(id: string, userRole: string): Promise<void> {
+    if (!REPORT_REVIEW_ROLES.includes(userRole as any)) {
+      throw new Error('Forbidden: Only PNP officials can permanently delete archived reports');
+    }
+
+    const result = await pool.query(
+      `DELETE FROM reports WHERE id = $1 AND status IN ('${REPORT_STATUS.FALSIFIED}', '${REPORT_STATUS.DELETED}')`,
+      [id]
+    );
+    if (result.rowCount === 0) throw new Error('Report not found or not archived');
   }
 
   /**

@@ -4,6 +4,13 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthContext';
+import { REPORT_STATUS_LABELS } from '@safepath/shared';
+
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  pending: 'bg-slate-500/20 text-slate-400',
+  confirmed: 'bg-green-500/20 text-green-400',
+  falsified: 'bg-red-500/20 text-red-400',
+};
 
 export default function MyReportsPage() {
   const { user, token } = useAuth();
@@ -13,15 +20,15 @@ export default function MyReportsPage() {
 
   useEffect(() => {
     const fetchReports = async () => {
-      if (!user) {
+      if (!user || !token) {
         setLoading(false);
         return;
       }
       try {
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports?limit=100`);
-        // Filter by user ID since the backend doesn't have a direct /users/me/reports yet
-        const myReports = (res.data.data.reports || []).filter((r: any) => r.user_id === user.id);
-        setReports(myReports);
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports/mine?limit=100`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setReports(res.data.data.reports || []);
       } catch (err) {
         console.error('Failed to load my incidents:', err);
       } finally {
@@ -29,7 +36,7 @@ export default function MyReportsPage() {
       }
     };
     fetchReports();
-  }, [user]);
+  }, [user, token]);
 
   const handleReportClick = (r: any) => {
     const lat = r.location.coordinates[1];
@@ -39,7 +46,7 @@ export default function MyReportsPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this report?')) return;
+    if (!confirm('Are you sure you want to delete this report? It will be moved to the archive.')) return;
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -82,20 +89,25 @@ export default function MyReportsPage() {
               onClick={() => handleReportClick(r)}
               className="bg-theme-panel border border-theme-border p-5 rounded-2xl cursor-pointer hover:bg-theme-panel hover:border-slate-600 transition-all shadow-lg active:scale-[0.98]"
             >
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-2 gap-2">
                 <h3 className="font-bold text-lg text-theme-fg">{r.type}</h3>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  r.severity_level === 'high' ? 'bg-red-500/20 text-red-400' :
-                  r.severity_level === 'medium' ? 'bg-orange-500/20 text-orange-400' :
-                  'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  {typeof r.severity_level === 'string' ? r.severity_level.toUpperCase() : r.severity_level}
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${STATUS_BADGE_STYLES[r.status] || 'bg-slate-500/20 text-slate-400'}`}>
+                    {REPORT_STATUS_LABELS[r.status as keyof typeof REPORT_STATUS_LABELS] || r.status}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${
+                    r.severity_level === 'high' ? 'bg-red-500/20 text-red-400' :
+                    r.severity_level === 'medium' ? 'bg-orange-500/20 text-orange-400' :
+                    'bg-yellow-500/20 text-yellow-400'
+                  }`}>
+                    {typeof r.severity_level === 'string' ? r.severity_level.toUpperCase() : r.severity_level}
+                  </span>
+                </div>
               </div>
               <p className="text-sm text-theme-fg-muted mb-4 line-clamp-2">{r.description}</p>
               <div className="text-xs text-theme-fg-muted flex justify-between items-center">
                 <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                {user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role)) && (
+                {user && (user.id === r.user_id || ['admin', 'superadmin', 'pnp_admin'].includes(user.role)) && (
                   <button 
                     onClick={(e) => handleDelete(e, r.id)}
                     className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 rounded-lg font-semibold transition-colors"

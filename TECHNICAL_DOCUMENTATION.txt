@@ -9,8 +9,8 @@ The primary goal of SafePath is to empower communities to visualize, report, and
 
 ### Target Users and Use Cases
 - **General Public (Users):** View the safety map, report incidents (e.g., accidents, hazards), rate street safety, and calculate safe routes from point A to B.
-- **LGU Administrators:** Verify user identities, monitor incident trends, and manage local reports.
-- **Superadmins:** Oversee the entire system, manage LGU admin requests, and enforce user bans.
+- **PNP Administrators:** Verify user identities, monitor incident trends, and manage local reports.
+- **Superadmins:** Oversee the entire system, manage PNP admin requests, and enforce user bans.
 
 ### Geographic Focus
 The map is strictly bounded to **Iba, Zambales**. A visual "fog-of-war" effect using SVG filters masks areas outside the official municipal boundary, ensuring reports and navigation are strictly localized.
@@ -57,7 +57,7 @@ The PostgreSQL database leverages the **PostGIS** extension for spatial data ope
 - `email` (String, Unique)
 - `username` (String, Unique)
 - `password_hash` (String)
-- `role` (Enum: `user`, `lgu_admin`, `superadmin`)
+- `role` (Enum: `user`, `pnp_admin`, `superadmin`)
 - `is_verified`, `is_banned`, `two_factor_enabled` (Boolean)
 
 #### `reports` (Incident Reports)
@@ -87,7 +87,7 @@ The PostgreSQL database leverages the **PostGIS** extension for spatial data ope
 #### Supporting Tables
 - `incident_types` (Categories of incidents)
 - `severity_levels` (1 to 4 scaling)
-- `admin_requests` (For users applying for LGU Admin roles)
+- `admin_requests` (For users applying for PNP Admin roles)
 
 ### Relationships and Indexes
 - **Foreign Keys:** `reports.user_id`, `street_ratings.user_id`, `report_votes.report_id` all cascade on delete.
@@ -125,10 +125,10 @@ The PostgreSQL database leverages the **PostGIS** extension for spatial data ope
 - `DELETE /:id` - Remove rating.
 
 #### Admin (`/api/v1/admin`)
-- `GET /users` - List all users (Role: `superadmin`, `lgu_admin`).
+- `GET /users` - List all users (Role: `superadmin`, `pnp_admin`).
 - `POST /users/:userId/ban` - Ban a malicious user.
 - `GET /id-verifications` - Fetch pending ID verifications.
-- `POST /requests/:requestId/approve` - Approve an LGU Admin request.
+- `POST /requests/:requestId/approve` - Approve an PNP Admin request.
 
 ### Core Functions & Utilities
 - `ReportService.createReport(userId, data)` (`server/src/services/report.ts`): Inserts report into DB, triggers socket broadcast, and clears cached heatmap.
@@ -145,9 +145,9 @@ The PostgreSQL database leverages the **PostGIS** extension for spatial data ope
 - `/login`, `/register`, `/forgot-password`, `/reset-password`: Authentication flows.
 - `/dashboard`: User-specific dashboard showing their reporting stats and recent activity.
 - `/incidents`: A tabular or list-based view of all active incidents with advanced filtering.
-- `/admin/reports`, `/admin/users`: Protected routes for LGU Admins and Superadmins to moderate content and manage users.
+- `/admin/reports`, `/admin/users`: Protected routes for PNP Admins and Superadmins to moderate content and manage users.
 - `/settings`: User profile configuration and ID verification uploads.
-- `/request-admin`: Application form for LGU personnel to request administrative access.
+- `/request-admin`: Application form for PNP personnel to request administrative access.
 
 ### Key Components
 
@@ -207,7 +207,7 @@ A calendar UI updates `dateRange` state. This triggers `fetchMapData()` appendin
 
 ### f. Authentication & Authorization
 - **JWT tokens:** Stored locally, sent via `Authorization: Bearer <token>` header.
-- **Roles:** Middleware `roleMiddleware(['superadmin', 'lgu_admin'])` protects admin endpoints.
+- **Roles:** Middleware `roleMiddleware(['superadmin', 'pnp_admin'])` protects admin endpoints.
 
 ---
 

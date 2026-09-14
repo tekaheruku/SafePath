@@ -70,7 +70,7 @@ pnpm dev
 - Access/refresh token system
 - Auth middleware
 - Token refresh on 401
-- Role-based access control (user, lgu_admin, superadmin)
+- Role-based access control (user, pnp_admin, superadmin)
 
 ### ✅ Real-time
 - Socket.io server

@@ -35,8 +35,8 @@ export class AdminController {
       if (targetUserResult.rowCount === 0) return res.status(404).json({ success: false, error: { message: 'User not found' } });
       const targetRole = targetUserResult.rows[0].role;
 
-      if (adminRole === 'lgu_admin' && targetRole !== 'user') {
-        return res.status(403).json({ success: false, error: { message: 'LGU Admins can only ban regular users' } });
+      if (adminRole === 'pnp_admin' && targetRole !== 'user') {
+        return res.status(403).json({ success: false, error: { message: 'PNP Admins can only ban regular users' } });
       }
 
       let bannedUntil = null;
@@ -67,8 +67,8 @@ export class AdminController {
       if (targetUserResult.rowCount === 0) return res.status(404).json({ success: false, error: { message: 'User not found' } });
       const targetRole = targetUserResult.rows[0].role;
 
-      if (adminRole === 'lgu_admin' && targetRole !== 'user') {
-        return res.status(403).json({ success: false, error: { message: 'LGU Admins can only unban regular users' } });
+      if (adminRole === 'pnp_admin' && targetRole !== 'user') {
+        return res.status(403).json({ success: false, error: { message: 'PNP Admins can only unban regular users' } });
       }
 
       await pool.query(
@@ -90,8 +90,8 @@ export class AdminController {
       if (targetUserResult.rowCount === 0) return res.status(404).json({ success: false, error: { message: 'User not found' } });
       const targetRole = targetUserResult.rows[0].role;
 
-      if (adminRole === 'lgu_admin' && targetRole !== 'user') {
-        return res.status(403).json({ success: false, error: { message: 'LGU Admins can only delete regular users' } });
+      if (adminRole === 'pnp_admin' && targetRole !== 'user') {
+        return res.status(403).json({ success: false, error: { message: 'PNP Admins can only delete regular users' } });
       }
 
       await pool.query('DELETE FROM users WHERE id = $1', [userId]);
@@ -173,7 +173,7 @@ export class AdminRequestsController {
         return res.status(400).json({ success: false, message: 'Invalid data submitted' });
       }
 
-      if (requestedRole !== 'lgu_admin' && requestedRole !== 'superadmin') {
+      if (requestedRole !== 'pnp_admin' && requestedRole !== 'superadmin') {
         return res.status(400).json({ success: false, message: 'Invalid role requested' });
       }
 

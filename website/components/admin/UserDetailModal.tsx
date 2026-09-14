@@ -152,12 +152,12 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
           )}
 
           {/* Role restriction message */}
-          {currentUser?.role === 'lgu_admin' && targetUser.role !== 'user' && (
+          {currentUser?.role === 'pnp_admin' && targetUser.role !== 'user' && (
             <div className="bg-amber-500/10 border border-amber-500/50 p-4 rounded-xl mb-6 flex items-start space-x-3">
               <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <p className="text-amber-200 text-xs">As an LGU Admin, you do not have permission to manage other administrators or superadmins.</p>
+              <p className="text-amber-200 text-xs">As an PNP Admin, you do not have permission to manage other administrators or superadmins.</p>
             </div>
           )}
 
@@ -169,7 +169,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                 {isBanned ? (
                   <button 
                     onClick={handleUnban}
-                    disabled={loading || (currentUser?.role === 'lgu_admin' && targetUser.role !== 'user')}
+                    disabled={loading || (currentUser?.role === 'pnp_admin' && targetUser.role !== 'user')}
                     className="bg-emerald-600 hover:bg-emerald-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Lift Ban
@@ -177,7 +177,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                 ) : (
                   <button 
                     onClick={() => setShowBanForm(true)}
-                    disabled={currentUser?.role === 'lgu_admin' && targetUser.role !== 'user'}
+                    disabled={currentUser?.role === 'pnp_admin' && targetUser.role !== 'user'}
                     className="bg-orange-600 hover:bg-orange-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     Ban User
@@ -185,7 +185,7 @@ export default function UserDetailModal({ user: targetUser, onClose, onUpdate }:
                 )}
                 <button 
                   onClick={() => setShowDeleteConfirm(true)}
-                  disabled={currentUser?.role === 'lgu_admin' && targetUser.role !== 'user'}
+                  disabled={currentUser?.role === 'pnp_admin' && targetUser.role !== 'user'}
                   className="bg-red-600 hover:bg-red-500 text-theme-fg font-bold py-2.5 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Delete Account

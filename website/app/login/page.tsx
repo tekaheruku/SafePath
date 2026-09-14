@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      if (user.role === 'superadmin' || user.role === 'lgu_admin') {
+      if (user.role === 'superadmin' || user.role === 'pnp_admin') {
         router.push('/admin/accounts');
       } else {
         router.push('/');
@@ -65,7 +65,7 @@ export default function LoginPage() {
       const { token, user } = res.data.data;
       login(token, user);
       
-      if (user.role === 'superadmin' || user.role === 'lgu_admin') {
+      if (user.role === 'superadmin' || user.role === 'pnp_admin') {
         router.push('/admin/accounts');
       } else {
         router.push('/');

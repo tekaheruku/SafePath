@@ -1,6 +1,6 @@
 # SafePath - GIS-Integrated Crowdsourcing Platform
 
-A mobile and web-based platform for real-time urban safety mapping and incident reporting in Iba, Zambales. Community members can submit geotagged incident reports, rate street safety, and view heatmap visualizations of risk areas. Includes an LGU admin dashboard for monitoring reports and analytics.
+A mobile and web-based platform for real-time urban safety mapping and incident reporting in Iba, Zambales. Community members can submit geotagged incident reports, rate street safety, and view heatmap visualizations of risk areas. Includes an PNP admin dashboard for monitoring reports and analytics.
 
 ## Project Overview
 
@@ -88,7 +88,7 @@ SafePath/
 │   │   ├── dashboard/  # Main map view
 │   │   ├── incidents/  # Incident list
 │   │   ├── report/     # Create incident
-│   │   ├── admin/      # LGU admin dashboard
+│   │   ├── admin/      # PNP admin dashboard
 │   │   └── my-reports/ # User's incidents
 │   ├── components/     # React components
 │   ├── lib/            # API client, auth, Socket.io
@@ -138,7 +138,7 @@ http://localhost:3001/api/v1
 - `GET /heatmap` - Get heatmap data (query: lat, lon, zoom)
 - `GET /heatmap/geojson` - Get GeoJSON for map overlay
 
-### Admin Endpoints (LGU admin role required)
+### Admin Endpoints (PNP admin role required)
 
 - `GET /admin/dashboard/stats` - Summary statistics
 - `GET /admin/incidents/all` - All incidents
@@ -238,7 +238,7 @@ No backend refactoring needed—the architecture is ready for multi-platform exp
 - [x] Interactive Leaflet map
 - [x] Real-time Socket.io updates
 - [ ] Sentiment analysis
-- [x] LGU admin dashboard
+- [x] PNP admin dashboard
 
 ### Phase 2: Enhanced
 - [ ] Photo uploads for incidents

@@ -50,7 +50,7 @@ export default function ReportSummaryPage() {
   // Access Control
   useEffect(() => {
     if (authLoading) return;
-    if (!user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) {
+    if (!user || (user.role !== 'superadmin' && user.role !== 'pnp_admin')) {
       router.push('/');
       return;
     }
@@ -133,7 +133,7 @@ export default function ReportSummaryPage() {
     }), { car_crash: 0, traffic_congestion: 0, road_hazard: 0, road_blockage: 0, road_safety: 0, total: 0 });
   }, [data]);
 
-  if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) return null;
+  if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'pnp_admin')) return null;
 
   return (
     <div className="min-h-screen bg-theme-bg-start text-theme-fg p-4 md:p-8">

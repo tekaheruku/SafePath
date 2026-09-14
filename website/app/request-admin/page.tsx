@@ -8,7 +8,7 @@ export default function RequestAdminPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    requestedRole: 'lgu_admin',
+    requestedRole: 'pnp_admin',
     reason: ''
   });
   const [document, setDocument] = useState<File | null>(null);
@@ -115,13 +115,13 @@ export default function RequestAdminPage() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, requestedRole: 'lgu_admin' })}
-                className={`flex flex-col items-center justify-center p-4 rounded-xl border text-sm font-semibold transition-all ${formData.requestedRole === 'lgu_admin'
+                onClick={() => setFormData({ ...formData, requestedRole: 'pnp_admin' })}
+                className={`flex flex-col items-center justify-center p-4 rounded-xl border text-sm font-semibold transition-all ${formData.requestedRole === 'pnp_admin'
                     ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_-3px_rgba(59,130,246,0.5)]'
                     : 'bg-theme-bg-start/50 border-theme-border text-slate-400 hover:bg-theme-panel'
                   }`}
               >
-                <span>LGU Admin</span>
+                <span>PNP Admin</span>
                 <span className="text-[10px] font-normal mt-1 opacity-70">Municipality Access</span>
               </button>
               <button

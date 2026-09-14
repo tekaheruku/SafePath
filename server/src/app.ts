@@ -71,11 +71,13 @@ app.patch(`${apiRoot}/auth/profile`, authMiddleware, (req, res) => AuthControlle
 app.post(`${apiRoot}/reports`, authMiddleware, (req, res) => ReportController.createReport(req, res));
 app.get(`${apiRoot}/reports`, optionalAuthMiddleware, (req, res) => ReportController.listReports(req, res));
 app.get(`${apiRoot}/reports/archive`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.listArchivedReports(req, res));
+app.get(`${apiRoot}/reports/mine`, authMiddleware, (req, res) => ReportController.listMyReports(req, res));
 app.get(`${apiRoot}/reports/nearby-similar`, optionalAuthMiddleware, (req, res) => ReportController.nearbySimilar(req, res));
 app.get(`${apiRoot}/reports/stats/:userId`, (req, res) => ReportController.getUserStats(req, res));
 app.get(`${apiRoot}/reports/:id`, optionalAuthMiddleware, (req, res) => ReportController.getReport(req, res));
 app.put(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.updateReport(req, res));
 app.delete(`${apiRoot}/reports/:id`, authMiddleware, (req, res) => ReportController.deleteReport(req, res));
+app.delete(`${apiRoot}/reports/:id/purge`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.purgeReport(req, res));
 app.post(`${apiRoot}/reports/:id/confirm`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.confirmReport(req, res));
 app.post(`${apiRoot}/reports/:id/falsify`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.falsifyReport(req, res));
 app.post(`${apiRoot}/reports/:id/restore`, authMiddleware, roleMiddleware(REPORT_REVIEW_ROLES), (req, res) => ReportController.restoreReport(req, res));
@@ -110,11 +112,11 @@ app.delete(`${apiRoot}/streets/ratings/:id`, authMiddleware, (req, res) => Stree
 app.post(`${apiRoot}/routes/safety`, (req, res) => RoutesController.scoreSafetyForRoutes(req, res));
 
 // Admin
-app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.listUsers(req, res));
-app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.banUser(req, res));
-app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.unbanUser(req, res));
-app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.deleteUser(req, res));
-app.get(`${apiRoot}/admin/reports/summary`, authMiddleware, roleMiddleware(['superadmin', 'lgu_admin']), (req, res) => AdminController.getReportSummary(req, res));
+app.get(`${apiRoot}/admin/users`, authMiddleware, roleMiddleware(['superadmin', 'pnp_admin']), (req, res) => AdminController.listUsers(req, res));
+app.post(`${apiRoot}/admin/users/:userId/ban`, authMiddleware, roleMiddleware(['superadmin', 'pnp_admin']), (req, res) => AdminController.banUser(req, res));
+app.post(`${apiRoot}/admin/users/:userId/unban`, authMiddleware, roleMiddleware(['superadmin', 'pnp_admin']), (req, res) => AdminController.unbanUser(req, res));
+app.delete(`${apiRoot}/admin/users/:userId`, authMiddleware, roleMiddleware(['superadmin', 'pnp_admin']), (req, res) => AdminController.deleteUser(req, res));
+app.get(`${apiRoot}/admin/reports/summary`, authMiddleware, roleMiddleware(['superadmin', 'pnp_admin']), (req, res) => AdminController.getReportSummary(req, res));
 
 // Admin Requests
 app.post(`${apiRoot}/admin-requests`, upload.single('document'), (req, res) => AdminRequestsController.submitRequest(req, res));

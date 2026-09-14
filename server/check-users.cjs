@@ -11,7 +11,7 @@ const { Pool } = pg;
     });
     try {
         await pool.query("UPDATE users SET role = 'superadmin' WHERE email = 'tripletwo1111@gmail.com'");
-        await pool.query("UPDATE users SET role = 'lgu_admin' WHERE email = 'davevaldez100@gmail.com'");
+        await pool.query("UPDATE users SET role = 'pnp_admin' WHERE email = 'davevaldez100@gmail.com'");
         
         const res = await pool.query('SELECT email, role, name FROM users');
         console.table(res.rows);

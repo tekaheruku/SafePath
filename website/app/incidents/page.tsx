@@ -102,7 +102,7 @@ export default function IncidentsPage() {
   const router = useRouter();
 
   const isAdmin = Boolean(user && ADMIN_ROLES.includes(user.role as any));
-  // Confirming/falsifying reports is an LGU admin responsibility only — superadmin
+  // Confirming/falsifying reports is an PNP admin responsibility only — superadmin
   // accounts can still see the pending queue but cannot act on it.
   const canReviewReports = Boolean(user && REPORT_REVIEW_ROLES.includes(user.role as any));
 
@@ -279,7 +279,7 @@ export default function IncidentsPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this report?')) return;
+    if (!confirm('Are you sure you want to delete this report? It will be moved to the archive.')) return;
     try {
       await axios.delete(`${apiUrl}/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -430,7 +430,7 @@ export default function IncidentsPage() {
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-bold text-lg text-theme-fg">{r.incident_type_name ?? r.type ?? 'Incident'}</h3>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    {/* Status Badge for Admin/LGU */}
+                    {/* Status Badge for Admin/PNP */}
                     {isAdmin && r.status === REPORT_STATUS.PENDING && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
                         Pending
@@ -595,7 +595,7 @@ export default function IncidentsPage() {
                   </button>
                 )}
 
-                {/* Verification Actions (LGU admin only). Pending reports can be
+                {/* Verification Actions (PNP admin only). Pending reports can be
                     confirmed or falsified; confirmed reports can still be falsified
                     later if they turn out to be a mistake. */}
                 {canReviewReports && (r.status === REPORT_STATUS.PENDING || r.status === REPORT_STATUS.CONFIRMED) && (

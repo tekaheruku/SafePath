@@ -31,7 +31,7 @@
 - [x] JWT utilities (generation, verification)
 - [x] Sentiment analysis engine (keyword-based)
 - [x] Authentication middleware (JWT validation)
-- [x] Role-based access control (user, lgu_admin, superadmin)
+- [x] Role-based access control (user, pnp_admin, superadmin)
 - [x] TypeScript compilation setup
 - [x] Environment configuration
 - [x] Dockerfile for containerization

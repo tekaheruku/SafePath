@@ -5,7 +5,7 @@
 
 import { ReportStatus } from './constants.js';
 
-export type UserRole = 'user' | 'lgu_admin' | 'superadmin';
+export type UserRole = 'user' | 'pnp_admin' | 'superadmin';
 
 export interface User {
     id: string;

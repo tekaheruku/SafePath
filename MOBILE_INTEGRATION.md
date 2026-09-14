@@ -134,9 +134,9 @@ These events allow web + mobile to stay consistent without polling:
 - `GET /heatmap/data` — heatmap points for bounds
 - `GET /heatmap/high-risk-areas`
 
-### Admin (LGU)
+### Admin (PNP)
 
-Admin endpoints require user role `lgu_admin` or `superadmin`:
+Admin endpoints require user role `pnp_admin` or `superadmin`:
 
 - `GET /admin/dashboard/stats`
 - `GET /admin/reports/spatial`

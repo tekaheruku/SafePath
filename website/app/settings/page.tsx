@@ -160,7 +160,7 @@ export default function SettingsPage() {
 
   const getRoleLabel = (role: string) => {
     if (role === 'user') return 'Regular User';
-    if (role === 'lgu_admin' || role === 'superadmin') return 'Admin';
+    if (role === 'pnp_admin' || role === 'superadmin') return 'Admin';
     return role.replace('_', ' ');
   };
 

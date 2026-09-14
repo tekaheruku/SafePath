@@ -23,6 +23,8 @@ export const API_ENDPOINTS = {
     REPORTS_FALSIFY: (id: string) => `/reports/${id}/falsify`,
     REPORTS_RESTORE: (id: string) => `/reports/${id}/restore`,
     REPORTS_ARCHIVE: "/reports/archive",
+    REPORTS_MINE: "/reports/mine",
+    REPORTS_PURGE: (id: string) => `/reports/${id}/purge`,
     STREET_RATE: "/streets/rate",
     STREET_RATINGS: "/streets/ratings",
     STREET_STATS: (name: string) => `/streets/stats/${name}`,
@@ -39,6 +41,7 @@ export const REPORT_STATUS = {
     PENDING: "pending" as const,
     CONFIRMED: "confirmed" as const,
     FALSIFIED: "falsified" as const,
+    DELETED: "deleted" as const,
 };
 
 export type ReportStatus = (typeof REPORT_STATUS)[keyof typeof REPORT_STATUS];
@@ -47,6 +50,7 @@ export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
     [REPORT_STATUS.PENDING]: "Pending Review",
     [REPORT_STATUS.CONFIRMED]: "Confirmed",
     [REPORT_STATUS.FALSIFIED]: "Falsified",
+    [REPORT_STATUS.DELETED]: "Deleted",
 };
 
 export const REPORT_REVIEW_ACTIONS = {
@@ -83,15 +87,15 @@ export const APP_ROUTES = {
 
 export const USER_ROLES = {
     USER: "user" as const,
-    LGU_ADMIN: "lgu_admin" as const,
+    PNP_ADMIN: "pnp_admin" as const,
     SUPERADMIN: "superadmin" as const,
 };
 
-export const ADMIN_ROLES = [USER_ROLES.LGU_ADMIN, USER_ROLES.SUPERADMIN];
+export const ADMIN_ROLES = [USER_ROLES.PNP_ADMIN, USER_ROLES.SUPERADMIN];
 
-// Report moderation (confirm/falsify/restore, and the Archive view) is an
-// LGU admin responsibility only — superadmin accounts do not get this workflow.
-export const REPORT_REVIEW_ROLES = [USER_ROLES.LGU_ADMIN];
+// Report moderation (confirm/falsify/restore, and the Archive view) is a
+// PNP admin responsibility only — superadmin accounts do not get this workflow.
+export const REPORT_REVIEW_ROLES = [USER_ROLES.PNP_ADMIN];
 
 export const SEVERITY_LEVELS = {
     LOW: "low" as const,

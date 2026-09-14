@@ -5,7 +5,7 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
     table.string('email').notNullable();
     table.string('name').notNullable();
-    table.string('requested_role').notNullable(); // 'lgu_admin' or 'superadmin'
+    table.string('requested_role').notNullable(); // 'pnp_admin' or 'superadmin'
     table.text('reason').nullable();
     table.string('status').notNullable().defaultTo('pending'); // 'pending', 'approved', 'rejected'
     table.timestamps(true, true);

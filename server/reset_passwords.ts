@@ -6,9 +6,9 @@ async function resetPasswords() {
     const adminHash = await bcrypt.hash('B055man69', 10);
     const userHash = await bcrypt.hash('password2026bro', 10);
 
-    // Update superadmins and lgu_admins
+    // Update superadmins and pnp_admins
     const adminCount = await db('users')
-      .whereIn('role', ['superadmin', 'lgu_admin'])
+      .whereIn('role', ['superadmin', 'pnp_admin'])
       .update({ password_hash: adminHash });
 
     // Update regular users

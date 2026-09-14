@@ -326,7 +326,7 @@ const MapDashboard: React.FC = () => {
       const toParam   = currentDateRange.to    ? { to:   currentDateRange.to   }  : {};
       const dateParams = { ...fromParam, ...toParam };
 
-      // Attach the auth token so admins/LGU officials also receive pending
+      // Attach the auth token so admins/PNP officials also receive pending
       // (not-yet-confirmed) reports from the backend — without this header
       // the backend treats the request as anonymous and only returns
       // confirmed reports, so a pending report's pin would never appear
@@ -514,7 +514,7 @@ const MapDashboard: React.FC = () => {
     ratings.forEach(r => {
       if (showRatingsHeatRef.current && r.id !== selectedRatingId) return;
 
-      const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'lgu_admin'].includes(user.role));
+      const canDelete = user && (user.id === r.user_id || ['admin', 'superadmin', 'pnp_admin'].includes(user.role));
       const deleteHtml = canDelete 
         ? `<br/><button onclick="window.deleteRating('${r.id}')" class="mt-2 text-xs text-red-500 hover:text-red-400 font-semibold transition-colors">Delete Rating</button>` 
         : '';
@@ -837,7 +837,7 @@ const MapDashboard: React.FC = () => {
   // AuthContext restores the token from localStorage asynchronously after
   // mount, which is after the initial fetchMapData() call above already ran
   // (with no token, so only confirmed reports came back). Re-fetch once the
-  // token becomes available so admins/LGU officials also get pending
+  // token becomes available so admins/PNP officials also get pending
   // reports — otherwise a pending report's pin never appears on the map
   // even when an admin navigates here specifically to review it.
   const hasFetchedWithTokenRef = useRef(false);

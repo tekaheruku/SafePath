@@ -296,7 +296,7 @@ export class ReportController {
 
   /**
    * POST /api/v1/reports/:id/confirm
-   * Admin/LGU action: Confirm a pending report (publish to public map/feed)
+   * Admin/PNP action: Confirm a pending report (publish to public map/feed)
    */
   static async confirmReport(req: Request, res: Response): Promise<void> {
     try {
@@ -343,7 +343,7 @@ export class ReportController {
 
   /**
    * POST /api/v1/reports/:id/falsify
-   * Admin/LGU action: Falsify a report (moves it to the Archive)
+   * Admin/PNP action: Falsify a report (moves it to the Archive)
    */
   static async falsifyReport(req: Request, res: Response): Promise<void> {
     try {
@@ -390,7 +390,7 @@ export class ReportController {
 
   /**
    * POST /api/v1/reports/:id/restore
-   * Admin/LGU action: Restore an archived/falsified report back to pending review
+   * Admin/PNP action: Restore an archived/falsified report back to pending review
    */
   static async restoreReport(req: Request, res: Response): Promise<void> {
     try {
@@ -422,7 +422,7 @@ export class ReportController {
 
   /**
    * GET /api/v1/reports/archive
-   * Admin/LGU action: List all falsified reports in the archive
+   * Admin/PNP action: List all falsified reports in the archive
    */
   static async listArchivedReports(req: Request, res: Response): Promise<void> {
     try {
@@ -438,7 +438,7 @@ export class ReportController {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
         userId: req.query.userId as string | undefined,
-        status: REPORT_STATUS.FALSIFIED,
+        archived: true,
         userRole: (req as any).user?.role,
       };
 
@@ -455,6 +455,77 @@ export class ReportController {
       res.status(500).json({
         success: false,
         error: { code: 'INTERNAL_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/reports/mine
+   * The current user's own reports at every stage (pending, confirmed, falsified) —
+   * unlike the public/admin listing, ownership itself is the authorization here, so
+   * a report's submitter can track it through review even before it's confirmed.
+   * Deleted reports are excluded (archive-only from that point on).
+   */
+  static async listMyReports(req: Request, res: Response): Promise<void> {
+    try {
+      const paginationData = validateSync(paginationSchema, {
+        page: req.query.page,
+        limit: req.query.limit,
+      });
+
+      const filters = {
+        userId: (req as any).user.id,
+        mine: true,
+      };
+
+      const reports = await ReportService.listReports(
+        { ...filters, currentUserId: (req as any).user.id },
+        paginationData.page,
+        paginationData.limit
+      );
+
+      res.json({
+        success: true,
+        data: reports,
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: error.message },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/reports/:id/purge
+   * PNP-admin-only "empty the trash" action — permanently removes a report that is
+   * already sitting in the archive (falsified or deleted). Never touches active reports.
+   */
+  static async purgeReport(req: Request, res: Response): Promise<void> {
+    try {
+      await ReportService.purgeReport(req.params.id, (req as any).user.role);
+
+      SocketEventBroadcaster.broadcastReportDelete(req.params.id);
+
+      res.json({
+        success: true,
+        data: { message: 'Report permanently deleted' },
+        timestamp: new Date().toISOString(),
+        request_id: req.id,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found') || error.message.includes('not archived')
+        ? 404
+        : error.message.includes('Forbidden') ? 403 : 400;
+      res.status(statusCode).json({
+        success: false,
+        error: { code: error.code || 'VALIDATION_ERROR', message: error.message },
         timestamp: new Date().toISOString(),
         request_id: req.id,
       });
@@ -497,7 +568,7 @@ export class ReportController {
 
   /**
    * POST /api/v1/reports/:id/analyze
-   * Admin/LGU action: manually (re-)run AI plausibility scoring on demand — e.g. to
+   * Admin/PNP action: manually (re-)run AI plausibility scoring on demand — e.g. to
    * check the current AI verdict without waiting, or to re-score after a description/
    * photo edit. Runs synchronously (unlike the background scoring on creation) since
    * this is an explicit, user-initiated action expecting an immediate result.

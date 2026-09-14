@@ -36,7 +36,7 @@ export default function AccountListPage() {
   useEffect(() => {
     if (authLoading) return;
     
-    if (!user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) {
+    if (!user || (user.role !== 'superadmin' && user.role !== 'pnp_admin')) {
       router.push('/');
       return;
     }
@@ -67,7 +67,7 @@ export default function AccountListPage() {
 
   const rolePriority: Record<string, number> = {
     'superadmin': 3,
-    'lgu_admin': 2,
+    'pnp_admin': 2,
     'user': 1
   };
 
@@ -108,7 +108,7 @@ export default function AccountListPage() {
     return items;
   }, [users, search, sortConfig]);
 
-  if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'lgu_admin')) return null;
+  if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'pnp_admin')) return null;
 
   return (
     <div className="min-h-screen bg-theme-bg-start text-theme-fg p-8">
@@ -235,7 +235,7 @@ export default function AccountListPage() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight ${
                           u.role === 'superadmin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                          u.role === 'lgu_admin' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                          u.role === 'pnp_admin' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                           'bg-slate-500/10 text-theme-fg-muted border border-slate-500/20'
                         }`}>
                           {u.role.replace('_', ' ')}
