@@ -3,6 +3,12 @@ import Joi from 'joi';
 export const createReportSchema = Joi.object({
   incident_type_id: Joi.string().uuid().required(),
   severity_level_id: Joi.string().uuid().required(),
+  // Only the "Other" incident type needs a title (its type name alone isn't
+  // descriptive); that's a frontend-enforced requirement, not a schema-level
+  // one, since the schema has no way to know which UUID "Other" is. Same
+  // pattern as photo_url below being required at the schema level while
+  // description's requiredness is left to the client.
+  title: Joi.string().trim().max(200).optional().allow('', null),
   description: Joi.string().pattern(/[a-zA-Z0-9]/).message('Description must contain at least one alphanumeric character').optional().allow('', null),
   location: Joi.object({
     latitude: Joi.number().required(),
@@ -17,6 +23,7 @@ export const createReportSchema = Joi.object({
 export const updateReportSchema = Joi.object({
   incident_type_id: Joi.string().uuid(),
   severity_level_id: Joi.string().uuid(),
+  title: Joi.string().trim().max(200).allow('', null),
   description: Joi.string().allow('', null),
 });
 

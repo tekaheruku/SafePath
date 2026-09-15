@@ -128,6 +128,18 @@ function routePolylineColor(riskScore: number): string {
   return '#ef4444';
 }
 
+// User-supplied text (report titles/descriptions) goes straight into popup
+// HTML via Leaflet's bindPopup, so it needs escaping to avoid a stored-XSS
+// injection through a crafted title or description.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── Pin icons ──────────────────────────────────────────────────────────────
 function pinIcon(className: string, fill: string): L.DivIcon {
   return L.divIcon({
@@ -453,7 +465,7 @@ const MapDashboard: React.FC = () => {
           <div class="min-w-[150px]">
             <div class="flex items-center justify-between gap-2 mb-1">
               <strong class="text-indigo-400 font-bold capitalize text-sm">
-                ${r.incident_type_name || 'Incident'}
+                ${escapeHtml(r.title || r.incident_type_name || 'Incident')}
               </strong>
               <div class="flex items-center gap-1">
                 ${isAdmin && isPending ? '<span class="px-1 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">PENDING</span>' : ''}
@@ -467,7 +479,7 @@ const MapDashboard: React.FC = () => {
               ? `<img src="${resolvePhotoUrl(r.photo_url)}" alt="Incident Photo" class="w-full h-32 object-cover rounded-md mb-2 shadow-sm border border-slate-700/50 cursor-pointer transition-opacity hover:opacity-80" onclick="window.openLightbox('${resolvePhotoUrl(r.photo_url)}')" />`
               : `<div class="w-full h-10 flex items-center justify-center bg-slate-800/50 rounded-md mb-2 text-[10px] text-theme-fg-muted italic border border-dashed border-slate-700">No photo available</div>`
             }
-            <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${r.description || 'No description provided.'}</p>
+            <p class="text-[13px] text-theme-fg leading-relaxed font-medium mb-2">${escapeHtml(r.description || 'No description provided.')}</p>
             ${voteHtml}
             ${reviewHtml}
           </div>

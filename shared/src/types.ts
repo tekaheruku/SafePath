@@ -82,6 +82,9 @@ export interface Report {
     severity_level_id: string;
     severity_level_name?: string;
     severity_level_color?: string;
+    // User-supplied label, only ever set for the "Other" incident type since
+    // the other types are already identified by incident_type_name.
+    title?: string | null;
     description: string;
     location: Location;
     sentiment_score: number;

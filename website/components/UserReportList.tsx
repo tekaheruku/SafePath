@@ -28,7 +28,7 @@ const UserReportList: React.FC<UserReportListProps> = ({ reports, onDelete, onVi
             <div className="flex justify-between items-start mb-3">
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">
-                  {r.incident_type_name ?? r.type ?? 'Incident'}
+                  {r.title || r.incident_type_name || r.type || 'Incident'}
                 </span>
                 <span className="text-xs text-theme-fg-muted">{new Date(r.created_at).toLocaleDateString()}</span>
               </div>

@@ -20,6 +20,7 @@ interface SummaryData {
   road_hazard: number;
   road_blockage: number;
   road_safety: number;
+  other: number;
   total: number;
 }
 
@@ -112,6 +113,7 @@ export default function ReportSummaryPage() {
       'Road Hazard': row.road_hazard,
       'Road Blockage': row.road_blockage,
       'Road Safety': row.road_safety,
+      'Other': row.other,
       'Total': row.total
     })));
     
@@ -129,8 +131,9 @@ export default function ReportSummaryPage() {
       road_hazard: acc.road_hazard + curr.road_hazard,
       road_blockage: acc.road_blockage + curr.road_blockage,
       road_safety: acc.road_safety + curr.road_safety,
+      other: acc.other + curr.other,
       total: acc.total + curr.total
-    }), { car_crash: 0, traffic_congestion: 0, road_hazard: 0, road_blockage: 0, road_safety: 0, total: 0 });
+    }), { car_crash: 0, traffic_congestion: 0, road_hazard: 0, road_blockage: 0, road_safety: 0, other: 0, total: 0 });
   }, [data]);
 
   if (authLoading || !user || (user.role !== 'superadmin' && user.role !== 'pnp_admin')) return null;
@@ -261,6 +264,7 @@ export default function ReportSummaryPage() {
                   <Bar dataKey="road_hazard" name="Hazard" stackId="a" fill="#f97316" />
                   <Bar dataKey="road_blockage" name="Blockage" stackId="a" fill="#ef4444" />
                   <Bar dataKey="road_safety" name="Road Safety" stackId="a" fill="#8b5cf6" />
+                  <Bar dataKey="other" name="Other" stackId="a" fill="#64748b" />
                 </BarChart>
               ) : (
                 <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -282,6 +286,7 @@ export default function ReportSummaryPage() {
                   <Line type="monotone" dataKey="road_hazard" name="Hazard" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
                   <Line type="monotone" dataKey="road_blockage" name="Blockage" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
                   <Line type="monotone" dataKey="road_safety" name="Road Safety" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="other" name="Other" stroke="#64748b" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               )}
             </ResponsiveContainer>
@@ -304,6 +309,7 @@ export default function ReportSummaryPage() {
                   <th className="px-6 py-4 font-bold text-center">Hazard</th>
                   <th className="px-6 py-4 font-bold text-center">Blockage</th>
                   <th className="px-6 py-4 font-bold text-center">Safety</th>
+                  <th className="px-6 py-4 font-bold text-center">Other</th>
                   <th className="px-6 py-4 font-bold text-right">Total</th>
                 </tr>
               </thead>
@@ -311,7 +317,7 @@ export default function ReportSummaryPage() {
                 {loading ? (
                   Array(5).fill(0).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={7} className="px-6 py-6 h-12 bg-slate-900/20"></td>
+                      <td colSpan={8} className="px-6 py-6 h-12 bg-slate-900/20"></td>
                     </tr>
                   ))
                 ) : data.length > 0 ? (
@@ -325,6 +331,7 @@ export default function ReportSummaryPage() {
                       <td className="px-6 py-4 text-center text-xs">{row.road_hazard}</td>
                       <td className="px-6 py-4 text-center text-xs">{row.road_blockage}</td>
                       <td className="px-6 py-4 text-center text-xs">{row.road_safety}</td>
+                      <td className="px-6 py-4 text-center text-xs">{row.other}</td>
                       <td className="px-6 py-4 text-right text-xs font-bold text-indigo-400 bg-indigo-500/5">
                         {row.total}
                       </td>
@@ -332,7 +339,7 @@ export default function ReportSummaryPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-theme-fg-muted">
+                    <td colSpan={8} className="px-6 py-12 text-center text-theme-fg-muted">
                       No data found for the selected filters.
                     </td>
                   </tr>
@@ -346,6 +353,7 @@ export default function ReportSummaryPage() {
                   <td className="px-6 py-4 text-center text-sm">{totals.road_hazard}</td>
                   <td className="px-6 py-4 text-center text-sm">{totals.road_blockage}</td>
                   <td className="px-6 py-4 text-center text-sm">{totals.road_safety}</td>
+                  <td className="px-6 py-4 text-center text-sm">{totals.other}</td>
                   <td className="px-6 py-4 text-right text-sm text-indigo-400 bg-indigo-500/10">
                     {totals.total}
                   </td>

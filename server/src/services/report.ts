@@ -61,15 +61,15 @@ export class ReportService {
    * Create a new incident report
    */
   static async createReport(userId: string, data: any): Promise<any> {
-    const { incident_type_id, severity_level_id, description, location, photo_url } = data;
-    
+    const { incident_type_id, severity_level_id, title, description, location, photo_url } = data;
+
     const query = `
-      INSERT INTO reports (user_id, incident_type_id, severity_level_id, description, location, upvotes_count, downvotes_count, photo_url, status)
-      VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), 0, 0, $7, $8)
-      RETURNING id, user_id, incident_type_id, severity_level_id, description, 
+      INSERT INTO reports (user_id, incident_type_id, severity_level_id, title, description, location, upvotes_count, downvotes_count, photo_url, status)
+      VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), 0, 0, $8, $9)
+      RETURNING id, user_id, incident_type_id, severity_level_id, title, description,
                 ST_AsGeoJSON(location)::json as location, upvotes_count, downvotes_count, photo_url, status, created_at, updated_at
     `;
-    const params = [userId, incident_type_id, severity_level_id, description, location.longitude, location.latitude, photo_url || null, REPORT_STATUS.PENDING];
+    const params = [userId, incident_type_id, severity_level_id, title || null, description, location.longitude, location.latitude, photo_url || null, REPORT_STATUS.PENDING];
     const result = await pool.query(query, params);
     return result.rows[0];
   }
@@ -142,7 +142,7 @@ export class ReportService {
     const whereParams = [...params];
 
     const query = `
-      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
+      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.title, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
              r.ai_plausibility_score, r.ai_flag_reason, r.ai_score_breakdown,
@@ -226,7 +226,7 @@ export class ReportService {
    */
   static async getReportById(id: string, currentUserId?: string): Promise<any | null> {
     const query = `
-      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.description,
+      SELECT r.id, r.user_id, r.incident_type_id, r.severity_level_id, r.title, r.description,
              ST_AsGeoJSON(r.location)::json as location, r.created_at, r.updated_at,
              r.upvotes_count, r.downvotes_count, r.photo_url, r.status,
              r.ai_plausibility_score, r.ai_flag_reason, r.ai_score_breakdown,
@@ -320,7 +320,7 @@ export class ReportService {
   }
 
   static async updateReport(id: string, userId: string, data: any): Promise<any> {
-    const { incident_type_id, severity_level_id, description } = data;
+    const { incident_type_id, severity_level_id, title, description } = data;
 
     let updateClause = 'updated_at = NOW()';
     const params: any[] = [id, userId];
@@ -336,6 +336,11 @@ export class ReportService {
       params.push(severity_level_id);
       paramIndex++;
     }
+    if (title !== undefined) {
+      updateClause += `, title = $${paramIndex}`;
+      params.push(title || null);
+      paramIndex++;
+    }
     if (description) {
       updateClause += `, description = $${paramIndex}`;
       params.push(description);
@@ -343,10 +348,10 @@ export class ReportService {
     }
 
     const query = `
-      UPDATE reports 
+      UPDATE reports
       SET ${updateClause}
       WHERE id = $1 AND user_id = $2
-      RETURNING id, user_id, incident_type_id, severity_level_id, description, 
+      RETURNING id, user_id, incident_type_id, severity_level_id, title, description,
                 ST_AsGeoJSON(location)::json as location, status, created_at, updated_at
     `;
     const result = await pool.query(query, params);
@@ -408,7 +413,7 @@ export class ReportService {
     hoursBack: number = 48
   ): Promise<any[]> {
     const query = `
-      SELECT r.id, r.description, r.status, r.created_at,
+      SELECT r.id, r.title, r.description, r.status, r.created_at,
              ST_AsGeoJSON(r.location)::json as location,
              ST_Distance(r.location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance_meters,
              it.name as incident_type_name

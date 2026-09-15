@@ -428,7 +428,7 @@ export default function IncidentsPage() {
             >
               <div>
                 <div className="flex justify-between items-start mb-2 gap-2">
-                  <h3 className="font-bold text-lg text-theme-fg">{r.incident_type_name ?? r.type ?? 'Incident'}</h3>
+                  <h3 className="font-bold text-lg text-theme-fg">{r.title || r.incident_type_name || r.type || 'Incident'}</h3>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {/* Status Badge for Admin/PNP */}
                     {isAdmin && r.status === REPORT_STATUS.PENDING && (

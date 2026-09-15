@@ -15,6 +15,9 @@ import { IncidentType, SeverityLevel } from '@safepath/shared';
 const reportSchema = z.object({
   incident_type_id: z.string().min(1, 'Type is required'),
   severity_level_id: z.string().min(1, 'Severity is required'),
+  // Only required for the "Other" incident type (enforced in onSubmit, where
+  // we know which type is selected) — every other type is self-explanatory.
+  title: z.string().max(200).optional(),
   description: z.string().optional(),
   latitude: z.number(),
   longitude: z.number(),
@@ -44,6 +47,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [nearbyReports, setNearbyReports] = useState<any[]>([]);
   const [dismissedNearbyNudge, setDismissedNearbyNudge] = useState(false);
@@ -69,6 +73,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
   const selectedSeverity = sortedSeverityLevels.find(s => s.id === selectedSeverityId);
   const watchedIncidentTypeId = watch('incident_type_id');
   const selectedIncidentType = incidentTypes.find(t => t.id === watchedIncidentTypeId);
+  const isOtherType = selectedIncidentType?.slug === 'other';
 
   // Soft, non-blocking nudge: if a recent report of the same type already exists
   // nearby, suggest commenting on it instead of filing a duplicate. The user can
@@ -95,6 +100,14 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
       setShowLoginModal(true);
       return;
     }
+
+    // Title check — only "Other" needs one; every other type is
+    // self-explanatory from its name alone.
+    if (isOtherType && !data.title?.trim()) {
+      setTitleError('Please give this report a short title.');
+      return;
+    }
+    setTitleError(null);
 
     // Photo Check
     if (!photoFile) {
@@ -172,7 +185,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
           <div className="space-y-1.5">
             {nearbyReports.map((nr) => (
               <div key={nr.id} className="flex items-center justify-between gap-2 bg-theme-panel/50 rounded-lg p-2">
-                <p className="text-xs text-theme-fg-muted line-clamp-1 flex-1">{nr.description || nr.incident_type_name}</p>
+                <p className="text-xs text-theme-fg-muted line-clamp-1 flex-1">{nr.title || nr.description || nr.incident_type_name}</p>
                 <button
                   type="button"
                   onClick={() => setCommentsReportId(nr.id)}
@@ -206,6 +219,20 @@ const ReportForm: React.FC<ReportFormProps> = ({ location, incidentTypes, severi
           <input type="hidden" {...register('incident_type_id')} />
           {errors.incident_type_id && <p className="text-xs text-red-400">{errors.incident_type_id.message}</p>}
         </div>
+
+        {isOtherType && (
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-theme-fg-muted uppercase tracking-wider">Title</label>
+            <input
+              type="text"
+              {...register('title')}
+              maxLength={200}
+              className="w-full bg-theme-panel border border-slate-700 rounded-lg p-2 text-theme-fg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Briefly describe what happened (e.g. Fallen tree blocking road)"
+            />
+            {titleError && <p className="text-xs text-red-400">{titleError}</p>}
+          </div>
+        )}
 
         <div className="space-y-1">
           <div className="flex justify-between items-baseline">

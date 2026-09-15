@@ -135,6 +135,7 @@ export class AdminController {
           COUNT(*) FILTER (WHERE type_slug = 'road-hazard') as road_hazard,
           COUNT(*) FILTER (WHERE type_slug = 'road-blockage') as road_blockage,
           COUNT(*) FILTER (WHERE type_slug = 'road-safety') as road_safety,
+          COUNT(*) FILTER (WHERE type_slug = 'other') as other,
           COUNT(*) as total
         FROM combined_data
         WHERE created_at BETWEEN $2 AND $3
@@ -152,6 +153,7 @@ export class AdminController {
         road_hazard: parseInt(row.road_hazard),
         road_blockage: parseInt(row.road_blockage),
         road_safety: parseInt(row.road_safety),
+        other: parseInt(row.other),
         total: parseInt(row.total)
       }));
 
