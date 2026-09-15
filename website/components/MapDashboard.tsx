@@ -1241,8 +1241,19 @@ const MapDashboard: React.FC = () => {
           >
             <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-1 md:hidden" />
 
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              {incidentTypes.map(type => {
+            {(() => {
+              // "Other" gets its own full-width row instead of sitting in the
+              // 2-column grid, where an odd number of types (5, with Other
+              // added) left it alone with an empty gap beside it.
+              const gridTypes = incidentTypes.filter(t => t.slug !== 'other');
+              const otherType = incidentTypes.find(t => t.slug === 'other');
+
+              // The full-width "Other" row reuses the grid buttons' small
+              // (px-2 py-3 text-xs) sizing by default, which looks thin and
+              // undersized stretched across the full width next to the larger
+              // Road Safety button below it — so it gets the same bigger
+              // sizing (px-4 py-3.5 text-sm) as that button instead.
+              const renderTypeButton = (type: IncidentType, large = false) => {
                 const isSelected = selectionMode === 'report' && selectedIncidentTypeId === type.id;
                 return (
                   <button
@@ -1259,13 +1270,28 @@ const MapDashboard: React.FC = () => {
                     }}
                     disabled={directionsOpen}
                     title={directionsOpen ? 'Close Directions panel first' : undefined}
-                    className={`w-full ${isSelected ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} px-2 py-3 rounded-lg text-xs font-extrabold transition-all border disabled:opacity-40 disabled:cursor-not-allowed leading-tight text-center`}
+                    className={`w-full ${isSelected ? 'bg-orange-200 shadow-orange-300/40 text-orange-800 border-orange-300/50' : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300/50'} rounded-lg font-extrabold transition-all border disabled:opacity-40 disabled:cursor-not-allowed leading-tight text-center ${
+                      large ? 'px-4 py-3.5 text-sm' : 'px-2 py-3 text-xs'
+                    }`}
                   >
                     {isSelected ? 'Cancel' : type.name}
                   </button>
                 );
-              })}
-            </div>
+              };
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {gridTypes.map(type => renderTypeButton(type))}
+                  </div>
+                  {otherType && (
+                    <div className="mt-2">
+                      {renderTypeButton(otherType, true)}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <button
               onClick={() => {
