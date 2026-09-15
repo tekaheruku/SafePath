@@ -288,6 +288,15 @@ const MapDashboard: React.FC = () => {
     updateRatingsHeatmap(ratingHeatPoints);
   }, [ratingHeatPoints, selectedRatingId, showRatingsHeat]);
 
+  // Dim the base tiles (not the heat canvas, markers, or fog layer — all live
+  // in different Leaflet panes) while either heatmap is showing, so the heat
+  // data reads clearly against a darker background instead of competing with
+  // full-color tiles.
+  useEffect(() => {
+    const pane = mapRef.current?.getPane('tilePane');
+    pane?.classList.toggle('heatmap-dim', showIncidentsHeat || showRatingsHeat);
+  }, [showIncidentsHeat, showRatingsHeat]);
+
   useEffect(() => {
     if (selectionMode) {
       setSelectedReportId(null);
@@ -632,14 +641,24 @@ const MapDashboard: React.FC = () => {
     // updateIncidentsHeatmap / updateRatingsHeatmap will call .addTo(map)
     // when data arrives and .removeLayer when data is empty or hidden.
     // This guarantees the canvas never exists in the DOM while heat is off.
+    //
+    // maxZoom is NOT "how far you can zoom in" — leaflet.heat uses it to scale
+    // down each point's intensity the further the CURRENT zoom sits below it
+    // (v = 1 / 2^(maxZoom - zoom)). The old value of 17 meant every point drew
+    // at only 12.5% intensity at this app's actual default zoom of 14
+    // (MAP_CONFIG.DEFAULT_ZOOM), which combined with a small fixed radius and
+    // the plugin's default 0.05 minOpacity floor was why the heatmap looked
+    // like faint, tiny, isolated bubbles instead of a visible heat field.
+    // Matching maxZoom to DEFAULT_ZOOM makes points draw at full intensity on
+    // the view people actually land on.
     const incidentHeat = (L as any).heatLayer([], {
-      radius: 28, blur: 18, maxZoom: 17,
+      radius: 42, blur: 26, maxZoom: MAP_CONFIG.DEFAULT_ZOOM, minOpacity: 0.35,
       gradient: { 0.2: '#fde68a', 0.5: '#fbbf24', 0.8: '#f97316', 1.0: '#ef4444' }
     });
     incidentsHeatLayerRef.current = incidentHeat;
 
     const ratingHeat = (L as any).heatLayer([], {
-      radius: 28, blur: 18, maxZoom: 17,
+      radius: 42, blur: 26, maxZoom: MAP_CONFIG.DEFAULT_ZOOM, minOpacity: 0.35,
       gradient: { 0.3: '#34d399', 0.6: '#a78bfa', 1.0: '#7c3aed' }
     });
     ratingsHeatLayerRef.current = ratingHeat;

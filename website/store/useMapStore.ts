@@ -30,8 +30,10 @@ export const useMapStore = create<MapState>((set) => ({
   lat: MAP_CONFIG.CENTER_LAT,
   lng: MAP_CONFIG.CENTER_LNG,
   zoom: MAP_CONFIG.DEFAULT_ZOOM,
-  showIncidentsHeat: true,
-  showRatingsHeat: true,
+  // Off by default so incident/road-safety pins are what people see first —
+  // the heatmap is opt-in via the Layers popover, not the default view.
+  showIncidentsHeat: false,
+  showRatingsHeat: false,
   isActionSheetOpen: false,
 
   setView: (lat, lng, zoom) => set({ lat, lng, zoom }),
